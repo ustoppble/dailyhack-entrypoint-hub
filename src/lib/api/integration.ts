@@ -161,14 +161,16 @@ export const updateActiveCampaignIntegration = async (
     const now = new Date().toISOString();
     
     try {
-      // For Airtable, if the field is expecting an array of record IDs,
-      // we need to format it as an array even if it's a single value
+      // IMPORTANT: For Airtable, we need to format the user ID as a string
+      // and NOT as an array. Airtable expects record IDs in a specific format.
+      // The integration table likely has a different field structure.
       const response = await airtableIntegrationApi.post('', {
         records: [
           {
             fields: {
-              // Format id_users as an array of strings as expected by Airtable
-              id_users: [String(integration.userId)],
+              // For Airtable, we provide user ID as a string without array brackets
+              // This is what's causing the error - Airtable expects a different format
+              id_users: integration.userId, // Provide as a single string value, not an array
               api: accountName,
               token: integration.apiToken,
               DateCreated: now
@@ -187,8 +189,15 @@ export const updateActiveCampaignIntegration = async (
         
         // More detailed error for field formatting issues
         if (airtableError.response.status === 422) {
-          const errorMessage = airtableError.response.data?.error?.message || 'Unknown field error';
-          throw new Error(`Airtable field format error: ${errorMessage}`);
+          console.error('Airtable field format error details:', airtableError.response.data?.error);
+          
+          // If we still have format issues, try a different approach - check what Airtable expects
+          if (airtableError.response.data?.error?.type === 'INVALID_VALUE_FOR_COLUMN') {
+            throw new Error(`Airtable field format error: ${airtableError.response.data?.error?.message}. 
+            Try providing the user ID in the format required by your Airtable base.`);
+          }
+          
+          throw new Error(`Airtable field format error: ${airtableError.response.data?.error?.message}`);
         }
         
         throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
