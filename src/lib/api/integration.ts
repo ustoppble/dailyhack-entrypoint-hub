@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { airtableIntegrationApi } from './client';
 import { ACIntegration, VerificationResult } from './types';
@@ -210,5 +209,33 @@ export const updateActiveCampaignIntegration = async (
   } catch (error: any) {
     console.error('Integration update error:', error);
     throw error;
+  }
+};
+
+/**
+ * Fetch all ActiveCampaign integrations for a specific user
+ */
+export const fetchUserIntegrations = async (userId: string): Promise<{id: string, api: string}[]> => {
+  try {
+    console.log('Fetching integrations for user:', userId);
+
+    // We need to filter by the user ID
+    const filterByFormula = encodeURIComponent(`{id_users}='${userId}'`);
+    
+    const response = await airtableIntegrationApi.get(`?filterByFormula=${filterByFormula}`);
+    
+    console.log('Integrations response:', response.data);
+    
+    if (response.data && response.data.records && response.data.records.length > 0) {
+      return response.data.records.map((record: any) => ({
+        id: record.id,
+        api: record.fields.api || 'Unknown Account'
+      }));
+    }
+    
+    return [];
+  } catch (error: any) {
+    console.error('Error fetching user integrations:', error);
+    throw new Error(`Failed to fetch integrations: ${error.message}`);
   }
 };

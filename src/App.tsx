@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/integrate" element={<IntegratePage />} />
               <Route path="/confirmation" element={<ConfirmationPage />} />
               <Route path="/lists" element={<ListsPage />} />
+              <Route path="/lists/:integrationId" element={<ListsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
