@@ -2,11 +2,7 @@
 import axios from 'axios';
 import { EmailList } from './types';
 
-interface ListsResponse {
-  output: EmailList[];
-}
-
-const N8N_WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
+const WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
 
 /**
  * Fetch email lists from ActiveCampaign via n8n webhook
@@ -15,37 +11,31 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
   try {
     console.log('Fetching ActiveCampaign lists for URL:', apiUrl);
     
-    // Build the webhook URL with query parameters
-    const webhookUrlWithParams = `${N8N_WEBHOOK_URL}?url=${encodeURIComponent(apiUrl)}&token=${encodeURIComponent(apiToken)}`;
-    
-    console.log('Making request to n8n webhook to fetch lists');
-    
-    const response = await axios.get(webhookUrlWithParams, {
+    // Using POST request with body parameters instead of query parameters
+    const response = await axios.post(WEBHOOK_URL, {
+      api: apiUrl,
+      token: apiToken
+    }, {
       timeout: 15000, // 15 second timeout
     });
     
     console.log('n8n webhook response for lists:', response.data);
     
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      // The response should be an array with at least one object containing an output array
-      const lists = response.data[0]?.output;
-      
-      if (Array.isArray(lists)) {
-        return lists;
-      }
+    if (response.data && response.data.output && Array.isArray(response.data.output)) {
+      return response.data.output;
     }
     
-    throw new Error('Formato de resposta inválido do webhook n8n');
+    throw new Error('Invalid response format from webhook');
   } catch (error: any) {
     console.error('Error fetching email lists:', error);
     
     if (error.response) {
       console.error('Response data:', error.response.data);
       console.error('Response status:', error.response.status);
-      throw new Error(`Erro ao buscar listas: ${error.response.status} - ${error.response.data || 'Erro desconhecido'}`);
+      throw new Error(`Error fetching lists: ${error.response.status} - ${error.response.data || 'Unknown error'}`);
     } else if (error.request) {
       console.error('No response received:', error.request);
-      throw new Error('Nenhuma resposta recebida do webhook n8n. Verifique sua conexão com a internet.');
+      throw new Error('No response received from webhook. Check your internet connection.');
     }
     
     throw error;

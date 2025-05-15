@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
+import axios from 'axios';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -21,27 +22,27 @@ const AgentListsPage = () => {
         setIsLoading(true);
         
         // Get API URL and token from localStorage (saved during integration)
-        const apiUrl = localStorage.getItem('ac_api_url');
-        const apiToken = localStorage.getItem('ac_api_token');
+        const apiUrl = localStorage.getItem('ac_api_url') || '';
+        const apiToken = localStorage.getItem('ac_api_token') || '';
         
         if (!apiUrl || !apiToken) {
           throw new Error('ActiveCampaign credentials not found. Please integrate your account first.');
         }
         
-        // Webhook URL for fetching lists
+        console.log('Fetching lists for agent:', agentName);
+        
+        // Webhook URL for fetching lists with updated URL format and POST request
         const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
-        const url = `${webhookUrl}?api=${encodeURIComponent(apiUrl)}&token=${encodeURIComponent(apiToken)}`;
         
-        const response = await fetch(url);
+        const response = await axios.post(webhookUrl, {
+          api: apiUrl,
+          token: apiToken
+        });
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch lists: ${response.status}`);
-        }
+        console.log('Lists response:', response.data);
         
-        const data = await response.json();
-        
-        if (Array.isArray(data)) {
-          setLists(data);
+        if (response.data && response.data.output && Array.isArray(response.data.output)) {
+          setLists(response.data.output);
         } else {
           throw new Error('Invalid response format');
         }
@@ -113,4 +114,3 @@ const AgentListsPage = () => {
 };
 
 export default AgentListsPage;
-
