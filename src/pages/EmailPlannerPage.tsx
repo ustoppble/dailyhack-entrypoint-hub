@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -17,7 +16,6 @@ import { ArrowLeft, Mail, Send, List, BookOpen, Link, Pencil } from 'lucide-reac
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
-import { EmailList } from '@/lib/api/types';
 
 // Updated schema with only mainGoal and emailCount
 const emailFormSchema = z.object({
@@ -194,49 +192,6 @@ The ${agentName} Team
         </div>
         
         <StatusMessage error={error} success={success} />
-        
-        {/* Connected Lists Card */}
-        <Card className="shadow-md mb-6">
-          <CardHeader className="border-b">
-            <CardTitle className="flex items-center">
-              <List className="mr-2 h-5 w-5" /> Connected Lists
-            </CardTitle>
-            <CardDescription>
-              These are the lists associated with {agentName}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {isLoading ? (
-              <p className="text-center py-4">Loading lists...</p>
-            ) : lists.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>List Name</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lists.map((listName) => (
-                    <TableRow key={listName}>
-                      <TableCell>{listName}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-6 bg-gray-50 rounded-md">
-                <p className="text-gray-500">No lists connected to this agent yet</p>
-                <Button 
-                  variant="link" 
-                  className="mt-2" 
-                  onClick={() => navigate(`/agents/${agentName}/lists`)}
-                >
-                  Go to Lists
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
         
         <Card className="shadow-md mb-6">
           <CardHeader className="border-b">
