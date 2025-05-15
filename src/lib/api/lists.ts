@@ -1,12 +1,6 @@
 
 import axios from 'axios';
-
-export interface EmailList {
-  name: string;
-  sender_reminder: string;
-  Insight: string;
-  active_subscribers: string;
-}
+import { EmailList } from './types';
 
 interface ListsResponse {
   output: EmailList[];

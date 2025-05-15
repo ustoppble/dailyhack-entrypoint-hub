@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmailList } from '@/lib/api/types';
-import { users } from "lucide-react";
+import { Users } from "lucide-react";
 
 interface EmailListCardProps {
   list: EmailList;
@@ -46,7 +46,7 @@ const EmailListCard = ({ list, selected, onSelect }: EmailListCardProps) => {
         </Avatar>
         <CardTitle className="mt-3 text-center text-lg">{list.name}</CardTitle>
         <Badge variant="outline" className="flex items-center gap-1 mt-2">
-          <users className="h-3 w-3" />
+          <Users className="h-3 w-3" />
           {list.active_subscribers}
         </Badge>
       </CardHeader>
