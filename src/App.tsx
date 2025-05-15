@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import AgentCentralPage from "./pages/AgentCentralPage";
 import AgentListsPage from "./pages/AgentListsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import EmailPlannerPage from "./pages/EmailPlannerPage";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/agents/:agentName/central" element={<AgentCentralPage />} />
               <Route path="/agents/:agentName/lists" element={<AgentListsPage />} />
               <Route path="/agents/:agentName/knowledge" element={<KnowledgeBasePage />} />
+              <Route path="/agents/:agentName/email-planner" element={<EmailPlannerPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
