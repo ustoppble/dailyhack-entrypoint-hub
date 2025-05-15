@@ -3,3 +3,5 @@
 export * from './api/types';
 export * from './api/auth';
 export * from './api/integration';
+export * from './api/client';
+export * from './api/constants';

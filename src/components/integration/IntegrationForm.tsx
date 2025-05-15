@@ -13,7 +13,7 @@ import {
   verifyActiveCampaignCredentials, 
   updateActiveCampaignIntegration,
   formatApiUrl 
-} from '@/lib/api-service';
+} from '@/lib/api/integration';
 import { validateActiveCampaignUrl } from '@/lib/validation';
 import { useAuth } from '@/contexts/AuthContext';
 
