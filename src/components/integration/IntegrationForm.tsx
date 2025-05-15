@@ -111,10 +111,14 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       console.log('ActiveCampaign credentials verified successfully via n8n webhook');
       onSuccess?.('ActiveCampaign credentials verified successfully');
       
+      // Ensure user.id is properly formatted - convert to string to be safe
+      const userId = String(user.id);
+      console.log('Using user ID for integration:', userId);
+      
       // Update integration details
       console.log('Updating integration details...');
       const success = await updateActiveCampaignIntegration({
-        userId: user.id,
+        userId: userId,
         apiUrl: formattedApiUrl,
         apiToken: data.apiToken,
       });

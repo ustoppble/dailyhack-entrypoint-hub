@@ -161,12 +161,14 @@ export const updateActiveCampaignIntegration = async (
     const now = new Date().toISOString();
     
     try {
+      // For Airtable, if the field is expecting an array of record IDs,
+      // we need to format it as an array even if it's a single value
       const response = await airtableIntegrationApi.post('', {
         records: [
           {
             fields: {
-              // Use the correct field name as specified by the user: id_users instead of user_id
-              id_users: integration.userId,
+              // Format id_users as an array of strings as expected by Airtable
+              id_users: [String(integration.userId)],
               api: accountName,
               token: integration.apiToken,
               DateCreated: now
@@ -182,6 +184,13 @@ export const updateActiveCampaignIntegration = async (
       
       if (airtableError.response) {
         console.error('Airtable error response:', airtableError.response.data);
+        
+        // More detailed error for field formatting issues
+        if (airtableError.response.status === 422) {
+          const errorMessage = airtableError.response.data?.error?.message || 'Unknown field error';
+          throw new Error(`Airtable field format error: ${errorMessage}`);
+        }
+        
         throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
       } else if (airtableError.request) {
         throw new Error('Network error: Could not connect to our database. Please check your internet connection.');
