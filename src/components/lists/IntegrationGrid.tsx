@@ -28,7 +28,7 @@ const IntegrationGrid = ({ integrations, onAddNew }: IntegrationGridProps) => {
           onClick={onAddNew}
         >
           <Plus className="h-4 w-4" />
-          Add New Account
+          Add New Agent
         </Button>
       </Card>
     </div>

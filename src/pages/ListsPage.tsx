@@ -33,10 +33,10 @@ const ListsPage = () => {
         setIntegrations(userIntegrations);
       } catch (error: any) {
         console.error('Error loading integrations:', error);
-        setError(error.message || 'Failed to load ActiveCampaign accounts');
+        setError(error.message || 'Failed to load ActiveCampaign agents');
         toast({
-          title: 'Error loading accounts',
-          description: error.message || 'Could not load your ActiveCampaign accounts.',
+          title: 'Error loading agents',
+          description: error.message || 'Could not load your ActiveCampaign agents.',
           variant: 'destructive',
         });
       } finally {
@@ -80,9 +80,9 @@ const ListsPage = () => {
       <div className="max-w-5xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Your ActiveCampaign Accounts</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Your ActiveCampaign Agents</CardTitle>
             <CardDescription className="text-center">
-              Select an account to work with or add a new integration
+              Select an agent to work with or add a new one
             </CardDescription>
           </CardHeader>
           

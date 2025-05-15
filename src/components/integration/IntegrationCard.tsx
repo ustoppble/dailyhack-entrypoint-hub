@@ -50,12 +50,12 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
       </CardHeader>
       
       <CardContent className="text-sm text-gray-600 text-center pb-3">
-        <p>ActiveCampaign Account</p>
+        <p>ActiveCampaign Agent</p>
       </CardContent>
       
       <CardFooter className="flex justify-center pb-4">
         <Button onClick={handleEnterClick} className="w-full">
-          Enter <ArrowRight className="ml-2" />
+          MANAGE <ArrowRight className="ml-2" />
         </Button>
       </CardFooter>
     </Card>

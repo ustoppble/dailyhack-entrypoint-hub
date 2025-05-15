@@ -18,7 +18,7 @@ const ErrorState = ({ error }: ErrorStateProps) => {
         className="mt-4" 
         onClick={() => navigate('/integrate')}
       >
-        Back to Integration
+        Back to Agent Setup
       </Button>
     </div>
   );
