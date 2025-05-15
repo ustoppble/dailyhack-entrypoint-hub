@@ -1,8 +1,10 @@
 
 import axios from 'axios';
 import { EmailList } from './types';
+import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
 
 const WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
+const AIRTABLE_LISTS_TABLE_ID = 'tblhqy7BdNwj0SPHD';
 
 /**
  * Fetch email lists from ActiveCampaign via n8n webhook
@@ -44,36 +46,44 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 };
 
 /**
- * Save selected lists to user preferences
+ * Save selected lists to Airtable with all required fields
  */
-export const saveSelectedLists = async (userId: string, selectedLists: string[]): Promise<boolean> => {
+export const saveSelectedLists = async (userId: string, selectedLists: EmailList[]): Promise<boolean> => {
   try {
     console.log('Saving selected lists for user:', userId, selectedLists);
     
-    // Here you would typically make an API call to save the user's selected lists
-    // For now, we'll just simulate a successful response
+    // Create records for Airtable
+    const records = selectedLists.map(list => ({
+      fields: {
+        Name: list.name,
+        description: list.sender_reminder || '',
+        Insight: list.Insight || '',
+        leads: parseInt(list.active_subscribers) || 0,
+        id_users: userId
+      }
+    }));
     
-    // Example of how this might work with your Airtable integration:
-    /*
-    const response = await airtableIntegrationApi.post('', {
-      records: [
-        {
-          fields: {
-            id_users: userId,
-            selected_lists: selectedLists.join(','),
-            DateUpdated: new Date().toISOString()
-          },
-        },
-      ],
-    });
+    // Save to Airtable
+    const response = await axios.post(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}`,
+      { records },
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Airtable save response:', response.data);
     
     return response.data.records && response.data.records.length > 0;
-    */
-    
-    // For now, just return true to simulate success
-    return true;
   } catch (error: any) {
-    console.error('Error saving selected lists:', error);
+    console.error('Error saving selected lists to Airtable:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
     throw error;
   }
 };

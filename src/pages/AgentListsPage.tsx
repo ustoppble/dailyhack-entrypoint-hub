@@ -11,7 +11,7 @@ import ErrorState from '@/components/lists/ErrorState';
 import { fetchEmailLists, saveSelectedLists } from '@/lib/api/lists';
 import { airtableIntegrationApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { List, ListCheck } from 'lucide-react';
+import { List, ListCheck, Users } from 'lucide-react';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -19,7 +19,7 @@ const AgentListsPage = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<EmailList[]>([]);
-  const [selectedLists, setSelectedLists] = useState<string[]>([]);
+  const [selectedLists, setSelectedLists] = useState<EmailList[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,12 +73,14 @@ const AgentListsPage = () => {
     fetchLists();
   }, [agentName, toast, user]);
 
-  const handleCheckboxChange = (listName: string) => {
+  const handleCheckboxChange = (list: EmailList) => {
     setSelectedLists(prevSelected => {
-      if (prevSelected.includes(listName)) {
-        return prevSelected.filter(name => name !== listName);
+      const isAlreadySelected = prevSelected.some(item => item.name === list.name);
+      
+      if (isAlreadySelected) {
+        return prevSelected.filter(item => item.name !== list.name);
       } else {
-        return [...prevSelected, listName];
+        return [...prevSelected, list];
       }
     });
   };
@@ -105,6 +107,9 @@ const AgentListsPage = () => {
         title: "Lists imported successfully",
         description: `Imported ${selectedLists.length} list(s) for ${agentName}`,
       });
+      
+      // Clear selections after successful import
+      setSelectedLists([]);
     } catch (error: any) {
       console.error('Error importing lists:', error);
       toast({
@@ -144,12 +149,13 @@ const AgentListsPage = () => {
                   {lists.map((list) => (
                     <div 
                       key={list.name} 
-                      className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50"
+                      className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50"
                     >
                       <Checkbox 
                         id={`list-${list.name}`}
-                        checked={selectedLists.includes(list.name)}
-                        onCheckedChange={() => handleCheckboxChange(list.name)}
+                        checked={selectedLists.some(item => item.name === list.name)}
+                        onCheckedChange={() => handleCheckboxChange(list)}
+                        className="mt-1"
                       />
                       <div className="flex-1 ml-2">
                         <label 
@@ -160,11 +166,18 @@ const AgentListsPage = () => {
                         </label>
                         <div className="text-sm text-gray-600 mt-1">
                           <span className="inline-flex items-center mr-4">
-                            <ListCheck className="h-4 w-4 mr-1" /> 
+                            <Users className="h-4 w-4 mr-1" /> 
                             {list.active_subscribers} subscribers
                           </span>
-                          <p className="text-gray-500 mt-1">{list.sender_reminder}</p>
                         </div>
+                        <p className="text-gray-500 mt-1 text-sm">
+                          <strong>Description:</strong> {list.sender_reminder}
+                        </p>
+                        {list.Insight && (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                            <strong>Insight:</strong> {list.Insight}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -35,4 +35,3 @@ export interface EmailList {
   active_subscribers: string;
   selected?: boolean;
 }
-
