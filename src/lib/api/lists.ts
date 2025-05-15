@@ -53,15 +53,23 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
     console.log('Saving selected lists for user:', userId, selectedLists);
     
     // Create records for Airtable
-    const records = selectedLists.map(list => ({
-      fields: {
-        Name: list.name,
-        description: list.sender_reminder || '',
-        Insight: list.Insight || '',
-        leads: parseInt(list.active_subscribers) || 0,
-        id_users: userId
-      }
-    }));
+    const records = selectedLists.map(list => {
+      // Convert active_subscribers to a string to avoid type issues
+      const subscribersCount = list.active_subscribers ? String(list.active_subscribers).trim() : "0";
+      
+      return {
+        fields: {
+          Name: list.name,
+          description: list.sender_reminder || '',
+          Insight: list.Insight || '',
+          // Ensure leads is sent as a string instead of trying to parse it as an integer
+          leads: subscribersCount,
+          id_users: userId
+        }
+      };
+    });
+    
+    console.log('Sending records to Airtable:', records);
     
     // Save to Airtable
     const response = await axios.post(
