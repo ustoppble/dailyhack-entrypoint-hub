@@ -134,7 +134,7 @@ const KnowledgeBasePage = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => navigate(`/agents/${agentName}`)}
+              onClick={() => navigate(`/agents/${agentName}/central`)}
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Central

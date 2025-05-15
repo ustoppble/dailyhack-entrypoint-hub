@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -171,7 +170,7 @@ const AgentListsPage = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => navigate(`/agents/${agentName}`)}
+              onClick={() => navigate(`/agents/${agentName}/central`)}
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Central
