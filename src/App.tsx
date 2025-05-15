@@ -16,6 +16,7 @@ import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 import AgentCentralPage from "./pages/AgentCentralPage";
 import AgentListsPage from "./pages/AgentListsPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/lists/:integrationId" element={<ListsPage />} />
               <Route path="/agents/:agentName/central" element={<AgentCentralPage />} />
               <Route path="/agents/:agentName/lists" element={<AgentListsPage />} />
+              <Route path="/agents/:agentName/knowledge" element={<KnowledgeBasePage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -47,4 +49,3 @@ const App = () => (
 );
 
 export default App;
-

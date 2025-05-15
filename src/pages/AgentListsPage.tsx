@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import ErrorState from '@/components/lists/ErrorState';
 import { fetchEmailLists, saveSelectedLists } from '@/lib/api/lists';
 import { airtableIntegrationApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { List, ListCheck, Users } from 'lucide-react';
+import { List, ListCheck, Users, BookOpen } from 'lucide-react';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -134,10 +134,19 @@ const AgentListsPage = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">{agentName}</h1>
+          <Link to={`/agents/${agentName}/knowledge`}>
+            <Button variant="outline" className="gap-2">
+              <BookOpen className="h-4 w-4" /> Base de Conhecimento
+            </Button>
+          </Link>
+        </div>
+        
         <Card className="shadow-md">
           <CardHeader className="border-b">
             <CardTitle className="text-3xl font-bold">
-              {agentName} Lists
+              Listas
             </CardTitle>
             <p className="text-gray-500 mt-2">
               Select the lists you want to import
