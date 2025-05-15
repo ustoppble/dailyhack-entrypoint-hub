@@ -50,29 +50,6 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
     },
   });
 
-  const formatApiUrl = (url: string) => {
-    // Ensure URL has proper format
-    let formattedUrl = url.trim();
-    
-    // Check if URL starts with http/https
-    if (!formattedUrl.startsWith('http')) {
-      formattedUrl = `https://${formattedUrl}`;
-    }
-    
-    // Clean trailing slashes
-    if (formattedUrl.endsWith('/')) {
-      formattedUrl = formattedUrl.slice(0, -1);
-    }
-    
-    // Convert activehosted.com to api-us1.com format if needed
-    if (formattedUrl.includes('activehosted.com')) {
-      const accountName = formattedUrl.split('.')[0].split('//')[1];
-      formattedUrl = `https://${accountName}.api-us1.com`;
-    }
-    
-    return formattedUrl;
-  };
-
   const handleRetry = async () => {
     if (!lastAttemptedData) return;
     
@@ -109,8 +86,8 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       const formattedApiUrl = formatApiUrl(data.apiUrl);
       console.log('Formatted API URL:', formattedApiUrl);
       
-      // Verify ActiveCampaign credentials
-      console.log('Verifying ActiveCampaign credentials...');
+      // Verify ActiveCampaign credentials (using n8n webhook)
+      console.log('Verifying ActiveCampaign credentials via n8n webhook...');
       const verificationResult = await verifyActiveCampaignCredentials(formattedApiUrl, data.apiToken);
       
       if (!verificationResult.success) {
@@ -131,7 +108,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
         return;
       }
       
-      console.log('ActiveCampaign credentials verified successfully');
+      console.log('ActiveCampaign credentials verified successfully via n8n webhook');
       onSuccess?.('ActiveCampaign credentials verified successfully');
       
       // Update integration details
@@ -221,13 +198,10 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
         </div>
 
         <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-4">
-          <h4 className="font-medium mb-1">⚠️ Problemas de CORS</h4>
+          <h4 className="font-medium mb-1">🔄 Usando n8n para verificação</h4>
           <p className="mb-2">
-            As chamadas diretas à API do ActiveCampaign podem ser bloqueadas pelo navegador devido a restrições de CORS.
-            O exemplo CURL funciona porque não está sujeito às mesmas restrições.
-          </p>
-          <p>
-            Idealmente, essas chamadas deveriam ser feitas através de um servidor backend.
+            Esta integração utiliza um webhook n8n para verificar as credenciais 
+            do ActiveCampaign, contornando problemas de CORS no navegador.
           </p>
         </div>
         

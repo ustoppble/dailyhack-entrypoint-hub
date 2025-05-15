@@ -30,7 +30,12 @@ export const formatApiUrl = (url: string): string => {
 };
 
 /**
- * Verify ActiveCampaign credentials
+ * N8n webhook URL for ActiveCampaign verification
+ */
+const N8N_WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/d935a725-80e0-405e-8a15-74554dbbc1bd';
+
+/**
+ * Verify ActiveCampaign credentials using n8n webhook
  */
 export const verifyActiveCampaignCredentials = async (
   apiUrl: string,
@@ -38,113 +43,69 @@ export const verifyActiveCampaignCredentials = async (
 ): Promise<VerificationResult> => {
   try {
     console.log('Verifying ActiveCampaign credentials for URL:', apiUrl);
+    console.log('Using n8n webhook for verification');
     
-    // Format API URL correctly - endpoint should be /api/3/users
-    let baseUrl = apiUrl;
+    // Format API URL correctly
+    const formattedApiUrl = formatApiUrl(apiUrl);
     
-    // Clean up URL format if needed
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
+    // Build the webhook URL with query parameters
+    const webhookUrlWithParams = `${N8N_WEBHOOK_URL}?url=${encodeURIComponent(formattedApiUrl)}&token=${encodeURIComponent(apiToken)}`;
     
-    // If URL contains activehosted.com, convert to api-us1.com format
-    if (baseUrl.includes('activehosted.com')) {
-      const accountName = baseUrl.split('.')[0].split('//')[1];
-      baseUrl = `https://${accountName}.api-us1.com`;
-    }
-    
-    const endpoint = '/api/3/users';
-    const url = `${baseUrl}${endpoint}`;
-    
-    console.log('Making API request to:', url);
-    console.log('Using API token:', apiToken.substring(0, 5) + '...');
+    console.log('Making request to n8n webhook');
     
     try {
-      // Try with direct request
-      const response = await axios.get(url, {
-        headers: {
-          'Api-Token': apiToken,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+      // Make request to n8n webhook
+      const response = await axios.get(webhookUrlWithParams, {
         timeout: 15000, // 15 second timeout
       });
       
-      console.log('ActiveCampaign API response status:', response.status);
-      console.log('ActiveCampaign API response data:', response.data);
+      console.log('n8n webhook response:', response.data);
       
-      return { 
-        success: response.status === 200,
-        message: 'Connection successful',
-        attemptedUrl: url,
-        responseDetails: {
-          status: response.status,
-          data: response.data
-        }
-      };
+      // n8n webhook returns "true" if successful, "false" if failed
+      const isSuccess = response.data === true || response.data === "true";
+      
+      if (isSuccess) {
+        return {
+          success: true,
+          message: 'Connection successful',
+          attemptedUrl: formattedApiUrl
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Credenciais inválidas ou problema de conexão com o ActiveCampaign',
+          attemptedUrl: formattedApiUrl
+        };
+      }
     } catch (axiosError: any) {
-      console.error('ActiveCampaign API request error:', axiosError);
+      console.error('n8n webhook request error:', axiosError);
       
       // More detailed error handling for axios errors
       if (axiosError.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         console.error('Response data:', axiosError.response.data);
         console.error('Response status:', axiosError.response.status);
         
-        let errorMessage: string;
-        
-        switch (axiosError.response.status) {
-          case 401:
-            errorMessage = 'Invalid API token. Please check your credentials.';
-            break;
-          case 402:
-            errorMessage = 'The request could not be processed due to account payment issues.';
-            break;
-          case 403:
-            errorMessage = 'Authentication failed or unauthorized access.';
-            break;
-          case 404:
-            errorMessage = 'API URL is incorrect or endpoint not found.';
-            break;
-          case 422:
-            errorMessage = 'Invalid parameters in the request.';
-            break;
-          case 429:
-            errorMessage = 'Too many requests. Rate limit exceeded.';
-            break;
-          default:
-            errorMessage = `Server error: ${axiosError.response.status} - ${axiosError.response.data?.message || 'Unknown error'}`;
-        }
-        
         return { 
           success: false, 
-          message: errorMessage,
-          attemptedUrl: url,
-          responseDetails: {
-            status: axiosError.response.status,
-            data: axiosError.response.data
-          }
+          message: `Erro ao contatar o webhook n8n: ${axiosError.response.status} - ${axiosError.response.data || 'Erro desconhecido'}`,
+          attemptedUrl: formattedApiUrl
         };
       } else if (axiosError.request) {
-        // The request was made but no response was received
         console.error('No response received:', axiosError.request);
         
-        // This is likely a CORS or network connectivity issue
         return { 
           success: false,
           isNetworkError: true,
-          message: `Nenhuma resposta recebida do ActiveCampaign. Isso pode ser devido a restrições de CORS ou problemas de rede.`,
-          attemptedUrl: url
+          message: `Nenhuma resposta recebida do webhook n8n. Verifique sua conexão com a internet.`,
+          attemptedUrl: formattedApiUrl
         };
       } else {
-        // Something happened in setting up the request that triggered an Error
         console.error('Error message:', axiosError.message);
         return { 
           success: false, 
           isNetworkError: axiosError.message.includes('network'),
-          message: `Error: ${axiosError.message}`,
-          attemptedUrl: url
+          message: `Erro: ${axiosError.message}`,
+          attemptedUrl: formattedApiUrl
         };
       }
     }
@@ -152,8 +113,8 @@ export const verifyActiveCampaignCredentials = async (
     console.error('ActiveCampaign verification general error:', error);
     return { 
       success: false,
-      isNetworkError: error.message.includes('network'),
-      message: error.message || 'An unexpected error occurred during verification.'
+      isNetworkError: error.message?.includes('network'),
+      message: error.message || 'Ocorreu um erro inesperado durante a verificação.'
     };
   }
 };

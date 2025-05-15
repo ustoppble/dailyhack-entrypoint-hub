@@ -38,13 +38,12 @@ const StatusMessage = ({
                 <p>Please check:</p>
                 <ul className="list-disc pl-4 mt-1">
                   <li>Your internet connection</li>
-                  <li>If ActiveCampaign is accessible from your network</li>
+                  <li>If our n8n webhook is accessible from your network</li>
                   <li>Firewall or network restrictions that might block API requests</li>
-                  <li>CORS settings in your browser</li>
                 </ul>
                 {attemptedUrl && (
                   <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto">
-                    <p>Attempted URL: {attemptedUrl}</p>
+                    <p>URL tentada: {attemptedUrl}</p>
                   </div>
                 )}
                 {responseDetails && (
@@ -58,8 +57,8 @@ const StatusMessage = ({
                   </div>
                 )}
                 <p className="mt-2">
-                  Tente usar uma conexão de rede diferente ou acessar o ActiveCampaign diretamente
-                  para confirmar que o serviço está disponível.
+                  Tente usar uma conexão de rede diferente ou verifique se o
+                  webhook n8n está disponível.
                 </p>
               </div>
             )}
