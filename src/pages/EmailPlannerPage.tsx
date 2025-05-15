@@ -12,10 +12,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, Link, Pencil } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Updated schema with only mainGoal and emailCount
 const emailFormSchema = z.object({
@@ -25,10 +26,9 @@ const emailFormSchema = z.object({
   emailCount: z.string({
     required_error: "Please select how many emails to plan",
   }),
-  selectedList: z.string({
-    required_error: "Please select a list",
+  selectedLists: z.array(z.string()).min(1, {
+    message: "Please select at least one list",
   }),
-  additionalNotes: z.string().optional(),
 });
 
 type EmailPlannerFormValues = z.infer<typeof emailFormSchema>;
@@ -50,8 +50,7 @@ const EmailPlannerPage = () => {
     defaultValues: {
       mainGoal: "",
       emailCount: "1",
-      selectedList: "",
-      additionalNotes: "",
+      selectedLists: [],
     },
   });
   
@@ -106,10 +105,9 @@ const EmailPlannerPage = () => {
       // Prepare data to send to webhook
       const requestData = {
         agentName,
-        list: values.selectedList,
+        lists: values.selectedLists,
         mainGoal: values.mainGoal,
         emailCount: values.emailCount,
-        additionalNotes: values.additionalNotes || '',
       };
       
       // Simulate API call for now
@@ -118,11 +116,13 @@ const EmailPlannerPage = () => {
       // Generate demo email content based on form inputs
       const generatedEmail = generateEmailContent(values);
       setEmailContent(generatedEmail);
-      setSuccess(`Email draft successfully created for ${values.emailCount} email(s)!`);
+      
+      const emailCountText = values.emailCount === "autopilot" ? "Autopilot" : `${values.emailCount} email(s)`;
+      setSuccess(`Email draft successfully created for ${emailCountText}!`);
       
       toast({
         title: "Success!",
-        description: `Email draft successfully created for ${values.emailCount} email(s)!`,
+        description: `Email draft successfully created for ${emailCountText}!`,
       });
       
     } catch (err: any) {
@@ -140,16 +140,16 @@ const EmailPlannerPage = () => {
   
   // Helper function to generate sample email content
   const generateEmailContent = (values: EmailPlannerFormValues): string => {
-    const { mainGoal, additionalNotes, emailCount, selectedList } = values;
+    const { mainGoal, emailCount, selectedLists } = values;
+    
+    const emailCountText = emailCount === "autopilot" ? "Autopilot mode" : `Email 1 of ${emailCount}`;
     
     const content = `
-To: ${selectedList}
+To: ${selectedLists.join(", ")}
 
 ${mainGoal}
 
-${additionalNotes ? `Additional note: ${additionalNotes}` : ''}
-
-This is email 1 of ${emailCount}.
+${emailCountText}
 
 Best regards,
 The ${agentName} Team
@@ -203,80 +203,69 @@ The ${agentName} Team
           <CardContent className="pt-6">
             <Alert className="mb-6">
               <AlertDescription>
-                Provide information about your email campaign to generate a draft. You can include links and offers in the main goal field.
+                Provide information about your email campaign to generate a draft. You can include any details you need in the main goal field.
               </AlertDescription>
             </Alert>
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* List selection with multiple checkbox selection */}
                 <FormField
                   control={form.control}
-                  name="selectedList"
-                  render={({ field }) => (
+                  name="selectedLists"
+                  render={() => (
                     <FormItem>
-                      <FormLabel>Select List</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a list to send to" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {lists.map((listName) => (
-                            <SelectItem key={listName} value={listName}>{listName}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="mainGoal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        Main Goal <Pencil className="h-4 w-4 text-gray-500" />
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="What is the main goal of this email? You can include links, offers, or other content here..."
-                          className="min-h-[200px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                      <div className="flex gap-2 mt-2 text-sm text-gray-500">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-xs gap-1"
-                          onClick={() => {
-                            const currentValue = form.getValues("mainGoal");
-                            form.setValue("mainGoal", currentValue + " [Link]");
-                          }}
-                        >
-                          <Link className="h-3 w-3" /> Add Link
-                        </Button>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-xs gap-1"
-                          onClick={() => {
-                            const currentValue = form.getValues("mainGoal");
-                            form.setValue("mainGoal", currentValue + " [Special Offer]");
-                          }}
-                        >
-                          <Mail className="h-3 w-3" /> Add Offer
-                        </Button>
+                      <FormLabel>Select Lists</FormLabel>
+                      <div className="border rounded-md p-4 space-y-3">
+                        {isLoading ? (
+                          <p className="text-center py-2">Loading lists...</p>
+                        ) : lists.length > 0 ? (
+                          lists.map((list) => (
+                            <FormField
+                              key={list}
+                              control={form.control}
+                              name="selectedLists"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={list}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(list)}
+                                        onCheckedChange={(checked) => {
+                                          const updatedLists = checked
+                                            ? [...field.value, list]
+                                            : field.value?.filter(
+                                                (value) => value !== list
+                                              );
+                                          field.onChange(updatedLists);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal cursor-pointer">
+                                      {list}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <div className="text-center py-2">
+                            <p className="text-gray-500">No lists connected to this agent</p>
+                            <Button 
+                              variant="link" 
+                              className="mt-1" 
+                              onClick={() => navigate(`/agents/${agentName}/lists`)}
+                            >
+                              Go to Lists
+                            </Button>
+                          </div>
+                        )}
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -302,6 +291,7 @@ The ${agentName} Team
                           <SelectItem value="5">5 Emails</SelectItem>
                           <SelectItem value="7">7 Emails</SelectItem>
                           <SelectItem value="10">10 Emails</SelectItem>
+                          <SelectItem value="autopilot">Autopilot</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -311,14 +301,14 @@ The ${agentName} Team
                 
                 <FormField
                   control={form.control}
-                  name="additionalNotes"
+                  name="mainGoal"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Additional Notes (Optional)</FormLabel>
+                      <FormLabel>Main Goal</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Any additional details, context, or specific points to include..."
-                          className="min-h-[100px]"
+                          placeholder="What is the main goal of this email? Include all necessary information here..."
+                          className="min-h-[200px]"
                           {...field}
                         />
                       </FormControl>
