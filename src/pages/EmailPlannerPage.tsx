@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,6 +17,8 @@ import axios from 'axios';
 import { ArrowLeft, Mail, Send, List, BookOpen } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
+import { fetchConnectedLists } from '@/lib/api/lists';
+import { EmailList } from '@/lib/api/types';
 
 const emailFormSchema = z.object({
   subject: z.string().min(3, {
@@ -30,6 +33,9 @@ const emailFormSchema = z.object({
   mainGoal: z.string().min(3, {
     message: "Main goal must be at least 3 characters",
   }),
+  emailCount: z.string({
+    required_error: "Please select how many emails to plan",
+  }),
   additionalNotes: z.string().optional(),
 });
 
@@ -40,6 +46,8 @@ const EmailPlannerPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [lists, setLists] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +60,30 @@ const EmailPlannerPage = () => {
       emailType: "",
       targetAudience: "",
       mainGoal: "",
+      emailCount: "1",
       additionalNotes: "",
     },
   });
+  
+  useEffect(() => {
+    const loadConnectedLists = async () => {
+      if (!agentName) return;
+      
+      try {
+        setIsLoading(true);
+        // Fetch the lists that are already connected to this agent
+        const connectedLists = await fetchConnectedLists(agentName);
+        setLists(connectedLists);
+      } catch (error) {
+        console.error("Error loading connected lists:", error);
+        setError("Failed to load connected lists");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadConnectedLists();
+  }, [agentName]);
   
   const onSubmit = async (values: EmailPlannerFormValues) => {
     if (!user) {
@@ -89,11 +118,11 @@ const EmailPlannerPage = () => {
       // Generate demo email content based on form inputs
       const generatedEmail = generateEmailContent(values);
       setEmailContent(generatedEmail);
-      setSuccess("Email draft successfully created!");
+      setSuccess(`Email draft successfully created for ${values.emailCount} email(s)!`);
       
       toast({
         title: "Success!",
-        description: "Email draft successfully created!",
+        description: `Email draft successfully created for ${values.emailCount} email(s)!`,
       });
       
     } catch (err: any) {
@@ -111,7 +140,7 @@ const EmailPlannerPage = () => {
   
   // Helper function to generate sample email content
   const generateEmailContent = (values: EmailPlannerFormValues): string => {
-    const { subject, emailType, targetAudience, mainGoal, additionalNotes } = values;
+    const { subject, emailType, targetAudience, mainGoal, additionalNotes, emailCount } = values;
     
     let content = '';
     
@@ -127,6 +156,8 @@ Welcome to our latest newsletter. We've put together some valuable content speci
 Our main focus this week is to ${mainGoal}. We believe this information will be extremely valuable for you.
 
 ${additionalNotes ? `Additional note: ${additionalNotes}` : ''}
+
+This is email 1 of ${emailCount}.
 
 Stay tuned for more updates!
 
@@ -147,6 +178,8 @@ We've designed this promotion to help you ${mainGoal}.
 
 ${additionalNotes ? `Special note: ${additionalNotes}` : ''}
 
+This is email 1 of ${emailCount}.
+
 Don't miss out on this opportunity!
 
 Best regards,
@@ -166,6 +199,8 @@ We're here to help you ${mainGoal}, and we're excited to have you on board.
 
 ${additionalNotes ? `Just wanted to add: ${additionalNotes}` : ''}
 
+This is email 1 of ${emailCount}.
+
 Feel free to reply if you have any questions.
 
 Warmly,
@@ -184,6 +219,8 @@ We're reaching out to our valued ${targetAudience}.
 We wanted to connect regarding ${mainGoal}.
 
 ${additionalNotes ? `Note: ${additionalNotes}` : ''}
+
+This is email 1 of ${emailCount}.
 
 Looking forward to connecting with you soon!
 
@@ -229,6 +266,49 @@ The ${agentName} Team
         </div>
         
         <StatusMessage error={error} success={success} />
+        
+        {/* Connected Lists Card */}
+        <Card className="shadow-md mb-6">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center">
+              <List className="mr-2 h-5 w-5" /> Connected Lists
+            </CardTitle>
+            <CardDescription>
+              These are the lists associated with {agentName}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {isLoading ? (
+              <p className="text-center py-4">Loading lists...</p>
+            ) : lists.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>List Name</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lists.map((listName) => (
+                    <TableRow key={listName}>
+                      <TableCell>{listName}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-6 bg-gray-50 rounded-md">
+                <p className="text-gray-500">No lists connected to this agent yet</p>
+                <Button 
+                  variant="link" 
+                  className="mt-2" 
+                  onClick={() => navigate(`/agents/${agentName}/lists`)}
+                >
+                  Go to Lists
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         
         <Card className="shadow-md mb-6">
           <CardHeader className="border-b">
@@ -283,6 +363,34 @@ The ${agentName} Team
                           <SelectItem value="promotional">Promotional</SelectItem>
                           <SelectItem value="welcome">Welcome Email</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="emailCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Emails to Plan</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="How many emails do you want to plan?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">1 Email</SelectItem>
+                          <SelectItem value="3">3 Emails</SelectItem>
+                          <SelectItem value="5">5 Emails</SelectItem>
+                          <SelectItem value="7">7 Emails</SelectItem>
+                          <SelectItem value="10">10 Emails</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
