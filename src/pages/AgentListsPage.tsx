@@ -200,7 +200,7 @@ const AgentListsPage = () => {
                             <span className="text-lg">{list.name}</span>
                           </label>
                           {isListConnected(list.name) && (
-                            <Badge variant="secondary" className="flex items-center gap-1 ml-2">
+                            <Badge variant="outline" className="flex items-center gap-1 ml-2 bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900 border-green-300">
                               <CheckCircle className="h-3 w-3" /> Connected
                             </Badge>
                           )}
