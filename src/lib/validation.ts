@@ -26,8 +26,17 @@ export const formatPhoneNumber = (phone: string): string => {
 
 export const validateActiveCampaignUrl = (url: string): boolean => {
   // More flexible URL validation to accept various ActiveCampaign URL formats
-  // Examples: https://account.api-us1.com, https://account.activehosted.com, etc.
-  return url.includes('api-us1.com') || 
-         url.includes('activehosted.com') || 
-         url.includes('activecampaign.com');
+  if (!url) return false;
+  
+  const trimmedUrl = url.trim().toLowerCase();
+  
+  // Accept common formats
+  const validDomains = [
+    'api-us1.com',
+    'activehosted.com',
+    'activecampaign.com'
+  ];
+  
+  // Check for any valid domain
+  return validDomains.some(domain => trimmedUrl.includes(domain));
 };

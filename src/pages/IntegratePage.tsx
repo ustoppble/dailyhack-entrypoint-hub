@@ -14,18 +14,24 @@ import { validateUserCredentials, verifyActiveCampaignCredentials, updateActiveC
 import { useAuth } from '@/contexts/AuthContext';
 import { validateActiveCampaignUrl } from '@/lib/validation';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-const formSchema = z.object({
+const authFormSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
-  apiUrl: z.string().url({ message: "Valid URL is required" })
+});
+
+const integrationFormSchema = z.object({
+  apiUrl: z.string()
+    .min(1, { message: "API URL is required" })
     .refine(url => validateActiveCampaignUrl(url), {
-      message: "API URL must be a valid ActiveCampaign URL"
+      message: "API URL must be a valid ActiveCampaign URL (e.g., youraccount.api-us1.com or youraccount.activehosted.com)"
     }),
   apiToken: z.string().min(5, { message: "API token is required" }),
 });
 
-type IntegrationFormValues = z.infer<typeof formSchema>;
+type AuthFormValues = z.infer<typeof authFormSchema>;
+type IntegrationFormValues = z.infer<typeof integrationFormSchema>;
 
 const IntegratePage = () => {
   const { user, setUser } = useAuth();
@@ -34,54 +40,97 @@ const IntegratePage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(!!user);
 
-  const form = useForm<IntegrationFormValues>({
-    resolver: zodResolver(formSchema),
+  const authForm = useForm<AuthFormValues>({
+    resolver: zodResolver(authFormSchema),
     defaultValues: {
       email: user?.email || '',
       password: '',
+    },
+  });
+
+  const integrationForm = useForm<IntegrationFormValues>({
+    resolver: zodResolver(integrationFormSchema),
+    defaultValues: {
       apiUrl: '',
       apiToken: '',
     },
   });
 
-  const onSubmit = async (data: IntegrationFormValues) => {
+  const handleAuthSubmit = async (data: AuthFormValues) => {
     setIsLoading(true);
     setErrorMessage('');
     
     try {
-      console.log('Form submitted with data:', { ...data, apiToken: '***hidden***' });
+      console.log('Auth form submitted with data:', { ...data, password: '***hidden***' });
       
-      // First verify user credentials if not authenticated
-      if (!user) {
-        console.log('No user in context, authenticating...');
-        const authenticatedUser = await validateUserCredentials(data.email, data.password);
-        
-        if (!authenticatedUser) {
-          setErrorMessage('Invalid email or password');
-          toast({
-            title: "Authentication failed",
-            description: "Invalid email or password.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('User authenticated successfully');
-        setUser(authenticatedUser);
+      const authenticatedUser = await validateUserCredentials(data.email, data.password);
+      
+      if (!authenticatedUser) {
+        setErrorMessage('Invalid email or password');
+        toast({
+          title: "Authentication failed",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('User authenticated successfully');
+      setUser(authenticatedUser);
+      setIsAuthenticated(true);
+      
+      toast({
+        title: "Authentication successful",
+        description: "You can now connect your ActiveCampaign account.",
+      });
+      
+    } catch (error: any) {
+      console.error('Authentication error:', error);
+      setErrorMessage(error.message || "An unexpected error occurred");
+      toast({
+        title: "Authentication failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIntegrationSubmit = async (data: IntegrationFormValues) => {
+    setIsLoading(true);
+    setIsVerifying(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    
+    try {
+      console.log('Integration form submitted with data:', { ...data, apiToken: '***hidden***' });
+      
+      if (!user && !isAuthenticated) {
+        setErrorMessage('You must be authenticated to connect your ActiveCampaign account');
+        toast({
+          title: "Authentication required",
+          description: "Please log in first.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        setIsVerifying(false);
+        return;
       }
       
       // Verify ActiveCampaign credentials
-      setIsVerifying(true);
       console.log('Verifying ActiveCampaign credentials...');
-      const isValidAC = await verifyActiveCampaignCredentials(data.apiUrl, data.apiToken);
+      const verificationResult = await verifyActiveCampaignCredentials(data.apiUrl, data.apiToken);
       
-      if (!isValidAC) {
-        setErrorMessage('ActiveCampaign verification failed. Please check your API URL and token.');
+      if (!verificationResult.success) {
+        setErrorMessage(`ActiveCampaign verification failed: ${verificationResult.message || 'Unknown error'}`);
         toast({
           title: "ActiveCampaign verification failed",
-          description: "Please check your API URL and token.",
+          description: verificationResult.message || "Please check your API URL and token.",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -90,11 +139,12 @@ const IntegratePage = () => {
       }
       
       console.log('ActiveCampaign credentials verified successfully');
+      setSuccessMessage('ActiveCampaign credentials verified successfully');
       
       // Update integration details
       console.log('Updating integration details...');
       const success = await updateActiveCampaignIntegration({
-        email: data.email,
+        email: user?.email || authForm.getValues('email'),
         apiUrl: data.apiUrl,
         apiToken: data.apiToken,
       });
@@ -142,39 +192,110 @@ const IntegratePage = () => {
           </CardHeader>
           <CardContent>
             {errorMessage && (
-              <div className="mb-4 p-3 border border-red-300 bg-red-50 text-red-800 rounded-md flex items-start">
-                <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-                <p className="text-sm">{errorMessage}</p>
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
             )}
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {!user && (
-                  <>
+            {successMessage && (
+              <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>{successMessage}</AlertDescription>
+              </Alert>
+            )}
+            
+            {!isAuthenticated && !user ? (
+              <Form {...authForm}>
+                <form onSubmit={authForm.handleSubmit(handleAuthSubmit)} className="space-y-4">
+                  <div className="space-y-4">
+                    <FormField
+                      control={authForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="john@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={authForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="******" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Authenticating...
+                      </>
+                    ) : (
+                      "Log In"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            ) : (
+              <>
+                {user && (
+                  <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded-md">
+                    <p className="text-sm">Logged in as: <strong>{user.email}</strong></p>
+                  </div>
+                )}
+                
+                <Separator className="my-4" />
+                
+                <Form {...integrationForm}>
+                  <form onSubmit={integrationForm.handleSubmit(handleIntegrationSubmit)} className="space-y-4">
                     <div className="space-y-4">
                       <FormField
-                        control={form.control}
-                        name="email"
+                        control={integrationForm.control}
+                        name="apiUrl"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
+                            <FormLabel>ActiveCampaign API URL</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} />
+                              <Input 
+                                placeholder="https://your-account.api-us1.com" 
+                                {...field} 
+                              />
                             </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Format: https://your-account.api-us1.com or https://your-account.activehosted.com
+                            </p>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
                       <FormField
-                        control={form.control}
-                        name="password"
+                        control={integrationForm.control}
+                        name="apiToken"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Password</FormLabel>
+                            <FormLabel>ActiveCampaign API Token</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="******" {...field} />
+                              <Input 
+                                type="password"
+                                placeholder="Your API token" 
+                                {...field} 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -182,62 +303,20 @@ const IntegratePage = () => {
                       />
                     </div>
                     
-                    <Separator className="my-4" />
-                  </>
-                )}
-                
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="apiUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ActiveCampaign API URL</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://your-account.api-us1.com" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Format: https://your-account.api-us1.com
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="apiToken"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ActiveCampaign API Token</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="password"
-                            placeholder="Your API token" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {isVerifying ? "Verifying..." : "Connecting..."}
-                    </>
-                  ) : (
-                    "Connect Account"
-                  )}
-                </Button>
-              </form>
-            </Form>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {isVerifying ? "Verifying..." : "Connecting..."}
+                        </>
+                      ) : (
+                        "Connect Account"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </>
+            )}
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-gray-500">

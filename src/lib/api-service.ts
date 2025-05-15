@@ -122,29 +122,69 @@ export const validateUserCredentials = async (email: string, password: string): 
 export const verifyActiveCampaignCredentials = async (
   apiUrl: string,
   apiToken: string
-): Promise<boolean> => {
+): Promise<{ success: boolean; message?: string }> => {
   try {
     console.log('Verifying ActiveCampaign credentials for URL:', apiUrl);
-    // Make sure the URL is valid by adding /api/3/users if not already present
-    const url = apiUrl.endsWith('/') ? `${apiUrl}api/3/users` : `${apiUrl}/api/3/users`;
+    
+    // Format API URL correctly - endpoint should be /api/3/users/me
+    let baseUrl = apiUrl;
+    
+    // Clean up URL format if needed
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    
+    // If URL contains activehosted.com, convert to api-us1.com format
+    if (baseUrl.includes('activehosted.com')) {
+      const accountName = baseUrl.split('.')[0].split('//')[1];
+      baseUrl = `https://${accountName}.api-us1.com`;
+    }
+    
+    const endpoint = '/api/3/users/me';
+    const url = `${baseUrl}${endpoint}`;
     
     console.log('Making API request to:', url);
+    console.log('Using API token:', apiToken.substring(0, 5) + '...');
+    
     const response = await axios.get(url, {
       headers: {
         'Api-Token': apiToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
+      timeout: 10000 // 10 second timeout
     });
     
     console.log('ActiveCampaign API response status:', response.status);
-    return response.status === 200;
+    return { 
+      success: response.status === 200,
+      message: 'Connection successful'
+    };
   } catch (error) {
     console.error('ActiveCampaign verification error:', error);
+    
     // More detailed error message
+    let errorMessage = 'Failed to connect to ActiveCampaign';
+    
     if (axios.isAxiosError(error)) {
       console.error('Status:', error.response?.status);
       console.error('Data:', error.response?.data);
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Connection timed out. Please check your API URL.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Invalid API token. Please check your credentials.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'API URL is incorrect or endpoint not found.';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
     }
-    return false;
+    
+    return { 
+      success: false,
+      message: errorMessage
+    };
   }
 };
 
