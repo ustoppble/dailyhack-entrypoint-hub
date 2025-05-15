@@ -116,9 +116,10 @@ const EmailPlannerPage = () => {
       
       setSuccess(successMessage);
       
+      // Keep the toast notification but remove the duplicate toast message
       toast({
         title: "Success!",
-        description: successMessage,
+        description: "Your email campaign has been created",
       });
       
     } catch (err: any) {
