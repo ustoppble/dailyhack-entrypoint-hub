@@ -50,6 +50,40 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 };
 
 /**
+ * Fetch connected lists from Airtable
+ */
+export const fetchConnectedLists = async (agentName: string): Promise<string[]> => {
+  try {
+    console.log('Fetching connected lists for agent:', agentName);
+    
+    // Query Airtable for lists with matching activehosted field
+    const filterByFormula = encodeURIComponent(`{activehosted}='${agentName}'`);
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}?filterByFormula=${filterByFormula}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Connected lists response:', response.data);
+    
+    // Extract list names from the response
+    if (response.data && response.data.records) {
+      return response.data.records.map((record: any) => record.fields.list_name);
+    }
+    
+    return [];
+  } catch (error: any) {
+    console.error('Error fetching connected lists:', error);
+    // Return empty array on error, don't throw
+    return [];
+  }
+};
+
+/**
  * Save selected lists to Airtable with all required fields
  */
 export const saveSelectedLists = async (userId: string, selectedLists: EmailList[], agentName?: string): Promise<boolean> => {

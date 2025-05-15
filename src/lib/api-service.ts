@@ -6,4 +6,4 @@ export * from './api/integration';
 export * from './api/client';
 export * from './api/constants';
 // Export lists functionality but avoid EmailList type duplication
-export { fetchEmailLists, saveSelectedLists } from './api/lists';
+export { fetchEmailLists, saveSelectedLists, fetchConnectedLists } from './api/lists';

@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
-import { fetchEmailLists, saveSelectedLists } from '@/lib/api/lists';
+import { fetchEmailLists, saveSelectedLists, fetchConnectedLists } from '@/lib/api/lists';
 import { airtableIntegrationApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { List, ListCheck, Users, BookOpen } from 'lucide-react';
+import { List, ListCheck, Users, BookOpen, CheckCircle } from 'lucide-react';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -21,6 +22,7 @@ const AgentListsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [selectedLists, setSelectedLists] = useState<EmailList[]>([]);
+  const [connectedLists, setConnectedLists] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +56,10 @@ const AgentListsPage = () => {
         const apiUrl = `https://${agentName}.api-us1.com`;
         
         console.log('Using API URL:', apiUrl);
+        
+        // Fetch connected lists for this agent from Airtable
+        const connectedListsData = await fetchConnectedLists(agentName);
+        setConnectedLists(connectedListsData);
         
         // Use the fetchEmailLists function with the correct agent credentials
         const listsData = await fetchEmailLists(apiUrl, apiToken);
@@ -110,6 +116,12 @@ const AgentListsPage = () => {
         description: `Imported ${selectedLists.length} list(s) for ${agentName}`,
       });
       
+      // Update connected lists
+      setConnectedLists(prev => [
+        ...prev,
+        ...selectedLists.map(list => list.name)
+      ]);
+      
       // Clear selections after successful import
       setSelectedLists([]);
       
@@ -129,6 +141,11 @@ const AgentListsPage = () => {
     }
   };
 
+  // Check if a list is already connected
+  const isListConnected = (listName: string) => {
+    return connectedLists.includes(listName);
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -144,7 +161,7 @@ const AgentListsPage = () => {
           <h1 className="text-3xl font-bold">{agentName}</h1>
           <Link to={`/agents/${agentName}/knowledge`}>
             <Button variant="outline" className="gap-2">
-              <BookOpen className="h-4 w-4" /> Base de Conhecimento
+              <BookOpen className="h-4 w-4" /> Knowledge Base
             </Button>
           </Link>
         </div>
@@ -152,7 +169,7 @@ const AgentListsPage = () => {
         <Card className="shadow-md">
           <CardHeader className="border-b">
             <CardTitle className="text-3xl font-bold">
-              Listas
+              Lists
             </CardTitle>
             <p className="text-gray-500 mt-2">
               Select the lists you want to import
@@ -172,14 +189,22 @@ const AgentListsPage = () => {
                         checked={selectedLists.some(item => item.name === list.name)}
                         onCheckedChange={() => handleCheckboxChange(list)}
                         className="mt-1"
+                        disabled={isListConnected(list.name)}
                       />
                       <div className="flex-1 ml-2">
-                        <label 
-                          htmlFor={`list-${list.name}`} 
-                          className="font-medium cursor-pointer flex items-center"
-                        >
-                          <span className="text-lg">{list.name}</span>
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label 
+                            htmlFor={`list-${list.name}`} 
+                            className="font-medium cursor-pointer flex items-center"
+                          >
+                            <span className="text-lg">{list.name}</span>
+                          </label>
+                          {isListConnected(list.name) && (
+                            <Badge variant="secondary" className="flex items-center gap-1 ml-2">
+                              <CheckCircle className="h-3 w-3" /> Connected
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-600 mt-1">
                           <span className="inline-flex items-center mr-4">
                             <Users className="h-4 w-4 mr-1" /> 
