@@ -2,31 +2,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { Form } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { 
   verifyActiveCampaignCredentials, 
   updateActiveCampaignIntegration,
   formatApiUrl 
 } from '@/lib/api/integration';
-import { validateActiveCampaignUrl } from '@/lib/validation';
 import { useAuth } from '@/contexts/AuthContext';
-
-const integrationFormSchema = z.object({
-  apiUrl: z.string()
-    .min(1, { message: "API URL is required" })
-    .refine(url => validateActiveCampaignUrl(url), {
-      message: "API URL must be a valid ActiveCampaign URL (e.g., youraccount.api-us1.com or youraccount.activehosted.com)"
-    }),
-  apiToken: z.string().min(5, { message: "API token is required" }),
-});
-
-type IntegrationFormValues = z.infer<typeof integrationFormSchema>;
+import FormFields, { integrationFormSchema, IntegrationFormValues } from './FormFields';
+import FormActions from './FormActions';
+import FormNotice from './FormNotice';
 
 interface IntegrationFormProps {
   onError?: (message: string, isNetworkError: boolean, url?: string, details?: {status?: number, data?: any}) => void;
@@ -161,93 +148,15 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="apiUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>ActiveCampaign API URL</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="https://your-account.api-us1.com" 
-                    {...field} 
-                  />
-                </FormControl>
-                <p className="text-xs text-gray-500 mt-1">
-                  Format: https://your-account.api-us1.com or https://your-account.activehosted.com
-                </p>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="apiToken"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>ActiveCampaign API Token</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="password"
-                    placeholder="Your API token" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-4">
-          <h4 className="font-medium mb-1">🔄 Usando n8n para verificação</h4>
-          <p className="mb-2">
-            Esta integração utiliza um webhook n8n para verificar as credenciais 
-            do ActiveCampaign, contornando problemas de CORS no navegador.
-          </p>
-        </div>
-        
-        <div className="flex flex-col space-y-2">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isVerifying ? "Verificando..." : "Conectando..."}
-              </>
-            ) : (
-              "Conectar Conta"
-            )}
-          </Button>
-          
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full" 
-            onClick={() => window.open('https://www.activecampaign.com/login', '_blank')}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Acessar ActiveCampaign
-          </Button>
-          
-          {lastAttemptedData && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleRetry}
-              disabled={isRetrying || isLoading}
-            >
-              {isRetrying ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Tentar Novamente
-            </Button>
-          )}
-        </div>
+        <FormFields form={form} />
+        <FormNotice />
+        <FormActions
+          isLoading={isLoading}
+          isVerifying={isVerifying}
+          isRetrying={isRetrying}
+          hasAttempted={!!lastAttemptedData}
+          onRetry={handleRetry}
+        />
       </form>
     </Form>
   );
