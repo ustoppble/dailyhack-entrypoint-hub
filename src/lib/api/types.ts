@@ -31,7 +31,7 @@ export interface VerificationResult {
 export interface EmailList {
   name: string;
   sender_reminder: string;
-  Insight: string;
+  insight: string; // Changed from Insight to insight (lowercase)
   id?: string;
   active_subscribers: string;
   selected?: boolean;

@@ -25,7 +25,11 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
     console.log('n8n webhook response for lists:', response.data);
     
     if (response.data && response.data.output && Array.isArray(response.data.output)) {
-      return response.data.output;
+      return response.data.output.map((item: any) => ({
+        ...item,
+        // Map the field with the correct case to our lowercase property
+        insight: item.Insight || item.insight || ''
+      }));
     }
     
     throw new Error('Invalid response format from webhook');
@@ -61,7 +65,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
         fields: {
           list_name: list.name,
           list_description: list.sender_reminder || '',
-          list_insight: list.Insight || '',
+          list_insight: list.insight || '', // Using lowercase 'insight' to match our interface
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',

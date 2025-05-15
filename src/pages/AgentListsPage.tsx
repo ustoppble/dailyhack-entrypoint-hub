@@ -174,9 +174,9 @@ const AgentListsPage = () => {
                         <p className="text-gray-500 mt-1 text-sm">
                           <strong>Description:</strong> {list.sender_reminder}
                         </p>
-                        {list.Insight && (
+                        {list.insight && (
                           <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
-                            <strong>Insight:</strong> {list.Insight}
+                            <strong>Insight:</strong> {list.insight}
                           </div>
                         )}
                       </div>
