@@ -32,6 +32,7 @@ export interface EmailList {
   name: string;
   sender_reminder: string;
   Insight: string;
+  id?: string;
   active_subscribers: string;
   selected?: boolean;
 }

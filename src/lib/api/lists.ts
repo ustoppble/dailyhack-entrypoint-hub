@@ -48,22 +48,23 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 /**
  * Save selected lists to Airtable with all required fields
  */
-export const saveSelectedLists = async (userId: string, selectedLists: EmailList[]): Promise<boolean> => {
+export const saveSelectedLists = async (userId: string, selectedLists: EmailList[], agentName?: string): Promise<boolean> => {
   try {
     console.log('Saving selected lists for user:', userId, selectedLists);
     
-    // Create records for Airtable
+    // Create records for Airtable with the correct column names
     const records = selectedLists.map(list => {
-      // Convert active_subscribers to a string to avoid type issues
+      // Make sure all values are strings
       const subscribersCount = list.active_subscribers ? String(list.active_subscribers).trim() : "0";
       
       return {
         fields: {
-          Name: list.name,
-          description: list.sender_reminder || '',
-          Insight: list.Insight || '',
-          // Ensure leads is sent as a string instead of trying to parse it as an integer
-          leads: subscribersCount,
+          list_name: list.name,
+          list_description: list.sender_reminder || '',
+          list_insight: list.Insight || '',
+          list_leads: subscribersCount,
+          list_id: list.id || '',
+          activehosted: agentName || '',
           id_users: userId
         }
       };

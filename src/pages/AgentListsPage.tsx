@@ -101,7 +101,8 @@ const AgentListsPage = () => {
         throw new Error('You need to be logged in to perform this action');
       }
       
-      await saveSelectedLists(user.id, selectedLists);
+      // Pass the agentName to the saveSelectedLists function
+      await saveSelectedLists(user.id, selectedLists, agentName);
       
       toast({
         title: "Lists imported successfully",
