@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
@@ -43,7 +42,6 @@ const EmailPlannerPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [emailContent, setEmailContent] = useState<string | null>(null);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -96,7 +94,6 @@ const EmailPlannerPage = () => {
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
-    setEmailContent(null);
     
     try {
       // Updated webhook URL as specified by the user
@@ -114,49 +111,27 @@ const EmailPlannerPage = () => {
       const response = await axios.post(webhookUrl, requestData);
       console.log('Webhook response:', response.data);
       
-      // Generate demo email content based on form inputs
-      const generatedEmail = generateEmailContent(values);
-      setEmailContent(generatedEmail);
-      
       const emailCountText = values.emailCount === "autopilot" ? "Autopilot" : `${values.emailCount} email(s)`;
-      setSuccess(`Email draft successfully created for ${emailCountText}!`);
+      const successMessage = `Your email campaign is now in production! ${emailCountText} will be sent to ${values.selectedLists.join(", ")}.`;
+      
+      setSuccess(successMessage);
       
       toast({
         title: "Success!",
-        description: `Email draft successfully created for ${emailCountText}!`,
+        description: successMessage,
       });
       
     } catch (err: any) {
-      console.error('Error generating email:', err);
-      setError(err.message || "An error occurred while processing your request");
+      console.error('Error setting up email campaign:', err);
+      setError(err.message || "An error occurred while setting up your email campaign");
       toast({
-        title: "Error generating email",
-        description: err.message || "An error occurred while processing your request",
+        title: "Error setting up email campaign",
+        description: err.message || "An error occurred while setting up your email campaign",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  // Helper function to generate sample email content
-  const generateEmailContent = (values: EmailPlannerFormValues): string => {
-    const { mainGoal, emailCount, selectedLists } = values;
-    
-    const emailCountText = emailCount === "autopilot" ? "Autopilot mode" : `Email 1 of ${emailCount}`;
-    
-    const content = `
-To: ${selectedLists.join(", ")}
-
-${mainGoal}
-
-${emailCountText}
-
-Best regards,
-The ${agentName} Team
-    `;
-        
-    return content.trim();
   };
   
   return (
@@ -194,170 +169,172 @@ The ${agentName} Team
         
         <StatusMessage error={error} success={success} />
         
-        <Card className="shadow-md mb-6">
-          <CardHeader className="border-b">
-            <CardTitle className="text-3xl font-bold">Email Planner</CardTitle>
-            <CardDescription>
-              Plan and draft email campaigns for {agentName}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <Alert className="mb-6">
-              <AlertDescription>
-                Provide information about your email campaign to generate a draft. You can include any details you need in the main goal field.
-              </AlertDescription>
-            </Alert>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* List selection with multiple checkbox selection */}
-                <FormField
-                  control={form.control}
-                  name="selectedLists"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Select Lists</FormLabel>
-                      <div className="border rounded-md p-4 space-y-3">
-                        {isLoading ? (
-                          <p className="text-center py-2">Loading lists...</p>
-                        ) : lists.length > 0 ? (
-                          lists.map((list) => (
-                            <FormField
-                              key={list}
-                              control={form.control}
-                              name="selectedLists"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={list}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(list)}
-                                        onCheckedChange={(checked) => {
-                                          const updatedLists = checked
-                                            ? [...field.value, list]
-                                            : field.value?.filter(
-                                                (value) => value !== list
-                                              );
-                                          field.onChange(updatedLists);
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer">
-                                      {list}
-                                    </FormLabel>
-                                  </FormItem>
-                                );
-                              }}
-                            />
-                          ))
-                        ) : (
-                          <div className="text-center py-2">
-                            <p className="text-gray-500">No lists connected to this agent</p>
-                            <Button 
-                              variant="link" 
-                              className="mt-1" 
-                              onClick={() => navigate(`/agents/${agentName}/lists`)}
-                            >
-                              Go to Lists
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="emailCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Emails to Plan</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="How many emails do you want to plan?" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1">1 Email</SelectItem>
-                          <SelectItem value="3">3 Emails</SelectItem>
-                          <SelectItem value="5">5 Emails</SelectItem>
-                          <SelectItem value="7">7 Emails</SelectItem>
-                          <SelectItem value="10">10 Emails</SelectItem>
-                          <SelectItem value="autopilot">Autopilot</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="mainGoal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Main Goal</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="What is the main goal of this email? Include all necessary information here..."
-                          className="min-h-[200px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="flex justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="px-8"
-                  >
-                    {isSubmitting ? (
-                      'Generating...'
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" /> Generate Email Draft
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-        
-        {emailContent && (
-          <Card className="shadow-md">
+        {success ? (
+          <Card className="shadow-md mb-6">
             <CardHeader className="border-b bg-green-50">
               <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-xl font-bold">Generated Email Draft</CardTitle>
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-xl font-bold">Email Campaign Created</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="bg-white border rounded-md p-6 whitespace-pre-wrap font-mono text-sm">
-                {emailContent}
-              </div>
-              <div className="mt-6 flex justify-end">
-                <Button variant="outline" className="mr-2">
-                  Edit Draft
+              <Alert className="mb-6 bg-green-50 text-green-800 border-green-200">
+                <AlertDescription className="text-center py-4">
+                  {success}
+                </AlertDescription>
+              </Alert>
+              <div className="mt-6 flex justify-center">
+                <Button 
+                  onClick={() => navigate(`/agents/${agentName}/central`)}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back to Central
                 </Button>
-                <Button>
-                  <Send className="mr-2 h-4 w-4" /> Save Draft
-                </Button>
               </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="shadow-md mb-6">
+            <CardHeader className="border-b">
+              <CardTitle className="text-3xl font-bold">Email Planner</CardTitle>
+              <CardDescription>
+                Plan and draft email campaigns for {agentName}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Alert className="mb-6">
+                <AlertDescription>
+                  Provide information about your email campaign to generate a draft. You can include any details you need in the main goal field.
+                </AlertDescription>
+              </Alert>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* List selection with multiple checkbox selection */}
+                  <FormField
+                    control={form.control}
+                    name="selectedLists"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Select Lists</FormLabel>
+                        <div className="border rounded-md p-4 space-y-3">
+                          {isLoading ? (
+                            <p className="text-center py-2">Loading lists...</p>
+                          ) : lists.length > 0 ? (
+                            lists.map((list) => (
+                              <FormField
+                                key={list}
+                                control={form.control}
+                                name="selectedLists"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={list}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(list)}
+                                          onCheckedChange={(checked) => {
+                                            const updatedLists = checked
+                                              ? [...field.value, list]
+                                              : field.value?.filter(
+                                                  (value) => value !== list
+                                                );
+                                            field.onChange(updatedLists);
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal cursor-pointer">
+                                        {list}
+                                      </FormLabel>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            ))
+                          ) : (
+                            <div className="text-center py-2">
+                              <p className="text-gray-500">No lists connected to this agent</p>
+                              <Button 
+                                variant="link" 
+                                className="mt-1" 
+                                onClick={() => navigate(`/agents/${agentName}/lists`)}
+                              >
+                                Go to Lists
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="emailCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of Emails to Plan</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="How many emails do you want to plan?" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1">1 Email</SelectItem>
+                            <SelectItem value="3">3 Emails</SelectItem>
+                            <SelectItem value="5">5 Emails</SelectItem>
+                            <SelectItem value="7">7 Emails</SelectItem>
+                            <SelectItem value="10">10 Emails</SelectItem>
+                            <SelectItem value="autopilot">Autopilot</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="mainGoal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Main Goal</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="What is the main goal of this email? Include all necessary information here..."
+                            className="min-h-[200px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="px-8"
+                    >
+                      {isSubmitting ? (
+                        'Processing...'
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" /> Create Email Campaign
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
         )}
