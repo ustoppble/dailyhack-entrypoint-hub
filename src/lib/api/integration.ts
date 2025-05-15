@@ -165,8 +165,8 @@ export const updateActiveCampaignIntegration = async (
         records: [
           {
             fields: {
-              // Use the correct field names according to your Airtable schema
-              user_id: integration.userId,
+              // Use the correct field name as specified by the user: id_users instead of user_id
+              id_users: integration.userId,
               api: accountName,
               token: integration.apiToken,
               DateCreated: now
