@@ -15,6 +15,7 @@ const IntegratePage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!user);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [isNetworkError, setIsNetworkError] = useState(false);
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
@@ -32,7 +33,11 @@ const IntegratePage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <StatusMessage error={errorMessage} success={successMessage} />
+            <StatusMessage 
+              error={errorMessage} 
+              success={successMessage} 
+              isNetworkError={isNetworkError} 
+            />
             
             {!isAuthenticated && !user ? (
               <AuthForm onAuthSuccess={handleAuthSuccess} />

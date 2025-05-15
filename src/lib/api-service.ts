@@ -146,44 +146,59 @@ export const verifyActiveCampaignCredentials = async (
     console.log('Making API request to:', url);
     console.log('Using API token:', apiToken.substring(0, 5) + '...');
     
-    const response = await axios.get(url, {
-      headers: {
-        'Api-Token': apiToken,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout: 10000 // 10 second timeout
-    });
-    
-    console.log('ActiveCampaign API response status:', response.status);
-    return { 
-      success: response.status === 200,
-      message: 'Connection successful'
-    };
-  } catch (error) {
-    console.error('ActiveCampaign verification error:', error);
-    
-    // More detailed error message
-    let errorMessage = 'Failed to connect to ActiveCampaign';
-    
-    if (axios.isAxiosError(error)) {
-      console.error('Status:', error.response?.status);
-      console.error('Data:', error.response?.data);
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'Api-Token': apiToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 15000 // 15 second timeout
+      });
       
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Connection timed out. Please check your API URL.';
-      } else if (error.response?.status === 401) {
-        errorMessage = 'Invalid API token. Please check your credentials.';
-      } else if (error.response?.status === 404) {
-        errorMessage = 'API URL is incorrect or endpoint not found.';
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
+      console.log('ActiveCampaign API response status:', response.status);
+      return { 
+        success: response.status === 200,
+        message: 'Connection successful'
+      };
+    } catch (axiosError: any) {
+      console.error('ActiveCampaign API request error:', axiosError);
+      
+      // More detailed error handling for axios errors
+      if (axiosError.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Response data:', axiosError.response.data);
+        console.error('Response status:', axiosError.response.status);
+        
+        if (axiosError.response.status === 401) {
+          return { success: false, message: 'Invalid API token. Please check your credentials.' };
+        } else if (axiosError.response.status === 404) {
+          return { success: false, message: 'API URL is incorrect or endpoint not found.' };
+        } else {
+          return { 
+            success: false, 
+            message: `Server error: ${axiosError.response.status} - ${axiosError.response.data?.message || 'Unknown error'}` 
+          };
+        }
+      } else if (axiosError.request) {
+        // The request was made but no response was received
+        console.error('No response received:', axiosError.request);
+        return { 
+          success: false, 
+          message: 'No response received from ActiveCampaign. Please check your URL and internet connection.' 
+        };
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', axiosError.message);
+        return { success: false, message: `Error: ${axiosError.message}` };
       }
     }
-    
+  } catch (error: any) {
+    console.error('ActiveCampaign verification general error:', error);
     return { 
       success: false,
-      message: errorMessage
+      message: error.message || 'An unexpected error occurred during verification.'
     };
   }
 };
@@ -192,7 +207,12 @@ export const updateActiveCampaignIntegration = async (
   integration: ACIntegration
 ): Promise<boolean> => {
   try {
-    console.log('Updating integration with:', integration);
+    console.log('Updating integration with:', {
+      email: integration.email,
+      apiUrl: integration.apiUrl,
+      apiToken: integration.apiToken.substring(0, 5) + '***'
+    });
+    
     // Extract account name from API URL
     const apiUrlParts = integration.apiUrl.split('//');
     const accountName = apiUrlParts[1]?.split('.')[0] || 'unknown';
@@ -200,22 +220,38 @@ export const updateActiveCampaignIntegration = async (
     
     // Create new record in the integration table
     const now = new Date().toISOString();
-    const response = await airtableIntegrationApi.post('', {
-      records: [
-        {
-          fields: {
-            api: accountName,
-            token: integration.apiToken,
-            DateCreated: now
-          },
-        },
-      ],
-    });
     
-    console.log('Integration update response:', response.data);
-    return response.data.records && response.data.records.length > 0;
-  } catch (error) {
+    try {
+      const response = await airtableIntegrationApi.post('', {
+        records: [
+          {
+            fields: {
+              email: integration.email,
+              api: accountName,
+              token: integration.apiToken,
+              DateCreated: now
+            },
+          },
+        ],
+      });
+      
+      console.log('Integration update response:', response.data);
+      return response.data.records && response.data.records.length > 0;
+    } catch (airtableError: any) {
+      console.error('Airtable integration error:', airtableError);
+      
+      if (airtableError.response) {
+        console.error('Airtable error response:', airtableError.response.data);
+        throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
+      } else if (airtableError.request) {
+        throw new Error('Network error: Could not connect to our database. Please check your internet connection.');
+      } else {
+        throw airtableError;
+      }
+    }
+  } catch (error: any) {
     console.error('Integration update error:', error);
     throw error;
   }
 };
+
