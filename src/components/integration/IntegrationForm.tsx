@@ -69,7 +69,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
         apiToken: data.apiToken.substring(0, 5) + '***' 
       });
       
-      if (!user) {
+      if (!user || !user.id) {
         const errorMsg = 'You must be authenticated to connect your ActiveCampaign account';
         onError?.(errorMsg, false);
         toast({
@@ -114,7 +114,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       // Update integration details
       console.log('Updating integration details...');
       const success = await updateActiveCampaignIntegration({
-        email: user.email,
+        userId: user.id,
         apiUrl: formattedApiUrl,
         apiToken: data.apiToken,
       });

@@ -11,7 +11,7 @@ export interface User {
 
 // ActiveCampaign integration interface
 export interface ACIntegration {
-  email: string;
+  userId: string;
   apiUrl: string;
   apiToken: string;
 }

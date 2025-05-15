@@ -30,6 +30,27 @@ export const formatApiUrl = (url: string): string => {
 };
 
 /**
+ * Extract account name from ActiveCampaign API URL
+ * Example: https://gestordenewsletter.api-us1.com -> gestordenewsletter
+ */
+export const extractAccountName = (url: string): string => {
+  // Format the URL first
+  const formattedUrl = formatApiUrl(url);
+  
+  // Extract account name from the URL
+  try {
+    const urlParts = formattedUrl.split('//');
+    if (urlParts.length < 2) return 'unknown';
+    
+    const domain = urlParts[1].split('.')[0];
+    return domain;
+  } catch (error) {
+    console.error('Error extracting account name:', error);
+    return 'unknown';
+  }
+};
+
+/**
  * N8n webhook URL for ActiveCampaign verification
  */
 const N8N_WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/d935a725-80e0-405e-8a15-74554dbbc1bd';
@@ -127,17 +148,16 @@ export const updateActiveCampaignIntegration = async (
 ): Promise<boolean> => {
   try {
     console.log('Updating integration with:', {
-      email: integration.email,
+      userId: integration.userId,
       apiUrl: integration.apiUrl,
       apiToken: integration.apiToken.substring(0, 5) + '***'
     });
     
     // Extract account name from API URL
-    const apiUrlParts = integration.apiUrl.split('//');
-    const accountName = apiUrlParts[1]?.split('.')[0] || 'unknown';
+    const accountName = extractAccountName(integration.apiUrl);
     console.log('Extracted account name:', accountName);
     
-    // Create new record in the integration table
+    // Create new record in the integration table with correct field names
     const now = new Date().toISOString();
     
     try {
@@ -145,7 +165,8 @@ export const updateActiveCampaignIntegration = async (
         records: [
           {
             fields: {
-              email: integration.email,
+              // Use the correct field names according to your Airtable schema
+              user_id: integration.userId,
               api: accountName,
               token: integration.apiToken,
               DateCreated: now
