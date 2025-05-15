@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
-import axios from 'axios';
+import { fetchEmailLists } from '@/lib/api/lists';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -31,21 +31,9 @@ const AgentListsPage = () => {
         
         console.log('Fetching lists for agent:', agentName);
         
-        // Webhook URL for fetching lists with updated URL format and POST request
-        const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
-        
-        const response = await axios.post(webhookUrl, {
-          api: apiUrl,
-          token: apiToken
-        });
-        
-        console.log('Lists response:', response.data);
-        
-        if (response.data && response.data.output && Array.isArray(response.data.output)) {
-          setLists(response.data.output);
-        } else {
-          throw new Error('Invalid response format');
-        }
+        // Use the fetchEmailLists function that now makes a GET request
+        const listsData = await fetchEmailLists(apiUrl, apiToken);
+        setLists(listsData);
       } catch (error: any) {
         console.error('Error fetching lists:', error);
         setError(error.message || 'Failed to load email lists');

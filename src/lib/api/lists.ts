@@ -11,11 +11,12 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
   try {
     console.log('Fetching ActiveCampaign lists for URL:', apiUrl);
     
-    // Using POST request with body parameters instead of query parameters
-    const response = await axios.post(WEBHOOK_URL, {
-      api: apiUrl,
-      token: apiToken
-    }, {
+    // Using GET request with query parameters instead of POST
+    const response = await axios.get(WEBHOOK_URL, {
+      params: {
+        api: apiUrl,
+        token: apiToken
+      },
       timeout: 15000, // 15 second timeout
     });
     
@@ -43,7 +44,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 };
 
 /**
- * Save selected email lists to user preferences
+ * Save selected lists to user preferences
  */
 export const saveSelectedLists = async (userId: string, selectedLists: string[]): Promise<boolean> => {
   try {
