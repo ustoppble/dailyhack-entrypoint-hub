@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [selectedLists, setSelectedLists] = useState<EmailList[]>([]);
@@ -111,6 +112,11 @@ const AgentListsPage = () => {
       
       // Clear selections after successful import
       setSelectedLists([]);
+      
+      // Navigate to the knowledge base page after successful import
+      if (agentName) {
+        navigate(`/agents/${agentName}/knowledge`);
+      }
     } catch (error: any) {
       console.error('Error importing lists:', error);
       toast({
