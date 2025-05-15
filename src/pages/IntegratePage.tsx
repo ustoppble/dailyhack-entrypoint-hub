@@ -18,17 +18,28 @@ const IntegratePage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isNetworkError, setIsNetworkError] = useState(false);
+  const [attemptedUrl, setAttemptedUrl] = useState('');
+  const [responseDetails, setResponseDetails] = useState<{status?: number, data?: any}>();
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
     setErrorMessage('');
     setIsNetworkError(false);
+    setAttemptedUrl('');
+    setResponseDetails(undefined);
     setSuccessMessage('Authentication successful! You can now connect your ActiveCampaign account.');
   };
 
-  const handleIntegrationError = (message: string, isNetwork: boolean) => {
+  const handleIntegrationError = (
+    message: string, 
+    isNetwork: boolean,
+    url?: string,
+    details?: {status?: number, data?: any}
+  ) => {
     setErrorMessage(message);
     setIsNetworkError(isNetwork);
+    setAttemptedUrl(url || '');
+    setResponseDetails(details);
     setSuccessMessage('');
     
     if (isNetwork) {
@@ -43,6 +54,8 @@ const IntegratePage = () => {
   const handleIntegrationSuccess = (message: string) => {
     setErrorMessage('');
     setIsNetworkError(false);
+    setAttemptedUrl('');
+    setResponseDetails(undefined);
     setSuccessMessage(message);
   };
 
@@ -60,7 +73,9 @@ const IntegratePage = () => {
             <StatusMessage 
               error={errorMessage} 
               success={successMessage} 
-              isNetworkError={isNetworkError} 
+              isNetworkError={isNetworkError}
+              attemptedUrl={attemptedUrl}
+              responseDetails={responseDetails} 
             />
             
             {!isAuthenticated && !user ? (

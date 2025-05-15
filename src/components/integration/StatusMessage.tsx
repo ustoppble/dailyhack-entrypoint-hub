@@ -7,9 +7,20 @@ interface StatusMessageProps {
   error?: string;
   success?: string;
   isNetworkError?: boolean;
+  attemptedUrl?: string;
+  responseDetails?: {
+    status?: number;
+    data?: any;
+  };
 }
 
-const StatusMessage = ({ error, success, isNetworkError }: StatusMessageProps) => {
+const StatusMessage = ({ 
+  error, 
+  success, 
+  isNetworkError,
+  attemptedUrl,
+  responseDetails 
+}: StatusMessageProps) => {
   if (!error && !success) return null;
   
   return (
@@ -31,9 +42,24 @@ const StatusMessage = ({ error, success, isNetworkError }: StatusMessageProps) =
                   <li>Firewall or network restrictions that might block API requests</li>
                   <li>CORS settings in your browser</li>
                 </ul>
+                {attemptedUrl && (
+                  <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto">
+                    <p>Attempted URL: {attemptedUrl}</p>
+                  </div>
+                )}
+                {responseDetails && (
+                  <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto">
+                    <p>Status: {responseDetails.status || 'N/A'}</p>
+                    {responseDetails.data && (
+                      <pre className="whitespace-pre-wrap">
+                        {JSON.stringify(responseDetails.data, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
                 <p className="mt-2">
-                  Try using a different network connection or accessing ActiveCampaign directly 
-                  to confirm their service is available.
+                  Tente usar uma conexão de rede diferente ou acessar o ActiveCampaign diretamente
+                  para confirmar que o serviço está disponível.
                 </p>
               </div>
             )}

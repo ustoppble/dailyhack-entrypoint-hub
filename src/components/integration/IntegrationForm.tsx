@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { verifyActiveCampaignCredentials, updateActiveCampaignIntegration } from '@/lib/api-service';
 import { validateActiveCampaignUrl } from '@/lib/validation';
@@ -25,7 +25,7 @@ const integrationFormSchema = z.object({
 type IntegrationFormValues = z.infer<typeof integrationFormSchema>;
 
 interface IntegrationFormProps {
-  onError?: (message: string, isNetworkError: boolean) => void;
+  onError?: (message: string, isNetworkError: boolean, url?: string, details?: {status?: number, data?: any}) => void;
   onSuccess?: (message: string) => void;
 }
 
@@ -111,7 +111,12 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       
       if (!verificationResult.success) {
         const errorMsg = `ActiveCampaign verification failed: ${verificationResult.message || 'Unknown error'}`;
-        onError?.(errorMsg, verificationResult.isNetworkError || false);
+        onError?.(
+          errorMsg, 
+          verificationResult.isNetworkError || false,
+          verificationResult.attemptedUrl,
+          verificationResult.responseDetails
+        );
         toast({
           title: "ActiveCampaign verification failed",
           description: verificationResult.message || "Please check your API URL and token.",
@@ -210,17 +215,38 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
             )}
           />
         </div>
+
+        <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-4">
+          <h4 className="font-medium mb-1">⚠️ Problemas de CORS</h4>
+          <p className="mb-2">
+            As chamadas diretas à API do ActiveCampaign podem ser bloqueadas pelo navegador devido a restrições de CORS.
+            O exemplo CURL funciona porque não está sujeito às mesmas restrições.
+          </p>
+          <p>
+            Idealmente, essas chamadas deveriam ser feitas através de um servidor backend.
+          </p>
+        </div>
         
         <div className="flex flex-col space-y-2">
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isVerifying ? "Verifying..." : "Connecting..."}
+                {isVerifying ? "Verificando..." : "Conectando..."}
               </>
             ) : (
-              "Connect Account"
+              "Conectar Conta"
             )}
+          </Button>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full" 
+            onClick={() => window.open('https://www.activecampaign.com/login', '_blank')}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Acessar ActiveCampaign
           </Button>
           
           {lastAttemptedData && (
@@ -236,7 +262,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
-              Retry Connection
+              Tentar Novamente
             </Button>
           )}
         </div>

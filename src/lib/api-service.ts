@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const AIRTABLE_API_KEY = 'patCQxJfk9ad5GpUD.1a42f0b1749856dd9739d9c8042fcd041e101e7f70c2248a857fb2997e2a9c23';
@@ -122,11 +121,20 @@ export const validateUserCredentials = async (email: string, password: string): 
 export const verifyActiveCampaignCredentials = async (
   apiUrl: string,
   apiToken: string
-): Promise<{ success: boolean; message?: string; isNetworkError?: boolean }> => {
+): Promise<{ 
+  success: boolean; 
+  message?: string; 
+  isNetworkError?: boolean; 
+  attemptedUrl?: string;
+  responseDetails?: {
+    status?: number;
+    data?: any;
+  };
+}> => {
   try {
     console.log('Verifying ActiveCampaign credentials for URL:', apiUrl);
     
-    // Format API URL correctly - endpoint should be /api/3/users/me
+    // Format API URL correctly - endpoint should be /api/3/users
     let baseUrl = apiUrl;
     
     // Clean up URL format if needed
@@ -140,14 +148,14 @@ export const verifyActiveCampaignCredentials = async (
       baseUrl = `https://${accountName}.api-us1.com`;
     }
     
-    const endpoint = '/api/3/users/me';
+    const endpoint = '/api/3/users';  // Alterando o endpoint para o que foi mostrado no exemplo CURL
     const url = `${baseUrl}${endpoint}`;
     
     console.log('Making API request to:', url);
     console.log('Using API token:', apiToken.substring(0, 5) + '...');
     
     try {
-      // Try first with direct request
+      // Try with direct request
       const response = await axios.get(url, {
         headers: {
           'Api-Token': apiToken,
@@ -155,13 +163,19 @@ export const verifyActiveCampaignCredentials = async (
           'Accept': 'application/json'
         },
         timeout: 15000, // 15 second timeout
-        withCredentials: false // Disables sending cookies with the request
       });
       
       console.log('ActiveCampaign API response status:', response.status);
+      console.log('ActiveCampaign API response data:', response.data);
+      
       return { 
         success: response.status === 200,
-        message: 'Connection successful'
+        message: 'Connection successful',
+        attemptedUrl: url,
+        responseDetails: {
+          status: response.status,
+          data: response.data
+        }
       };
     } catch (axiosError: any) {
       console.error('ActiveCampaign API request error:', axiosError);
@@ -173,16 +187,40 @@ export const verifyActiveCampaignCredentials = async (
         console.error('Response data:', axiosError.response.data);
         console.error('Response status:', axiosError.response.status);
         
-        if (axiosError.response.status === 401) {
-          return { success: false, message: 'Invalid API token. Please check your credentials.' };
-        } else if (axiosError.response.status === 404) {
-          return { success: false, message: 'API URL is incorrect or endpoint not found.' };
-        } else {
-          return { 
-            success: false, 
-            message: `Server error: ${axiosError.response.status} - ${axiosError.response.data?.message || 'Unknown error'}` 
-          };
+        let errorMessage: string;
+        
+        switch (axiosError.response.status) {
+          case 401:
+            errorMessage = 'Invalid API token. Please check your credentials.';
+            break;
+          case 402:
+            errorMessage = 'The request could not be processed due to account payment issues.';
+            break;
+          case 403:
+            errorMessage = 'Authentication failed or unauthorized access.';
+            break;
+          case 404:
+            errorMessage = 'API URL is incorrect or endpoint not found.';
+            break;
+          case 422:
+            errorMessage = 'Invalid parameters in the request.';
+            break;
+          case 429:
+            errorMessage = 'Too many requests. Rate limit exceeded.';
+            break;
+          default:
+            errorMessage = `Server error: ${axiosError.response.status} - ${axiosError.response.data?.message || 'Unknown error'}`;
         }
+        
+        return { 
+          success: false, 
+          message: errorMessage,
+          attemptedUrl: url,
+          responseDetails: {
+            status: axiosError.response.status,
+            data: axiosError.response.data
+          }
+        };
       } else if (axiosError.request) {
         // The request was made but no response was received
         console.error('No response received:', axiosError.request);
@@ -191,7 +229,8 @@ export const verifyActiveCampaignCredentials = async (
         return { 
           success: false,
           isNetworkError: true,
-          message: 'No response received from ActiveCampaign. This may be due to CORS restrictions or network issues.' 
+          message: `Nenhuma resposta recebida do ActiveCampaign. Isso pode ser devido a restrições de CORS ou problemas de rede.`,
+          attemptedUrl: url
         };
       } else {
         // Something happened in setting up the request that triggered an Error
@@ -199,7 +238,8 @@ export const verifyActiveCampaignCredentials = async (
         return { 
           success: false, 
           isNetworkError: axiosError.message.includes('network'),
-          message: `Error: ${axiosError.message}` 
+          message: `Error: ${axiosError.message}`,
+          attemptedUrl: url
         };
       }
     }
@@ -264,4 +304,3 @@ export const updateActiveCampaignIntegration = async (
     throw error;
   }
 };
-
