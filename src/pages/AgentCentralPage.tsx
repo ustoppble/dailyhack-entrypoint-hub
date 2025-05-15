@@ -3,7 +3,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { List } from 'lucide-react';
+import { List, BookOpen } from 'lucide-react';
 
 const AgentCentralPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -16,7 +16,7 @@ const AgentCentralPage = () => {
           <p className="text-center text-gray-500 mt-2">Manage your ActiveCampaign agent</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -36,6 +36,26 @@ const AgentCentralPage = () => {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BookOpen className="mr-2" />
+                Knowledge Base
+              </CardTitle>
+              <CardDescription>
+                Manage your agent's knowledge
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                Add and manage knowledge for your ActiveCampaign agent.
+              </p>
+              <Button asChild className="w-full">
+                <Link to={`/agents/${agentName}/knowledge`}>Manage Knowledge</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -43,4 +63,3 @@ const AgentCentralPage = () => {
 };
 
 export default AgentCentralPage;
-
