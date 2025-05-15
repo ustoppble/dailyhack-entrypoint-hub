@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const AIRTABLE_API_KEY = 'patCQxJfk9ad5GpUD.1a42f0b1749856dd9739d9c8042fcd041e101e7f70c2248a857fb2997e2a9c23';
@@ -94,6 +95,7 @@ export const registerUser = async (userData: User): Promise<User> => {
 
 export const validateUserCredentials = async (email: string, password: string): Promise<User | null> => {
   try {
+    console.log('Validating credentials for:', email);
     const response = await airtableApi.get('', {
       params: {
         filterByFormula: `AND({email} = "${email}", {password} = "${password}")`,
@@ -103,11 +105,13 @@ export const validateUserCredentials = async (email: string, password: string): 
 
     if (response.data.records && response.data.records.length > 0) {
       const record = response.data.records[0];
+      console.log('User found:', record.id);
       return {
         id: record.id,
         ...record.fields,
       } as User;
     }
+    console.log('No user found with those credentials');
     return null;
   } catch (error) {
     console.error('Login error:', error);
@@ -120,16 +124,26 @@ export const verifyActiveCampaignCredentials = async (
   apiToken: string
 ): Promise<boolean> => {
   try {
-    // Test API connection
-    const response = await axios.get(`${apiUrl}/api/3/users`, {
+    console.log('Verifying ActiveCampaign credentials for URL:', apiUrl);
+    // Make sure the URL is valid by adding /api/3/users if not already present
+    const url = apiUrl.endsWith('/') ? `${apiUrl}api/3/users` : `${apiUrl}/api/3/users`;
+    
+    console.log('Making API request to:', url);
+    const response = await axios.get(url, {
       headers: {
         'Api-Token': apiToken,
       },
     });
     
+    console.log('ActiveCampaign API response status:', response.status);
     return response.status === 200;
   } catch (error) {
     console.error('ActiveCampaign verification error:', error);
+    // More detailed error message
+    if (axios.isAxiosError(error)) {
+      console.error('Status:', error.response?.status);
+      console.error('Data:', error.response?.data);
+    }
     return false;
   }
 };
@@ -138,9 +152,11 @@ export const updateActiveCampaignIntegration = async (
   integration: ACIntegration
 ): Promise<boolean> => {
   try {
+    console.log('Updating integration with:', integration);
     // Extract account name from API URL
     const apiUrlParts = integration.apiUrl.split('//');
-    const accountName = apiUrlParts[1].split('.')[0];
+    const accountName = apiUrlParts[1]?.split('.')[0] || 'unknown';
+    console.log('Extracted account name:', accountName);
     
     // Create new record in the integration table
     const now = new Date().toISOString();
@@ -156,6 +172,7 @@ export const updateActiveCampaignIntegration = async (
       ],
     });
     
+    console.log('Integration update response:', response.data);
     return response.data.records && response.data.records.length > 0;
   } catch (error) {
     console.error('Integration update error:', error);

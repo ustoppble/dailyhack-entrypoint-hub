@@ -25,6 +25,9 @@ export const formatPhoneNumber = (phone: string): string => {
 };
 
 export const validateActiveCampaignUrl = (url: string): boolean => {
-  const urlRegex = /^https:\/\/[a-zA-Z0-9-]+\.api-us1\.com$/;
-  return urlRegex.test(url);
+  // More flexible URL validation to accept various ActiveCampaign URL formats
+  // Examples: https://account.api-us1.com, https://account.activehosted.com, etc.
+  return url.includes('api-us1.com') || 
+         url.includes('activehosted.com') || 
+         url.includes('activecampaign.com');
 };

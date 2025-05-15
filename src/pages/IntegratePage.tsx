@@ -13,13 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { validateUserCredentials, verifyActiveCampaignCredentials, updateActiveCampaignIntegration } from '@/lib/api-service';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateActiveCampaignUrl } from '@/lib/validation';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
   apiUrl: z.string().url({ message: "Valid URL is required" })
     .refine(url => validateActiveCampaignUrl(url), {
-      message: "API URL must be a valid ActiveCampaign URL (https://account.api-us1.com)"
+      message: "API URL must be a valid ActiveCampaign URL"
     }),
   apiToken: z.string().min(5, { message: "API token is required" }),
 });
@@ -32,6 +33,7 @@ const IntegratePage = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const form = useForm<IntegrationFormValues>({
     resolver: zodResolver(formSchema),
@@ -45,13 +47,18 @@ const IntegratePage = () => {
 
   const onSubmit = async (data: IntegrationFormValues) => {
     setIsLoading(true);
+    setErrorMessage('');
     
     try {
+      console.log('Form submitted with data:', { ...data, apiToken: '***hidden***' });
+      
       // First verify user credentials if not authenticated
       if (!user) {
+        console.log('No user in context, authenticating...');
         const authenticatedUser = await validateUserCredentials(data.email, data.password);
         
         if (!authenticatedUser) {
+          setErrorMessage('Invalid email or password');
           toast({
             title: "Authentication failed",
             description: "Invalid email or password.",
@@ -61,14 +68,17 @@ const IntegratePage = () => {
           return;
         }
         
+        console.log('User authenticated successfully');
         setUser(authenticatedUser);
       }
       
       // Verify ActiveCampaign credentials
       setIsVerifying(true);
+      console.log('Verifying ActiveCampaign credentials...');
       const isValidAC = await verifyActiveCampaignCredentials(data.apiUrl, data.apiToken);
       
       if (!isValidAC) {
+        setErrorMessage('ActiveCampaign verification failed. Please check your API URL and token.');
         toast({
           title: "ActiveCampaign verification failed",
           description: "Please check your API URL and token.",
@@ -79,7 +89,10 @@ const IntegratePage = () => {
         return;
       }
       
+      console.log('ActiveCampaign credentials verified successfully');
+      
       // Update integration details
+      console.log('Updating integration details...');
       const success = await updateActiveCampaignIntegration({
         email: data.email,
         apiUrl: data.apiUrl,
@@ -87,6 +100,7 @@ const IntegratePage = () => {
       });
       
       if (success) {
+        console.log('Integration successful');
         toast({
           title: "Integration successful!",
           description: "Your ActiveCampaign account has been connected.",
@@ -95,6 +109,7 @@ const IntegratePage = () => {
         // Redirect to confirmation page
         navigate('/confirmation');
       } else {
+        setErrorMessage('Integration failed. An error occurred while updating your integration details.');
         toast({
           title: "Integration failed",
           description: "An error occurred while updating your integration details.",
@@ -103,6 +118,7 @@ const IntegratePage = () => {
       }
     } catch (error: any) {
       console.error('Integration error:', error);
+      setErrorMessage(error.message || "An unexpected error occurred");
       toast({
         title: "Integration failed",
         description: error.message || "An unexpected error occurred.",
@@ -125,6 +141,13 @@ const IntegratePage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {errorMessage && (
+              <div className="mb-4 p-3 border border-red-300 bg-red-50 text-red-800 rounded-md flex items-start">
+                <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                <p className="text-sm">{errorMessage}</p>
+              </div>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {!user && (
@@ -176,6 +199,9 @@ const IntegratePage = () => {
                             {...field} 
                           />
                         </FormControl>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Format: https://your-account.api-us1.com
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -201,7 +227,14 @@ const IntegratePage = () => {
                 </div>
                 
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (isVerifying ? "Verifying..." : "Connecting...") : "Connect Account"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isVerifying ? "Verifying..." : "Connecting..."}
+                    </>
+                  ) : (
+                    "Connect Account"
+                  )}
                 </Button>
               </form>
             </Form>
