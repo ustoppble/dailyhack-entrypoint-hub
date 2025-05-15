@@ -26,3 +26,12 @@ export interface VerificationResult {
     data?: any;
   };
 }
+
+// Email list interface
+export interface EmailList {
+  name: string;
+  sender_reminder: string;
+  Insight: string;
+  active_subscribers: string;
+  selected?: boolean;
+}

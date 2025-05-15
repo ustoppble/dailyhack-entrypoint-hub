@@ -98,6 +98,10 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       console.log('ActiveCampaign credentials verified successfully via n8n webhook');
       onSuccess?.('ActiveCampaign credentials verified successfully');
       
+      // Store API credentials in localStorage for later use
+      localStorage.setItem('ac_api_url', formattedApiUrl);
+      localStorage.setItem('ac_api_token', data.apiToken);
+      
       // Ensure user.id is properly formatted - use it directly as a string without wrapping in array
       // This is the important change to fix the "Field id_users cannot accept the provided value" error
       const userId = String(user.id);
@@ -118,8 +122,8 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
           description: "Your ActiveCampaign account has been connected.",
         });
         
-        // Redirect to confirmation page
-        navigate('/confirmation');
+        // Redirect to lists page instead of confirmation
+        navigate('/lists');
       } else {
         const errorMsg = 'Integration failed. An error occurred while updating your integration details.';
         onError?.(errorMsg, false);
