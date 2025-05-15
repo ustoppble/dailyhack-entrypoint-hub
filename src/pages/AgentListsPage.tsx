@@ -4,12 +4,14 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
-import { fetchEmailLists } from '@/lib/api/lists';
+import { fetchEmailLists, saveSelectedLists } from '@/lib/api/lists';
 import { airtableIntegrationApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { List, ListCheck } from 'lucide-react';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -17,6 +19,8 @@ const AgentListsPage = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<EmailList[]>([]);
+  const [selectedLists, setSelectedLists] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +73,50 @@ const AgentListsPage = () => {
     fetchLists();
   }, [agentName, toast, user]);
 
+  const handleCheckboxChange = (listName: string) => {
+    setSelectedLists(prevSelected => {
+      if (prevSelected.includes(listName)) {
+        return prevSelected.filter(name => name !== listName);
+      } else {
+        return [...prevSelected, listName];
+      }
+    });
+  };
+
+  const handleImport = async () => {
+    if (selectedLists.length === 0) {
+      toast({
+        title: "No lists selected",
+        description: "Please select at least one list to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setImporting(true);
+      if (!user) {
+        throw new Error('You need to be logged in to perform this action');
+      }
+      
+      await saveSelectedLists(user.id, selectedLists);
+      
+      toast({
+        title: "Lists imported successfully",
+        description: `Imported ${selectedLists.length} list(s) for ${agentName}`,
+      });
+    } catch (error: any) {
+      console.error('Error importing lists:', error);
+      toast({
+        title: "Import failed",
+        description: error.message || "Failed to import selected lists",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -79,42 +127,67 @@ const AgentListsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center">{agentName} Lists</h1>
-          <p className="text-center text-gray-500 mt-2">
-            Manage your email lists for {agentName}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {lists.map((list, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg">{list.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 mb-4">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Subscribers:</span> {list.active_subscribers}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Sender Reminder:</span> {list.sender_reminder}
-                  </p>
+      <div className="max-w-4xl mx-auto">
+        <Card className="shadow-md">
+          <CardHeader className="border-b">
+            <CardTitle className="text-3xl font-bold">
+              {agentName} Lists
+            </CardTitle>
+            <p className="text-gray-500 mt-2">
+              Select the lists you want to import
+            </p>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {lists.length > 0 ? (
+              <>
+                <div className="space-y-4">
+                  {lists.map((list) => (
+                    <div 
+                      key={list.name} 
+                      className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <Checkbox 
+                        id={`list-${list.name}`}
+                        checked={selectedLists.includes(list.name)}
+                        onCheckedChange={() => handleCheckboxChange(list.name)}
+                      />
+                      <div className="flex-1 ml-2">
+                        <label 
+                          htmlFor={`list-${list.name}`} 
+                          className="font-medium cursor-pointer flex items-center"
+                        >
+                          <span className="text-lg">{list.name}</span>
+                        </label>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <span className="inline-flex items-center mr-4">
+                            <ListCheck className="h-4 w-4 mr-1" /> 
+                            {list.active_subscribers} subscribers
+                          </span>
+                          <p className="text-gray-500 mt-1">{list.sender_reminder}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <Button variant="outline" className="w-full">
-                  Select List
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {lists.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-lg text-gray-600">No lists found for this agent.</p>
-          </div>
-        )}
+                
+                <div className="mt-8 flex justify-end">
+                  <Button 
+                    onClick={handleImport} 
+                    disabled={selectedLists.length === 0 || importing}
+                    className="px-8"
+                  >
+                    {importing ? 'Importing...' : 'Import Selected Lists'}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 flex flex-col items-center justify-center">
+                <List className="h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-xl text-gray-600">No lists found for this agent.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
