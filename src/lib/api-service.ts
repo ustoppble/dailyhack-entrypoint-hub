@@ -1,12 +1,20 @@
-
 import axios from 'axios';
 
 const AIRTABLE_API_KEY = 'patCQxJfk9ad5GpUD.1a42f0b1749856dd9739d9c8042fcd041e101e7f70c2248a857fb2997e2a9c23';
 const AIRTABLE_BASE_ID = 'appQ1xO0AUpotDePg';
 const AIRTABLE_TABLE_ID = 'tblRaSVdNM7os0CHe';
+const AIRTABLE_INTEGRATION_TABLE_ID = 'tblXTMwj5xIBxCIQG'; // New table for integrations
 
 const airtableApi = axios.create({
   baseURL: `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}`,
+  headers: {
+    Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+});
+
+const airtableIntegrationApi = axios.create({
+  baseURL: `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_INTEGRATION_TABLE_ID}`,
   headers: {
     Authorization: `Bearer ${AIRTABLE_API_KEY}`,
     'Content-Type': 'application/json',
@@ -26,7 +34,6 @@ export interface ACIntegration {
   email: string;
   apiUrl: string;
   apiToken: string;
-  userId: string;
 }
 
 export const checkEmailExists = async (email: string): Promise<boolean> => {
@@ -131,39 +138,25 @@ export const updateActiveCampaignIntegration = async (
   integration: ACIntegration
 ): Promise<boolean> => {
   try {
-    // Find the user record
-    const response = await airtableApi.get('', {
-      params: {
-        filterByFormula: `{email} = "${integration.email}"`,
-        maxRecords: 1,
-      },
+    // Extract account name from API URL
+    const apiUrlParts = integration.apiUrl.split('//');
+    const accountName = apiUrlParts[1].split('.')[0];
+    
+    // Create new record in the integration table
+    const now = new Date().toISOString();
+    const response = await airtableIntegrationApi.post('', {
+      records: [
+        {
+          fields: {
+            api: accountName,
+            token: integration.apiToken,
+            DateCreated: now
+          },
+        },
+      ],
     });
     
-    if (response.data.records && response.data.records.length > 0) {
-      const record = response.data.records[0];
-      
-      // Extract account name from API URL
-      const apiUrlParts = integration.apiUrl.split('//');
-      const accountName = apiUrlParts[1].split('.')[0];
-      
-      // Update the record
-      await airtableApi.patch('', {
-        records: [
-          {
-            id: record.id,
-            fields: {
-              api: accountName,
-              token: integration.apiToken,
-              AnalyticsSetup: "Todo"
-            },
-          },
-        ],
-      });
-      
-      return true;
-    }
-    
-    return false;
+    return response.data.records && response.data.records.length > 0;
   } catch (error) {
     console.error('Integration update error:', error);
     throw error;

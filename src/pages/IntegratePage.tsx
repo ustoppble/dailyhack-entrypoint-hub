@@ -12,13 +12,16 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { validateUserCredentials, verifyActiveCampaignCredentials, updateActiveCampaignIntegration } from '@/lib/api-service';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateActiveCampaignUrl } from '@/lib/validation';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
-  apiUrl: z.string().url({ message: "Valid URL is required" }),
+  apiUrl: z.string().url({ message: "Valid URL is required" })
+    .refine(url => validateActiveCampaignUrl(url), {
+      message: "API URL must be a valid ActiveCampaign URL (https://account.api-us1.com)"
+    }),
   apiToken: z.string().min(5, { message: "API token is required" }),
-  userId: z.string().optional(),
 });
 
 type IntegrationFormValues = z.infer<typeof formSchema>;
@@ -37,7 +40,6 @@ const IntegratePage = () => {
       password: '',
       apiUrl: '',
       apiToken: '',
-      userId: '',
     },
   });
 
@@ -82,7 +84,6 @@ const IntegratePage = () => {
         email: data.email,
         apiUrl: data.apiUrl,
         apiToken: data.apiToken,
-        userId: data.userId || '',
       });
       
       if (success) {
@@ -190,23 +191,6 @@ const IntegratePage = () => {
                           <Input 
                             type="password"
                             placeholder="Your API token" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="userId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ActiveCampaign User ID (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="User ID (optional)"
                             {...field} 
                           />
                         </FormControl>
