@@ -9,7 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { verifyActiveCampaignCredentials, updateActiveCampaignIntegration } from '@/lib/api-service';
+import { 
+  verifyActiveCampaignCredentials, 
+  updateActiveCampaignIntegration,
+  formatApiUrl 
+} from '@/lib/api-service';
 import { validateActiveCampaignUrl } from '@/lib/validation';
 import { useAuth } from '@/contexts/AuthContext';
 
