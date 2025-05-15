@@ -12,7 +12,8 @@ import ErrorState from '@/components/lists/ErrorState';
 import { fetchEmailLists, saveSelectedLists, fetchConnectedLists } from '@/lib/api/lists';
 import { airtableIntegrationApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { List, ListCheck, Users, BookOpen, CheckCircle } from 'lucide-react';
+import { List, ListCheck, Users, BookOpen, CheckCircle, ArrowLeft } from 'lucide-react';
+import StatusMessage from '@/components/integration/StatusMessage';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -25,6 +26,7 @@ const AgentListsPage = () => {
   const [connectedLists, setConnectedLists] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLists = async () => {
@@ -109,6 +111,9 @@ const AgentListsPage = () => {
 
     try {
       setImporting(true);
+      setSuccess(null);
+      setError(null);
+      
       if (!user) {
         throw new Error('You need to be logged in to perform this action');
       }
@@ -127,15 +132,14 @@ const AgentListsPage = () => {
         ...selectedLists.map(list => list.name)
       ]);
       
+      // Set success message
+      setSuccess(`Successfully imported ${selectedLists.length} list(s) for ${agentName}`);
+      
       // Clear selections after successful import
       setSelectedLists([]);
-      
-      // Navigate to the knowledge base page after successful import
-      if (agentName) {
-        navigate(`/agents/${agentName}/knowledge`);
-      }
     } catch (error: any) {
       console.error('Error importing lists:', error);
+      setError(error.message || "Failed to import selected lists");
       toast({
         title: "Import failed",
         description: error.message || "Failed to import selected lists",
@@ -155,7 +159,7 @@ const AgentListsPage = () => {
     return <LoadingState />;
   }
 
-  if (error) {
+  if (error && !success) {
     return <ErrorState error={error} />;
   }
 
@@ -163,13 +167,25 @@ const AgentListsPage = () => {
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">{agentName}</h1>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate(`/agents/${agentName}`)}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Central
+            </Button>
+            <h1 className="text-3xl font-bold">{agentName}</h1>
+          </div>
           <Link to={`/agents/${agentName}/knowledge`}>
             <Button variant="outline" className="gap-2">
               <BookOpen className="h-4 w-4" /> Knowledge Base
             </Button>
           </Link>
         </div>
+        
+        <StatusMessage error={error} success={success} />
         
         <Card className="shadow-md">
           <CardHeader className="border-b">

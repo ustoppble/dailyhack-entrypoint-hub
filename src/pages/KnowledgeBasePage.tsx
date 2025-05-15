@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { Send, CheckCircle } from 'lucide-react';
+import { Send, CheckCircle, ArrowLeft, List } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 
@@ -45,6 +45,7 @@ type KnowledgeResponse = Array<{
 
 const KnowledgeBasePage = () => {
   const { agentName } = useParams<{ agentName: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,6 +129,29 @@ const KnowledgeBasePage = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate(`/agents/${agentName}`)}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Central
+            </Button>
+            <h1 className="text-3xl font-bold">{agentName}</h1>
+          </div>
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => navigate(`/agents/${agentName}/lists`)}
+          >
+            <List className="h-4 w-4" /> Lists
+          </Button>
+        </div>
+        
+        <StatusMessage error={error} success={success} />
+        
         <Card className="shadow-md mb-6">
           <CardHeader className="border-b">
             <CardTitle className="text-3xl font-bold">Knowledge Base</CardTitle>
@@ -141,8 +165,6 @@ const KnowledgeBasePage = () => {
                 This text will be processed and added to your agent's knowledge base. The more detailed and relevant the content, the better your agent will perform.
               </AlertDescription>
             </Alert>
-            
-            <StatusMessage error={error} success={success} />
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
