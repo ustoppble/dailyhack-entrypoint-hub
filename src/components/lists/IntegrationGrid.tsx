@@ -36,3 +36,4 @@ const IntegrationGrid = ({ integrations, onAddNew }: IntegrationGridProps) => {
 };
 
 export default IntegrationGrid;
+

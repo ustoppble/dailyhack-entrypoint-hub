@@ -34,8 +34,8 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
     localStorage.setItem('selected_integration_id', id);
     localStorage.setItem('selected_integration_name', name);
     
-    // Navigate to the lists page for this integration
-    navigate(`/lists/${id}`);
+    // Navigate to the agent central page
+    navigate(`/agents/${name}/central`);
   };
 
   return (
@@ -55,7 +55,7 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
       
       <CardFooter className="flex justify-center pb-4">
         <Button onClick={handleEnterClick} className="w-full">
-          MANAGE <ArrowRight className="ml-2" />
+          ENTER <ArrowRight className="ml-2" />
         </Button>
       </CardFooter>
     </Card>
@@ -63,3 +63,4 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
 };
 
 export default IntegrationCard;
+

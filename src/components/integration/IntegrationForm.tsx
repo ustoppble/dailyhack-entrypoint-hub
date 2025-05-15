@@ -8,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   verifyActiveCampaignCredentials, 
   updateActiveCampaignIntegration,
-  formatApiUrl 
+  formatApiUrl,
+  extractAccountName 
 } from '@/lib/api/integration';
 import { useAuth } from '@/contexts/AuthContext';
 import FormFields, { integrationFormSchema, IntegrationFormValues } from './FormFields';
@@ -98,12 +99,15 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       console.log('ActiveCampaign credentials verified successfully via n8n webhook');
       onSuccess?.('ActiveCampaign credentials verified successfully');
       
+      // Get account name for the redirect
+      const accountName = extractAccountName(formattedApiUrl);
+      
       // Store API credentials in localStorage for later use
       localStorage.setItem('ac_api_url', formattedApiUrl);
       localStorage.setItem('ac_api_token', data.apiToken);
+      localStorage.setItem('ac_account_name', accountName);
       
       // Ensure user.id is properly formatted - use it directly as a string without wrapping in array
-      // This is the important change to fix the "Field id_users cannot accept the provided value" error
       const userId = String(user.id);
       console.log('Using user ID for integration:', userId);
       
@@ -122,8 +126,8 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
           description: "Your ActiveCampaign account has been connected.",
         });
         
-        // Redirect to lists page instead of confirmation
-        navigate('/lists');
+        // Redirect to agent central page
+        navigate(`/agents/${accountName}/central`);
       } else {
         const errorMsg = 'Integration failed. An error occurred while updating your integration details.';
         onError?.(errorMsg, false);
@@ -168,3 +172,4 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
 };
 
 export default IntegrationForm;
+

@@ -24,12 +24,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {!isAuthenticated ? (
               <>
                 <Link to="/register" className="text-gray-600 hover:text-blue-700">Register</Link>
-                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Integrate</Link>
+                <Link to="/agents" className="text-gray-600 hover:text-blue-700">Agents</Link>
               </>
             ) : (
               <>
-                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Integrate</Link>
+                <Link to="/agents" className="text-gray-600 hover:text-blue-700">Agents</Link>
                 <Link to="/confirmation" className="text-gray-600 hover:text-blue-700">Next Steps</Link>
+                <Link to="/lists" className="text-gray-600 hover:text-blue-700">Lists</Link>
               </>
             )}
           </nav>
@@ -80,3 +81,4 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export default Layout;
+

@@ -24,7 +24,7 @@ const ListsPage = () => {
   useEffect(() => {
     const loadIntegrations = async () => {
       if (!user) {
-        navigate('/integrate');
+        navigate('/agents');
         return;
       }
       
@@ -48,7 +48,7 @@ const ListsPage = () => {
   }, [user, navigate, toast]);
   
   const handleAddNewIntegration = () => {
-    navigate('/integrate');
+    navigate('/agents');
   };
   
   const renderContent = () => {
@@ -96,3 +96,4 @@ const ListsPage = () => {
 };
 
 export default ListsPage;
+
