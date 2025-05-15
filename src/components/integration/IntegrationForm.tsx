@@ -7,12 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { verifyActiveCampaignCredentials, updateActiveCampaignIntegration } from '@/lib/api-service';
 import { validateActiveCampaignUrl } from '@/lib/validation';
 import { useAuth } from '@/contexts/AuthContext';
-import StatusMessage from './StatusMessage';
 
 const integrationFormSchema = z.object({
   apiUrl: z.string()
@@ -25,15 +24,19 @@ const integrationFormSchema = z.object({
 
 type IntegrationFormValues = z.infer<typeof integrationFormSchema>;
 
-const IntegrationForm = () => {
+interface IntegrationFormProps {
+  onError?: (message: string, isNetworkError: boolean) => void;
+  onSuccess?: (message: string) => void;
+}
+
+const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [lastAttemptedData, setLastAttemptedData] = useState<IntegrationFormValues | null>(null);
 
   const form = useForm<IntegrationFormValues>({
     resolver: zodResolver(integrationFormSchema),
@@ -66,12 +69,18 @@ const IntegrationForm = () => {
     return formattedUrl;
   };
 
+  const handleRetry = async () => {
+    if (!lastAttemptedData) return;
+    
+    setIsRetrying(true);
+    await handleSubmit(lastAttemptedData);
+    setIsRetrying(false);
+  };
+
   const handleSubmit = async (data: IntegrationFormValues) => {
     setIsLoading(true);
     setIsVerifying(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-    setIsNetworkError(false);
+    setLastAttemptedData(data);
     
     try {
       console.log('Integration form submitted with data:', { 
@@ -80,7 +89,8 @@ const IntegrationForm = () => {
       });
       
       if (!user) {
-        setErrorMessage('You must be authenticated to connect your ActiveCampaign account');
+        const errorMsg = 'You must be authenticated to connect your ActiveCampaign account';
+        onError?.(errorMsg, false);
         toast({
           title: "Authentication required",
           description: "Please log in first.",
@@ -100,7 +110,8 @@ const IntegrationForm = () => {
       const verificationResult = await verifyActiveCampaignCredentials(formattedApiUrl, data.apiToken);
       
       if (!verificationResult.success) {
-        setErrorMessage(`ActiveCampaign verification failed: ${verificationResult.message || 'Unknown error'}`);
+        const errorMsg = `ActiveCampaign verification failed: ${verificationResult.message || 'Unknown error'}`;
+        onError?.(errorMsg, verificationResult.isNetworkError || false);
         toast({
           title: "ActiveCampaign verification failed",
           description: verificationResult.message || "Please check your API URL and token.",
@@ -112,7 +123,7 @@ const IntegrationForm = () => {
       }
       
       console.log('ActiveCampaign credentials verified successfully');
-      setSuccessMessage('ActiveCampaign credentials verified successfully');
+      onSuccess?.('ActiveCampaign credentials verified successfully');
       
       // Update integration details
       console.log('Updating integration details...');
@@ -132,7 +143,8 @@ const IntegrationForm = () => {
         // Redirect to confirmation page
         navigate('/confirmation');
       } else {
-        setErrorMessage('Integration failed. An error occurred while updating your integration details.');
+        const errorMsg = 'Integration failed. An error occurred while updating your integration details.';
+        onError?.(errorMsg, false);
         toast({
           title: "Integration failed",
           description: "An error occurred while updating your integration details.",
@@ -141,10 +153,12 @@ const IntegrationForm = () => {
       }
     } catch (error: any) {
       console.error('Integration error:', error);
-      setIsNetworkError(!!error.message?.includes('network') || error.code === 'ERR_NETWORK');
-      setErrorMessage(error.message || "An unexpected error occurred");
+      const isNetworkError = !!error.message?.includes('network') || error.code === 'ERR_NETWORK';
+      const errorMsg = error.message || "An unexpected error occurred";
+      
+      onError?.(errorMsg, isNetworkError);
       toast({
-        title: "Integration failed",
+        title: isNetworkError ? "Network Connection Error" : "Integration failed",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
@@ -155,55 +169,49 @@ const IntegrationForm = () => {
   };
 
   return (
-    <>
-      <StatusMessage 
-        error={errorMessage} 
-        success={successMessage} 
-        isNetworkError={isNetworkError} 
-      />
-      
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="apiUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ActiveCampaign API URL</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://your-account.api-us1.com" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Format: https://your-account.api-us1.com or https://your-account.activehosted.com
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="apiToken"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ActiveCampaign API Token</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password"
-                      placeholder="Your API token" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="apiUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ActiveCampaign API URL</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="https://your-account.api-us1.com" 
+                    {...field} 
+                  />
+                </FormControl>
+                <p className="text-xs text-gray-500 mt-1">
+                  Format: https://your-account.api-us1.com or https://your-account.activehosted.com
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
+          <FormField
+            control={form.control}
+            name="apiToken"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ActiveCampaign API Token</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="password"
+                    placeholder="Your API token" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <div className="flex flex-col space-y-2">
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
@@ -214,9 +222,26 @@ const IntegrationForm = () => {
               "Connect Account"
             )}
           </Button>
-        </form>
-      </Form>
-    </>
+          
+          {lastAttemptedData && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleRetry}
+              disabled={isRetrying || isLoading}
+            >
+              {isRetrying ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Retry Connection
+            </Button>
+          )}
+        </div>
+      </form>
+    </Form>
   );
 };
 

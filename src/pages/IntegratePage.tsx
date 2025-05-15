@@ -8,10 +8,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthForm from '@/components/integration/AuthForm';
 import IntegrationForm from '@/components/integration/IntegrationForm';
 import StatusMessage from '@/components/integration/StatusMessage';
+import { useToast } from '@/hooks/use-toast';
 
 const IntegratePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(!!user);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -19,7 +21,29 @@ const IntegratePage = () => {
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
+    setErrorMessage('');
+    setIsNetworkError(false);
     setSuccessMessage('Authentication successful! You can now connect your ActiveCampaign account.');
+  };
+
+  const handleIntegrationError = (message: string, isNetwork: boolean) => {
+    setErrorMessage(message);
+    setIsNetworkError(isNetwork);
+    setSuccessMessage('');
+    
+    if (isNetwork) {
+      toast({
+        title: "Network Connection Error",
+        description: "Unable to reach ActiveCampaign servers. Please check your connection.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleIntegrationSuccess = (message: string) => {
+    setErrorMessage('');
+    setIsNetworkError(false);
+    setSuccessMessage(message);
   };
 
   return (
@@ -51,7 +75,10 @@ const IntegratePage = () => {
                 
                 <Separator className="my-4" />
                 
-                <IntegrationForm />
+                <IntegrationForm 
+                  onError={handleIntegrationError}
+                  onSuccess={handleIntegrationSuccess}
+                />
               </>
             )}
           </CardContent>

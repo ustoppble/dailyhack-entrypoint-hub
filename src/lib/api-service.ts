@@ -122,7 +122,7 @@ export const validateUserCredentials = async (email: string, password: string): 
 export const verifyActiveCampaignCredentials = async (
   apiUrl: string,
   apiToken: string
-): Promise<{ success: boolean; message?: string }> => {
+): Promise<{ success: boolean; message?: string; isNetworkError?: boolean }> => {
   try {
     console.log('Verifying ActiveCampaign credentials for URL:', apiUrl);
     
@@ -147,13 +147,15 @@ export const verifyActiveCampaignCredentials = async (
     console.log('Using API token:', apiToken.substring(0, 5) + '...');
     
     try {
+      // Try first with direct request
       const response = await axios.get(url, {
         headers: {
           'Api-Token': apiToken,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 15000 // 15 second timeout
+        timeout: 15000, // 15 second timeout
+        withCredentials: false // Disables sending cookies with the request
       });
       
       console.log('ActiveCampaign API response status:', response.status);
@@ -184,20 +186,28 @@ export const verifyActiveCampaignCredentials = async (
       } else if (axiosError.request) {
         // The request was made but no response was received
         console.error('No response received:', axiosError.request);
+        
+        // This is likely a CORS or network connectivity issue
         return { 
-          success: false, 
-          message: 'No response received from ActiveCampaign. Please check your URL and internet connection.' 
+          success: false,
+          isNetworkError: true,
+          message: 'No response received from ActiveCampaign. This may be due to CORS restrictions or network issues.' 
         };
       } else {
         // Something happened in setting up the request that triggered an Error
         console.error('Error message:', axiosError.message);
-        return { success: false, message: `Error: ${axiosError.message}` };
+        return { 
+          success: false, 
+          isNetworkError: axiosError.message.includes('network'),
+          message: `Error: ${axiosError.message}` 
+        };
       }
     }
   } catch (error: any) {
     console.error('ActiveCampaign verification general error:', error);
     return { 
       success: false,
+      isNetworkError: error.message.includes('network'),
       message: error.message || 'An unexpected error occurred during verification.'
     };
   }
