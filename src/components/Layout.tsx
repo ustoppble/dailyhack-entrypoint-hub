@@ -44,6 +44,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 >
                   Lists
                 </Button>
+                <Link to="/automation" className="text-gray-600 hover:text-blue-700">Automation</Link>
               </>
             )}
           </nav>
