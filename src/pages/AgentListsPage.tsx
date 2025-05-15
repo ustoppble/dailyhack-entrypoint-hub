@@ -81,6 +81,11 @@ const AgentListsPage = () => {
   }, [agentName, toast, user]);
 
   const handleCheckboxChange = (list: EmailList) => {
+    // Don't allow changes if list is already connected
+    if (isListConnected(list.name)) {
+      return;
+    }
+    
     setSelectedLists(prevSelected => {
       const isAlreadySelected = prevSelected.some(item => item.name === list.name);
       
@@ -179,49 +184,52 @@ const AgentListsPage = () => {
             {lists.length > 0 ? (
               <>
                 <div className="space-y-4">
-                  {lists.map((list) => (
-                    <div 
-                      key={list.name} 
-                      className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50"
-                    >
-                      <Checkbox 
-                        id={`list-${list.name}`}
-                        checked={selectedLists.some(item => item.name === list.name)}
-                        onCheckedChange={() => handleCheckboxChange(list)}
-                        className="mt-1"
-                        disabled={isListConnected(list.name)}
-                      />
-                      <div className="flex-1 ml-2">
-                        <div className="flex items-center justify-between">
-                          <label 
-                            htmlFor={`list-${list.name}`} 
-                            className="font-medium cursor-pointer flex items-center"
-                          >
-                            <span className="text-lg">{list.name}</span>
-                          </label>
-                          {isListConnected(list.name) && (
-                            <Badge variant="outline" className="flex items-center gap-1 ml-2 bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900 border-green-300">
-                              <CheckCircle className="h-3 w-3" /> Connected
-                            </Badge>
+                  {lists.map((list) => {
+                    const isConnected = isListConnected(list.name);
+                    return (
+                      <div 
+                        key={list.name} 
+                        className={`flex items-start space-x-4 p-4 border rounded-lg ${isConnected ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
+                      >
+                        <Checkbox 
+                          id={`list-${list.name}`}
+                          checked={isConnected ? true : selectedLists.some(item => item.name === list.name)}
+                          onCheckedChange={() => handleCheckboxChange(list)}
+                          className={`mt-1 ${isConnected ? 'opacity-60' : ''}`}
+                          disabled={isConnected}
+                        />
+                        <div className="flex-1 ml-2">
+                          <div className="flex items-center justify-between">
+                            <label 
+                              htmlFor={`list-${list.name}`} 
+                              className={`font-medium cursor-pointer flex items-center ${isConnected ? 'text-gray-500' : ''}`}
+                            >
+                              <span className="text-lg">{list.name}</span>
+                            </label>
+                            {isConnected && (
+                              <Badge variant="outline" className="flex items-center gap-1 ml-2 bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900 border-green-300">
+                                <CheckCircle className="h-3 w-3" /> Connected
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            <span className="inline-flex items-center mr-4">
+                              <Users className="h-4 w-4 mr-1" /> 
+                              {list.active_subscribers} subscribers
+                            </span>
+                          </div>
+                          <p className="text-gray-500 mt-1 text-sm">
+                            <strong>Description:</strong> {list.sender_reminder}
+                          </p>
+                          {list.insight && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                              <strong>Insight:</strong> {list.insight}
+                            </div>
                           )}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          <span className="inline-flex items-center mr-4">
-                            <Users className="h-4 w-4 mr-1" /> 
-                            {list.active_subscribers} subscribers
-                          </span>
-                        </div>
-                        <p className="text-gray-500 mt-1 text-sm">
-                          <strong>Description:</strong> {list.sender_reminder}
-                        </p>
-                        {list.insight && (
-                          <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
-                            <strong>Insight:</strong> {list.insight}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 <div className="mt-8 flex justify-end">
