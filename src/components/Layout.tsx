@@ -13,13 +13,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     navigate('/');
   };
 
-  const handleGoToLists = () => {
-    // Force navigation to the lists page
-    navigate('/lists');
-    // Store a flag to prevent redirection
-    localStorage.setItem('bypass_redirect', 'true');
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm">
@@ -31,20 +24,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {!isAuthenticated ? (
               <>
                 <Link to="/register" className="text-gray-600 hover:text-blue-700">Register</Link>
-                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Agent</Link>
+                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Integrate</Link>
               </>
             ) : (
               <>
-                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Agent</Link>
+                <Link to="/integrate" className="text-gray-600 hover:text-blue-700">Integrate</Link>
                 <Link to="/confirmation" className="text-gray-600 hover:text-blue-700">Next Steps</Link>
-                <Button 
-                  variant="link" 
-                  className="text-gray-600 hover:text-blue-700 p-0 h-auto" 
-                  onClick={handleGoToLists}
-                >
-                  Lists
-                </Button>
-                <Link to="/automation" className="text-gray-600 hover:text-blue-700">Automation</Link>
               </>
             )}
           </nav>

@@ -14,7 +14,6 @@ import ConfirmationPage from "./pages/ConfirmationPage";
 import ListsPage from "./pages/ListsPage";
 import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
-import MarketingAutomationPage from "./pages/MarketingAutomationPage";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +33,6 @@ const App = () => (
               <Route path="/lists" element={<ListsPage />} />
               <Route path="/lists/:integrationId" element={<ListsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/automation" element={<MarketingAutomationPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>
