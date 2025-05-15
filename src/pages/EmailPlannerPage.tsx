@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,27 +13,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, Link, Pencil } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
 import { EmailList } from '@/lib/api/types';
 
+// Updated schema with only mainGoal and emailCount
 const emailFormSchema = z.object({
-  subject: z.string().min(3, {
-    message: "Subject must be at least 3 characters",
-  }),
-  emailType: z.string({
-    required_error: "Please select an email type",
-  }),
-  targetAudience: z.string().min(3, {
-    message: "Target audience description must be at least 3 characters",
-  }),
   mainGoal: z.string().min(3, {
     message: "Main goal must be at least 3 characters",
   }),
   emailCount: z.string({
     required_error: "Please select how many emails to plan",
+  }),
+  selectedList: z.string({
+    required_error: "Please select a list",
   }),
   additionalNotes: z.string().optional(),
 });
@@ -56,11 +50,9 @@ const EmailPlannerPage = () => {
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
-      subject: "",
-      emailType: "",
-      targetAudience: "",
       mainGoal: "",
       emailCount: "1",
+      selectedList: "",
       additionalNotes: "",
     },
   });
@@ -109,10 +101,20 @@ const EmailPlannerPage = () => {
     setSuccess(null);
     setEmailContent(null);
     
-    // For demonstration purposes, instead of making an actual API call,
-    // we'll simulate a response based on the form values
     try {
-      // Simulate API call
+      // Updated webhook URL
+      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+      
+      // Prepare data to send to webhook
+      const requestData = {
+        agentName,
+        list: values.selectedList,
+        mainGoal: values.mainGoal,
+        emailCount: values.emailCount,
+        additionalNotes: values.additionalNotes || '',
+      };
+      
+      // Simulate API call for now
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Generate demo email content based on form inputs
@@ -140,95 +142,21 @@ const EmailPlannerPage = () => {
   
   // Helper function to generate sample email content
   const generateEmailContent = (values: EmailPlannerFormValues): string => {
-    const { subject, emailType, targetAudience, mainGoal, additionalNotes, emailCount } = values;
+    const { mainGoal, additionalNotes, emailCount, selectedList } = values;
     
-    let content = '';
-    
-    switch (emailType) {
-      case 'newsletter':
-        content = `
-Subject: ${subject}
+    const content = `
+To: ${selectedList}
 
-Hi there!
-
-Welcome to our latest newsletter. We've put together some valuable content specifically designed for ${targetAudience}.
-
-Our main focus this week is to ${mainGoal}. We believe this information will be extremely valuable for you.
+${mainGoal}
 
 ${additionalNotes ? `Additional note: ${additionalNotes}` : ''}
 
 This is email 1 of ${emailCount}.
 
-Stay tuned for more updates!
-
 Best regards,
 The ${agentName} Team
-        `;
-        break;
+    `;
         
-      case 'promotional':
-        content = `
-Subject: ${subject}
-
-Hello!
-
-We're excited to share this special offer with you! As someone who ${targetAudience}, we think you'll be interested.
-
-We've designed this promotion to help you ${mainGoal}.
-
-${additionalNotes ? `Special note: ${additionalNotes}` : ''}
-
-This is email 1 of ${emailCount}.
-
-Don't miss out on this opportunity!
-
-Best regards,
-The ${agentName} Team
-        `;
-        break;
-        
-      case 'welcome':
-        content = `
-Subject: ${subject}
-
-Welcome!
-
-Thank you for joining our community of ${targetAudience}!
-
-We're here to help you ${mainGoal}, and we're excited to have you on board.
-
-${additionalNotes ? `Just wanted to add: ${additionalNotes}` : ''}
-
-This is email 1 of ${emailCount}.
-
-Feel free to reply if you have any questions.
-
-Warmly,
-The ${agentName} Team
-        `;
-        break;
-        
-      default:
-        content = `
-Subject: ${subject}
-
-Hello!
-
-We're reaching out to our valued ${targetAudience}.
-
-We wanted to connect regarding ${mainGoal}.
-
-${additionalNotes ? `Note: ${additionalNotes}` : ''}
-
-This is email 1 of ${emailCount}.
-
-Looking forward to connecting with you soon!
-
-Best,
-The ${agentName} Team
-        `;
-    }
-    
     return content.trim();
   };
   
@@ -320,7 +248,7 @@ The ${agentName} Team
           <CardContent className="pt-6">
             <Alert className="mb-6">
               <AlertDescription>
-                Provide information about your email campaign to generate a draft. The more details you provide, the better tailored your email will be.
+                Provide information about your email campaign to generate a draft. You can include links and offers in the main goal field.
               </AlertDescription>
             </Alert>
             
@@ -328,16 +256,25 @@ The ${agentName} Team
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="subject"
+                  name="selectedList"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Subject</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter a subject for your email..."
-                          {...field}
-                        />
-                      </FormControl>
+                      <FormLabel>Select List</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a list to send to" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {lists.map((listName) => (
+                            <SelectItem key={listName} value={listName}>{listName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -345,27 +282,46 @@ The ${agentName} Team
                 
                 <FormField
                   control={form.control}
-                  name="emailType"
+                  name="mainGoal"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Type</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select the type of email" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="newsletter">Newsletter</SelectItem>
-                          <SelectItem value="promotional">Promotional</SelectItem>
-                          <SelectItem value="welcome">Welcome Email</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel className="flex items-center gap-2">
+                        Main Goal <Pencil className="h-4 w-4 text-gray-500" />
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="What is the main goal of this email? You can include links, offers, or other content here..."
+                          className="min-h-[200px]"
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
+                      <div className="flex gap-2 mt-2 text-sm text-gray-500">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs gap-1"
+                          onClick={() => {
+                            const currentValue = form.getValues("mainGoal");
+                            form.setValue("mainGoal", currentValue + " [Link]");
+                          }}
+                        >
+                          <Link className="h-3 w-3" /> Add Link
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs gap-1"
+                          onClick={() => {
+                            const currentValue = form.getValues("mainGoal");
+                            form.setValue("mainGoal", currentValue + " [Special Offer]");
+                          }}
+                        >
+                          <Mail className="h-3 w-3" /> Add Offer
+                        </Button>
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -393,40 +349,6 @@ The ${agentName} Team
                           <SelectItem value="10">10 Emails</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="targetAudience"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Target Audience</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Describe who this email is for..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="mainGoal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Main Goal</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="What is the main goal of this email?"
-                          {...field}
-                        />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
