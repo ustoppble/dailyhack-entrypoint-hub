@@ -8,9 +8,12 @@ import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
 import { fetchEmailLists } from '@/lib/api/lists';
+import { airtableIntegrationApi } from '@/lib/api/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<EmailList[]>([]);
@@ -21,17 +24,33 @@ const AgentListsPage = () => {
       try {
         setIsLoading(true);
         
-        // Get API URL and token from localStorage (saved during integration)
-        const apiUrl = localStorage.getItem('ac_api_url') || '';
-        const apiToken = localStorage.getItem('ac_api_token') || '';
+        if (!user) {
+          throw new Error('You need to be logged in to access this page');
+        }
         
-        if (!apiUrl || !apiToken) {
-          throw new Error('ActiveCampaign credentials not found. Please integrate your account first.');
+        if (!agentName) {
+          throw new Error('Agent name is missing');
         }
         
         console.log('Fetching lists for agent:', agentName);
         
-        // Use the fetchEmailLists function that now makes a GET request
+        // First, get the integration record for this specific agent from Airtable
+        const filterByFormula = encodeURIComponent(`AND({id_users}='${user.id}', {api}='${agentName}')`);
+        const integrationResponse = await airtableIntegrationApi.get(`?filterByFormula=${filterByFormula}`);
+        
+        console.log('Integration response for agent:', integrationResponse.data);
+        
+        if (!integrationResponse.data?.records || integrationResponse.data.records.length === 0) {
+          throw new Error(`Integration for agent "${agentName}" not found`);
+        }
+        
+        const integration = integrationResponse.data.records[0];
+        const apiToken = integration.fields.token;
+        const apiUrl = `https://${agentName}.api-us1.com`;
+        
+        console.log('Using API URL:', apiUrl);
+        
+        // Use the fetchEmailLists function with the correct agent credentials
         const listsData = await fetchEmailLists(apiUrl, apiToken);
         setLists(listsData);
       } catch (error: any) {
@@ -48,7 +67,7 @@ const AgentListsPage = () => {
     };
     
     fetchLists();
-  }, [agentName, toast]);
+  }, [agentName, toast, user]);
 
   if (isLoading) {
     return <LoadingState />;
