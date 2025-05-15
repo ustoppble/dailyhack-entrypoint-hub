@@ -18,10 +18,10 @@ import StatusMessage from '@/components/integration/StatusMessage';
 
 const formSchema = z.object({
   title: z.string().min(3, {
-    message: "O título deve ter pelo menos 3 caracteres",
+    message: "Title must be at least 3 characters",
   }),
   content: z.string().min(10, {
-    message: "O texto deve ter pelo menos 10 caracteres",
+    message: "Content must be at least 10 characters",
   }),
 });
 
@@ -63,8 +63,8 @@ const KnowledgeBasePage = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast({
-        title: "Erro",
-        description: "Você precisa estar logado para enviar conhecimento",
+        title: "Error",
+        description: "You need to be logged in to submit knowledge",
         variant: "destructive",
       });
       return;
@@ -72,8 +72,8 @@ const KnowledgeBasePage = () => {
     
     if (!agentName) {
       toast({
-        title: "Erro",
-        description: "Nome do agente não encontrado",
+        title: "Error",
+        description: "Agent name not found",
         variant: "destructive",
       });
       return;
@@ -92,32 +92,32 @@ const KnowledgeBasePage = () => {
         id_users: user.id
       };
       
-      console.log('Enviando dados para a API:', payload);
+      console.log('Sending data to API:', payload);
       
       const response = await axios.post(
         'https://primary-production-2e546.up.railway.app/webhook/nutrir-conhecimento',
         payload
       );
       
-      console.log('Resposta da API:', response.data);
+      console.log('API response:', response.data);
       
-      setSuccess("Conhecimento adicionado com sucesso à base.");
+      setSuccess("Knowledge successfully added to the base.");
       setResponseData(response.data);
       
       toast({
-        title: "Sucesso!",
-        description: "Conhecimento adicionado com sucesso à base.",
+        title: "Success!",
+        description: "Knowledge successfully added to the base.",
       });
       
       // Reset form after successful submission
       form.reset();
       
     } catch (error: any) {
-      console.error('Erro ao enviar conhecimento:', error);
-      setError(error.message || "Ocorreu um erro ao processar sua solicitação");
+      console.error('Error sending knowledge:', error);
+      setError(error.message || "An error occurred while processing your request");
       toast({
-        title: "Erro ao enviar conhecimento",
-        description: error.message || "Ocorreu um erro ao processar sua solicitação",
+        title: "Error sending knowledge",
+        description: error.message || "An error occurred while processing your request",
         variant: "destructive",
       });
     } finally {
@@ -130,15 +130,15 @@ const KnowledgeBasePage = () => {
       <div className="max-w-3xl mx-auto">
         <Card className="shadow-md mb-6">
           <CardHeader className="border-b">
-            <CardTitle className="text-3xl font-bold">Base de Conhecimento</CardTitle>
+            <CardTitle className="text-3xl font-bold">Knowledge Base</CardTitle>
             <CardDescription>
-              Adicione informações para nutrir a base de conhecimento do {agentName}
+              Add information to nurture the knowledge base of {agentName}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <Alert className="mb-6">
               <AlertDescription>
-                Este texto será processado e adicionado à base de conhecimento do seu agente. Quanto mais detalhado e relevante for o conteúdo, melhor será o desempenho do seu agente.
+                This text will be processed and added to your agent's knowledge base. The more detailed and relevant the content, the better your agent will perform.
               </AlertDescription>
             </Alert>
             
@@ -151,10 +151,10 @@ const KnowledgeBasePage = () => {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Título da base de conhecimento</FormLabel>
+                      <FormLabel>Knowledge Base Title</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Digite um título para esta base de conhecimento..."
+                          placeholder="Enter a title for this knowledge base..."
                           {...field}
                         />
                       </FormControl>
@@ -168,10 +168,10 @@ const KnowledgeBasePage = () => {
                   name="content"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Texto para base de conhecimento</FormLabel>
+                      <FormLabel>Knowledge Base Text</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Digite aqui o texto que deseja adicionar à base de conhecimento..."
+                          placeholder="Enter the text you want to add to the knowledge base..."
                           className="min-h-[200px]"
                           {...field}
                         />
@@ -188,10 +188,10 @@ const KnowledgeBasePage = () => {
                     className="px-8"
                   >
                     {isSubmitting ? (
-                      'Enviando...'
+                      'Submitting...'
                     ) : (
                       <>
-                        <Send className="mr-2 h-4 w-4" /> Enviar Conhecimento
+                        <Send className="mr-2 h-4 w-4" /> Submit Knowledge
                       </>
                     )}
                   </Button>
@@ -206,27 +206,27 @@ const KnowledgeBasePage = () => {
             <CardHeader className="border-b bg-green-50">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-xl font-bold">Conhecimento adicionado com sucesso!</CardTitle>
+                <CardTitle className="text-xl font-bold">Knowledge successfully added!</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-2">Título</h3>
+                  <h3 className="font-semibold mb-2">Title</h3>
                   <p className="text-gray-800 bg-gray-50 p-3 rounded-md">
                     {responseData[0].metadata.título_live}
                   </p>
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold mb-2">Conteúdo</h3>
+                  <h3 className="font-semibold mb-2">Content</h3>
                   <p className="text-gray-800 bg-gray-50 p-3 rounded-md">
                     {responseData[0].pageContent}
                   </p>
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold mb-2">Resumo</h3>
+                  <h3 className="font-semibold mb-2">Summary</h3>
                   <p className="text-gray-800 bg-gray-50 p-3 rounded-md">
                     {responseData[0].metadata.resumo}
                   </p>
@@ -240,7 +240,7 @@ const KnowledgeBasePage = () => {
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold mb-2">Categorias</h3>
+                  <h3 className="font-semibold mb-2">Categories</h3>
                   <p className="text-gray-800 bg-gray-50 p-3 rounded-md">
                     {responseData[0].metadata.categorias}
                   </p>
