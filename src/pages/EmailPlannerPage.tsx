@@ -99,7 +99,7 @@ const EmailPlannerPage = () => {
     setEmailContent(null);
     
     try {
-      // Updated webhook URL
+      // Updated webhook URL as specified by the user
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
       
       // Prepare data to send to webhook
@@ -110,8 +110,9 @@ const EmailPlannerPage = () => {
         emailCount: values.emailCount,
       };
       
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Send the form data to the specified webhook
+      const response = await axios.post(webhookUrl, requestData);
+      console.log('Webhook response:', response.data);
       
       // Generate demo email content based on form inputs
       const generatedEmail = generateEmailContent(values);
