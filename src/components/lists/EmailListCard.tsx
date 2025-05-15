@@ -58,7 +58,7 @@ const EmailListCard = ({ list, selected, onSelect }: EmailListCardProps) => {
         </div>
         <div className="mt-3">
           <span className="font-medium text-gray-800">Insight:</span>
-          <p className="text-xs">{list.Insight}</p>
+          <p className="text-xs">{list.insight}</p>
         </div>
       </CardContent>
       

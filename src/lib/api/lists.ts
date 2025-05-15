@@ -69,7 +69,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          id_users: userId
+          // Removed id_users field as requested
         }
       };
     });
