@@ -23,14 +23,27 @@ const ListsPage = () => {
   
   useEffect(() => {
     const loadIntegrations = async () => {
-      if (!user) {
+      // Check if we should bypass the authentication redirect
+      const bypassRedirect = localStorage.getItem('bypass_redirect') === 'true';
+      
+      if (!user && !bypassRedirect) {
         navigate('/integrate');
         return;
       }
       
+      // Clear the bypass flag after using it
+      if (bypassRedirect) {
+        localStorage.removeItem('bypass_redirect');
+      }
+      
       try {
-        const userIntegrations = await fetchUserIntegrations(user.id);
-        setIntegrations(userIntegrations);
+        if (user && user.id) {
+          const userIntegrations = await fetchUserIntegrations(user.id);
+          setIntegrations(userIntegrations);
+        } else {
+          // If no user but we're bypassing redirect, just show empty state
+          setIntegrations([]);
+        }
       } catch (error: any) {
         console.error('Error loading integrations:', error);
         setError(error.message || 'Failed to load ActiveCampaign agents');
