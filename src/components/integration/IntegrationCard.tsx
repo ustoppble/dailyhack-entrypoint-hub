@@ -3,16 +3,23 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
+import { saveSelectedLists } from '@/lib/api/lists';
+import { EmailList } from '@/lib/api/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface IntegrationCardProps {
   id: string;
   name: string;
+  filterMode?: boolean;
+  connectedIds?: string[];
+  agentName?: string;
 }
 
-const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
+const IntegrationCard = ({ id, name, filterMode = false, connectedIds = [], agentName }: IntegrationCardProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Generate a color based on the account name for the avatar
   const generateColor = (accountName: string) => {
@@ -29,7 +36,15 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
   const avatarColor = generateColor(name);
   const avatarInitial = name.charAt(0).toUpperCase();
   
+  const isConnected = connectedIds.includes(id);
+
   const handleEnterClick = () => {
+    // If in filter mode and the agent name is provided, connect the list to the agent
+    if (filterMode && agentName && !isConnected) {
+      handleConnect();
+      return;
+    }
+    
     // Store the selected integration ID in localStorage
     localStorage.setItem('selected_integration_id', id);
     localStorage.setItem('selected_integration_name', name);
@@ -37,6 +52,74 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
     // Navigate to the agent central page
     navigate(`/agents/${name}/central`);
   };
+
+  const handleConnect = async () => {
+    if (!agentName) return;
+    
+    try {
+      // Create a dummy EmailList object with the required fields
+      const listToConnect: EmailList = {
+        id: id,
+        name: name,
+        sender_reminder: '',
+        insight: '',
+        active_subscribers: '0'
+      };
+      
+      // Get the user ID from localStorage
+      const userId = localStorage.getItem('user_id') || '';
+      
+      // Save the list as connected to the agent
+      const success = await saveSelectedLists(userId, [listToConnect], agentName);
+      
+      if (success) {
+        toast({
+          title: "List Connected",
+          description: `Successfully connected list "${name}" to agent "${agentName}"`,
+        });
+        
+        // Refresh the page to show the updated list
+        window.location.reload();
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: "Failed to connect the list to the agent.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting list:', error);
+      toast({
+        title: "Connection Error",
+        description: "An error occurred while connecting the list.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Button text based on mode and connection status
+  const getButtonContent = () => {
+    if (filterMode) {
+      return isConnected ? (
+        <>
+          <Check className="mr-2 h-4 w-4" /> Connected
+        </>
+      ) : (
+        <>
+          Connect <ArrowRight className="ml-2" />
+        </>
+      );
+    }
+    return (
+      <>
+        ENTER <ArrowRight className="ml-2" />
+      </>
+    );
+  };
+
+  // Button style and disabled state
+  const buttonVariant = filterMode && isConnected ? "secondary" : "default";
+  const isDisabled = filterMode && isConnected;
 
   return (
     <Card className="transition-all hover:shadow-md">
@@ -54,8 +137,13 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
       </CardContent>
       
       <CardFooter className="flex justify-center pb-4">
-        <Button onClick={handleEnterClick} className="w-full">
-          ENTER <ArrowRight className="ml-2" />
+        <Button
+          variant={buttonVariant}
+          onClick={handleEnterClick}
+          className="w-full"
+          disabled={isDisabled}
+        >
+          {getButtonContent()}
         </Button>
       </CardFooter>
     </Card>
@@ -63,4 +151,3 @@ const IntegrationCard = ({ id, name }: IntegrationCardProps) => {
 };
 
 export default IntegrationCard;
-
