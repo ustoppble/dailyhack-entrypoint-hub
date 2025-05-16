@@ -13,7 +13,6 @@ import LoginPage from "./pages/LoginPage";
 import AgentsPage from "./pages/AgentsPage";
 import ConfirmationPage from "./pages/ConfirmationPage";
 import ListsPage from "./pages/ListsPage";
-import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 import AgentCentralPage from "./pages/AgentCentralPage";
 import AgentListsPage from "./pages/AgentListsPage";
@@ -42,7 +41,6 @@ const App = () => (
               <Route path="/agents/:agentName/lists" element={<AgentListsPage />} />
               <Route path="/agents/:agentName/knowledge" element={<KnowledgeBasePage />} />
               <Route path="/agents/:agentName/email-planner" element={<EmailPlannerPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

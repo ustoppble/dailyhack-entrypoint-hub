@@ -62,7 +62,7 @@ const HomePage = () => {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Continue setting up your integration or view your dashboard.
+                Continue setting up your integration or access your agents.
               </p>
             </CardContent>
             <CardFooter className="flex justify-center gap-4">
@@ -70,7 +70,7 @@ const HomePage = () => {
                 <Link to="/integrate">Integrate ActiveCampaign</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/dashboard">Dashboard</Link>
+                <Link to="/agents">View Agents</Link>
               </Button>
             </CardFooter>
           </Card>
