@@ -51,7 +51,7 @@ const AgentListsPage = () => {
           <CardTitle className="flex justify-between items-center">
             <span>Connected Lists for {agentName}</span>
             <Button asChild variant="outline" className="flex items-center gap-2">
-              <Link to={`/lists/${agentName}`}>
+              <Link to={`/lists/fetch/${agentName}`}>
                 <ListPlus className="h-4 w-4" /> Connect More Lists
               </Link>
             </Button>
@@ -68,7 +68,7 @@ const AgentListsPage = () => {
           ) : connectedLists.length === 0 ? (
             <EmptyState 
               message={`You haven't connected any lists for ${agentName} yet.`}
-              actionUrl={`/lists/${agentName}`}
+              actionUrl={`/lists/fetch/${agentName}`}
               actionLabel="Connect Lists"
             />
           ) : (

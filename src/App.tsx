@@ -18,6 +18,7 @@ import AgentCentralPage from "./pages/AgentCentralPage";
 import AgentListsPage from "./pages/AgentListsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import EmailPlannerPage from "./pages/EmailPlannerPage";
+import FetchListsPage from "./pages/FetchListsPage";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/confirmation" element={<ConfirmationPage />} />
               <Route path="/lists" element={<ListsPage />} />
               <Route path="/lists/:integrationId" element={<ListsPage />} />
+              <Route path="/lists/fetch/:agentName" element={<FetchListsPage />} />
               <Route path="/agents/:agentName/central" element={<AgentCentralPage />} />
               <Route path="/agents/:agentName/lists" element={<AgentListsPage />} />
               <Route path="/agents/:agentName/knowledge" element={<KnowledgeBasePage />} />
