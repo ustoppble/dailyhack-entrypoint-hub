@@ -27,23 +27,26 @@ const FetchListsPage = () => {
   useEffect(() => {
     if (!agentName) return;
     
-    // Check for agent-specific credentials first
-    const storedApiUrl = localStorage.getItem(`${agentName}_api_url`);
+    // Format the API URL based on the agent name
+    const formattedApiUrl = `https://${agentName}.api-us1.com`;
+    
+    // Check for agent-specific token first
     const storedApiToken = localStorage.getItem(`${agentName}_api_token`);
     
-    if (storedApiUrl && storedApiToken) {
+    if (storedApiToken) {
       console.log(`Using ${agentName} specific credentials`);
-      setApiUrl(storedApiUrl);
+      setApiUrl(formattedApiUrl);
       setApiToken(storedApiToken);
     } else {
-      // Fall back to generic credentials
-      const genericApiUrl = localStorage.getItem('ac_api_url');
+      // Fall back to generic token
       const genericApiToken = localStorage.getItem('ac_api_token');
       
-      if (genericApiUrl && genericApiToken) {
-        console.log('Using generic credentials');
-        setApiUrl(genericApiUrl);
+      if (genericApiToken) {
+        console.log('Using generic token with agent-specific URL');
+        setApiUrl(formattedApiUrl);
         setApiToken(genericApiToken);
+      } else {
+        setError("API token not found. Please connect your ActiveCampaign account.");
       }
     }
   }, [agentName]);
