@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw, List } from 'lucide-react';
-import { fetchEmailLists } from '@/lib/api/lists';
+import { fetchEmailLists, fetchConnectedLists } from '@/lib/api/lists';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import EmailListCard from '@/components/lists/EmailListCard';
@@ -18,10 +19,12 @@ const FetchListsPage = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [lists, setLists] = useState<EmailList[]>([]);
+  const [connectedListIds, setConnectedListIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string>('');
   const [apiToken, setApiToken] = useState<string>('');
   const [integrationLoading, setIntegrationLoading] = useState(true);
+  const [connectedListsLoading, setConnectedListsLoading] = useState(true);
 
   // Load integration details from Airtable when component loads
   useEffect(() => {
@@ -62,12 +65,35 @@ const FetchListsPage = () => {
     loadIntegrationDetails();
   }, [agentName, user]);
 
+  // Fetch connected lists for the current agent
+  useEffect(() => {
+    if (!agentName || !user?.id) return;
+
+    const loadConnectedLists = async () => {
+      try {
+        setConnectedListsLoading(true);
+        const connectedLists = await fetchConnectedLists(agentName);
+        
+        // Extract IDs from connected lists
+        const connectedIds = connectedLists.map(list => list.id);
+        console.log('Connected list IDs:', connectedIds);
+        setConnectedListIds(connectedIds);
+      } catch (err) {
+        console.error('Error loading connected lists:', err);
+      } finally {
+        setConnectedListsLoading(false);
+      }
+    };
+
+    loadConnectedLists();
+  }, [agentName, user]);
+
   // Fetch lists when API credentials are loaded
   useEffect(() => {
-    if (apiUrl && apiToken && !integrationLoading) {
+    if (apiUrl && apiToken && !integrationLoading && !connectedListsLoading) {
       fetchLists();
     }
-  }, [apiUrl, apiToken, integrationLoading]);
+  }, [apiUrl, apiToken, integrationLoading, connectedListsLoading]);
 
   const fetchLists = async () => {
     if (!agentName || !apiUrl || !apiToken) {
@@ -82,13 +108,20 @@ const FetchListsPage = () => {
       console.log(`Fetching lists for agent ${agentName} with URL ${apiUrl}`);
       const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
       
-      if (fetchedLists.length === 0) {
-        setError("No lists found in your ActiveCampaign account.");
+      // Filter out already connected lists
+      const filteredLists = fetchedLists.filter(list => !connectedListIds.includes(list.id || ''));
+      
+      if (filteredLists.length === 0) {
+        if (fetchedLists.length === 0) {
+          setError("No lists found in your ActiveCampaign account.");
+        } else {
+          setError("All available lists are already connected to this agent.");
+        }
       } else {
-        setLists(fetchedLists);
+        setLists(filteredLists);
         toast({
           title: "Lists fetched successfully",
-          description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
+          description: `Found ${filteredLists.length} available lists to connect.`,
         });
       }
     } catch (err: any) {
@@ -122,7 +155,7 @@ const FetchListsPage = () => {
             <Button 
               variant="outline" 
               onClick={fetchLists} 
-              disabled={loading}
+              disabled={loading || integrationLoading || connectedListsLoading}
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> 
@@ -135,7 +168,7 @@ const FetchListsPage = () => {
         </CardHeader>
         
         <CardContent>
-          {integrationLoading ? (
+          {integrationLoading || connectedListsLoading ? (
             <LoadingState text="Loading integration details..." />
           ) : loading ? (
             <LoadingState />
@@ -153,7 +186,7 @@ const FetchListsPage = () => {
             </div>
           ) : lists.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No lists found. Click Refresh to fetch lists from ActiveCampaign.</p>
+              <p className="text-gray-500 mb-4">No unconnected lists found. Click Refresh to fetch lists from ActiveCampaign.</p>
               <Button onClick={fetchLists}>Refresh Lists</Button>
             </div>
           ) : (
@@ -174,6 +207,7 @@ const FetchListsPage = () => {
             <p>Agent: {agentName}</p>
             <p>API URL: {apiUrl ? apiUrl : "Not set"}</p>
             <p>API Token: {apiToken ? "Set (hidden)" : "Not set"}</p>
+            <p>Connected Lists: {connectedListIds.length}</p>
           </div>
         </CardContent>
       </Card>
