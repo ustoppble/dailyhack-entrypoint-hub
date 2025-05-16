@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchConnectedLists } from '@/lib/api/lists';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
 import EmptyState from '@/components/lists/EmptyState';
 import EmailListCard from '@/components/lists/EmailListCard';
+import { Button } from '@/components/ui/button';
+import { ListPlus } from 'lucide-react';
 
 interface ConnectedList {
   id: string;
   name: string;
+  subscribers?: string;
 }
 
 const AgentListsPage = () => {
@@ -28,6 +31,7 @@ const AgentListsPage = () => {
         setError(null);
         
         const lists = await fetchConnectedLists(agentName);
+        console.log('Fetched lists:', lists);
         setConnectedLists(lists);
       } catch (err) {
         console.error('Error loading connected lists:', err);
@@ -46,6 +50,11 @@ const AgentListsPage = () => {
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Connected Lists for {agentName}</span>
+            <Button asChild variant="outline" className="flex items-center gap-2">
+              <Link to={`/lists`}>
+                <ListPlus className="h-4 w-4" /> Connect More Lists
+              </Link>
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -70,7 +79,7 @@ const AgentListsPage = () => {
                   list={{
                     id: list.id,
                     name: list.name,
-                    active_subscribers: "0",
+                    active_subscribers: list.subscribers || "0",
                     insight: "",
                   }}
                 />

@@ -46,7 +46,7 @@ const EmptyState = ({
     <div className="text-center py-12">
       <p className="text-gray-600">{message}</p>
       <p className="text-sm text-gray-500 mt-2">
-        Please connect to get started.
+        Click the button below to connect lists.
       </p>
       {renderButton()}
     </div>

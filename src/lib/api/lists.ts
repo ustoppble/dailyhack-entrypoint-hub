@@ -52,7 +52,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 /**
  * Fetch connected lists from Airtable
  */
-export const fetchConnectedLists = async (agentName: string): Promise<{id: string, name: string}[]> => {
+export const fetchConnectedLists = async (agentName: string): Promise<{id: string, name: string, subscribers: string}[]> => {
   try {
     console.log('Fetching connected lists for agent:', agentName);
     
@@ -74,7 +74,8 @@ export const fetchConnectedLists = async (agentName: string): Promise<{id: strin
     if (response.data && response.data.records) {
       return response.data.records.map((record: any) => ({
         id: record.fields.list_id || record.id,
-        name: record.fields.list_name
+        name: record.fields.list_name,
+        subscribers: record.fields.list_leads || "0"
       }));
     }
     

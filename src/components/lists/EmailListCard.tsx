@@ -30,6 +30,7 @@ const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: Ema
   const name = list.name || "Unknown List";
   const avatarColor = generateColor(name);
   const avatarInitial = name.charAt(0).toUpperCase();
+  const subscriberCount = list.active_subscribers || "0";
   
   const handleCheckedChange = (checked: boolean) => {
     if (onToggleSelect && list.id) {
@@ -59,7 +60,7 @@ const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: Ema
         <CardTitle className="mt-3 text-center text-lg">{name}</CardTitle>
         <Badge variant="outline" className="flex items-center gap-1 mt-2">
           <Users className="h-3 w-3" />
-          {list.active_subscribers || "0"}
+          {subscriberCount}
         </Badge>
       </CardHeader>
       
@@ -81,7 +82,7 @@ const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: Ema
       <CardFooter className="pt-0 justify-center">
         {(onToggleSelect || onSelect) ? (
           <p className="text-xs text-gray-500 text-center">
-            Clique para selecionar esta lista
+            Click to select this list
           </p>
         ) : (
           <p className="text-xs text-gray-500 text-center">
