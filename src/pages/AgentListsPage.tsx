@@ -2,18 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { fetchConnectedLists } from '@/lib/api/lists';
+import { fetchConnectedLists, deleteConnectedList } from '@/lib/api/lists';
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
 import EmptyState from '@/components/lists/EmptyState';
 import EmailListCard from '@/components/lists/EmailListCard';
 import { Button } from '@/components/ui/button';
 import { ListPlus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConnectedList {
   id: string;
   name: string;
   subscribers?: string;
+  airtableId?: string;
 }
 
 const AgentListsPage = () => {
@@ -21,28 +23,55 @@ const AgentListsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectedLists, setConnectedLists] = useState<ConnectedList[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const loadConnectedLists = async () => {
-      if (!agentName) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const lists = await fetchConnectedLists(agentName);
-        console.log('Fetched lists:', lists);
-        setConnectedLists(lists);
-      } catch (err) {
-        console.error('Error loading connected lists:', err);
-        setError('Failed to load connected lists. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadConnectedLists();
   }, [agentName]);
+  
+  const loadConnectedLists = async () => {
+    if (!agentName) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const lists = await fetchConnectedLists(agentName);
+      console.log('Fetched lists:', lists);
+      setConnectedLists(lists);
+    } catch (err) {
+      console.error('Error loading connected lists:', err);
+      setError('Failed to load connected lists. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteList = async (airtableRecordId: string) => {
+    if (!airtableRecordId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify the list record to delete.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await deleteConnectedList(airtableRecordId);
+      
+      // Update the local state to remove the deleted list
+      setConnectedLists(prev => prev.filter(list => list.airtableId !== airtableRecordId));
+    } catch (err) {
+      console.error('Error deleting list:', err);
+      toast({
+        title: "Error",
+        description: "Failed to remove the list. Please try again.",
+        variant: "destructive"
+      });
+      throw err; // Re-throw to handle in the component
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -63,7 +92,7 @@ const AgentListsPage = () => {
           ) : error ? (
             <ErrorState 
               error={error} 
-              onRetry={() => window.location.reload()}
+              onRetry={loadConnectedLists}
             />
           ) : connectedLists.length === 0 ? (
             <EmptyState 
@@ -82,6 +111,12 @@ const AgentListsPage = () => {
                     active_subscribers: list.subscribers || "0",
                     insight: "",
                   }}
+                  isConnected={true}
+                  agentName={agentName}
+                  onDelete={list.airtableId ? 
+                    () => handleDeleteList(list.airtableId!) : 
+                    undefined
+                  }
                 />
               ))}
             </div>

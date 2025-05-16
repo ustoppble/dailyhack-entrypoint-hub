@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { EmailList } from './types';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
@@ -53,7 +52,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 /**
  * Fetch connected lists from Airtable
  */
-export const fetchConnectedLists = async (agentName: string): Promise<{id: string, name: string, subscribers: string}[]> => {
+export const fetchConnectedLists = async (agentName: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string}[]> => {
   try {
     console.log('Fetching connected lists for agent:', agentName);
     
@@ -76,7 +75,8 @@ export const fetchConnectedLists = async (agentName: string): Promise<{id: strin
       return response.data.records.map((record: any) => ({
         id: record.fields.list_id || record.id,
         name: record.fields.list_name,
-        subscribers: record.fields.list_leads || "0"
+        subscribers: record.fields.list_leads || "0",
+        airtableId: record.id // Adding the Airtable record ID for deletion
       }));
     }
     
@@ -132,6 +132,36 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
     return response.data.records && response.data.records.length > 0;
   } catch (error: any) {
     console.error('Error saving selected lists to Airtable:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Delete a connected list from Airtable
+ */
+export const deleteConnectedList = async (airtableRecordId: string): Promise<boolean> => {
+  try {
+    console.log('Deleting connected list with Airtable record ID:', airtableRecordId);
+    
+    const response = await axios.delete(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}/${airtableRecordId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Airtable delete response:', response.data);
+    
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting connected list from Airtable:', error);
     if (error.response) {
       console.error('Response data:', error.response.data);
       console.error('Response status:', error.response.status);

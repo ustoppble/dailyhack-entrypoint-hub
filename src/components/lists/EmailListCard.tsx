@@ -1,11 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmailList } from '@/lib/api/types';
-import { Users } from "lucide-react";
+import { Users, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { saveSelectedLists } from '@/lib/api/lists';
@@ -18,6 +18,8 @@ interface EmailListCardProps {
   onSelect?: (listName: string, isSelected: boolean) => void;
   agentName?: string;
   isConnected?: boolean;
+  onDelete?: () => Promise<void>;
+  airtableRecordId?: string;
 }
 
 const EmailListCard = ({ 
@@ -26,9 +28,12 @@ const EmailListCard = ({
   onToggleSelect, 
   onSelect, 
   agentName,
-  isConnected = false
+  isConnected = false,
+  onDelete,
+  airtableRecordId
 }: EmailListCardProps) => {
   const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Generate a color based on the list name for the avatar
   const generateColor = (name: string) => {
@@ -81,6 +86,28 @@ const EmailListCard = ({
       });
     }
   };
+
+  const handleDeleteClick = async () => {
+    if (!onDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await onDelete();
+      toast({
+        title: "List removed successfully",
+        description: `"${name}" has been removed from ${agentName}`,
+      });
+    } catch (err) {
+      console.error('Error deleting list:', err);
+      toast({
+        title: "Failed to remove list",
+        description: "There was an error removing the list. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   
   return (
     <Card className={`relative transition-all ${selected ? 'border-blue-500 border-2 shadow-md' : 'border-gray-200'}`}>
@@ -121,7 +148,7 @@ const EmailListCard = ({
         )}
       </CardContent>
       
-      <CardFooter className="pt-0 justify-center">
+      <CardFooter className="pt-0 flex flex-col gap-2">
         {agentName && !isConnected && (
           <Button 
             onClick={handleConnectList} 
@@ -132,11 +159,23 @@ const EmailListCard = ({
             Connect to {agentName}
           </Button>
         )}
-        {(onToggleSelect || onSelect) && !agentName ? (
+        {isConnected && onDelete && (
+          <Button 
+            onClick={handleDeleteClick} 
+            variant="destructive" 
+            size="sm"
+            className="w-full"
+            disabled={isDeleting}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            {isDeleting ? 'Removing...' : 'Remove List'}
+          </Button>
+        )}
+        {(onToggleSelect || onSelect) && !agentName && !isConnected ? (
           <p className="text-xs text-gray-500 text-center">
             Click to select this list
           </p>
-        ) : (!agentName && isConnected) && (
+        ) : (agentName && isConnected && !onDelete) && (
           <p className="text-xs text-gray-500 text-center">
             Connected list
           </p>
