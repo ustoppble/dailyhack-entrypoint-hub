@@ -6,15 +6,30 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmailList } from '@/lib/api/types';
 import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { saveSelectedLists } from '@/lib/api/lists';
+import { useToast } from "@/hooks/use-toast";
 
 interface EmailListCardProps {
   list: EmailList | Partial<EmailList>;
   selected?: boolean;
   onToggleSelect?: (listId: string, isSelected: boolean) => void;
   onSelect?: (listName: string, isSelected: boolean) => void;
+  agentName?: string;
+  isConnected?: boolean;
 }
 
-const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: EmailListCardProps) => {
+const EmailListCard = ({ 
+  list, 
+  selected = false, 
+  onToggleSelect, 
+  onSelect, 
+  agentName,
+  isConnected = false
+}: EmailListCardProps) => {
+  const { toast } = useToast();
+  
   // Generate a color based on the list name for the avatar
   const generateColor = (name: string) => {
     const colors = [
@@ -37,6 +52,33 @@ const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: Ema
       onToggleSelect(list.id, checked);
     } else if (onSelect && list.name) {
       onSelect(list.name, checked);
+    }
+  };
+
+  const handleConnectList = async () => {
+    if (!list.id || !agentName) return;
+    
+    try {
+      const success = await saveSelectedLists('', [list as EmailList], agentName);
+      
+      if (success) {
+        toast({
+          title: "List connected successfully",
+          description: `"${name}" has been connected to ${agentName}`,
+        });
+        
+        // Refresh the page after successful connection
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Error connecting list:', err);
+      toast({
+        title: "Failed to connect list",
+        description: "There was an error connecting the list. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -80,11 +122,21 @@ const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: Ema
       </CardContent>
       
       <CardFooter className="pt-0 justify-center">
-        {(onToggleSelect || onSelect) ? (
+        {agentName && !isConnected && (
+          <Button 
+            onClick={handleConnectList} 
+            variant="outline" 
+            size="sm"
+            className="w-full"
+          >
+            Connect to {agentName}
+          </Button>
+        )}
+        {(onToggleSelect || onSelect) && !agentName ? (
           <p className="text-xs text-gray-500 text-center">
             Click to select this list
           </p>
-        ) : (
+        ) : (!agentName && isConnected) && (
           <p className="text-xs text-gray-500 text-center">
             Connected list
           </p>

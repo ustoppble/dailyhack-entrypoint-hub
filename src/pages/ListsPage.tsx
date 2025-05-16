@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchUserIntegrations } from '@/lib/api/integration';
+import { fetchEmailLists, fetchConnectedLists } from '@/lib/api/lists';
+import { EmailList } from '@/lib/api/types';
 
-// Import our new components
+// Import our components
 import LoadingState from '@/components/lists/LoadingState';
 import ErrorState from '@/components/lists/ErrorState';
 import EmptyState from '@/components/lists/EmptyState';
@@ -17,9 +19,11 @@ const ListsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { integrationId } = useParams<{ integrationId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [integrations, setIntegrations] = useState<{id: string, api: string}[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showingForAgent, setShowingForAgent] = useState<string | null>(integrationId || null);
   
   useEffect(() => {
     const loadIntegrations = async () => {
@@ -69,20 +73,29 @@ const ListsPage = () => {
         <IntegrationGrid 
           integrations={integrations} 
           onAddNew={handleAddNewIntegration} 
+          agentFilter={showingForAgent}
         />
         <Separator className="my-8" />
       </>
     );
   };
+
+  const pageTitle = showingForAgent 
+    ? `Available Lists for ${showingForAgent}` 
+    : "Your ActiveCampaign Agents";
   
+  const pageDescription = showingForAgent
+    ? "Select lists to connect to your agent"
+    : "Select an agent to work with or add a new one";
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-5xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Your ActiveCampaign Agents</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">{pageTitle}</CardTitle>
             <CardDescription className="text-center">
-              Select an agent to work with or add a new one
+              {pageDescription}
             </CardDescription>
           </CardHeader>
           
@@ -96,4 +109,3 @@ const ListsPage = () => {
 };
 
 export default ListsPage;
-
