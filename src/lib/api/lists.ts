@@ -13,7 +13,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
   try {
     console.log('Fetching ActiveCampaign lists for URL:', apiUrl);
     
-    // Using GET request with query parameters instead of POST
+    // Using GET request with query parameters
     const response = await axios.get(WEBHOOK_URL, {
       params: {
         api: apiUrl,

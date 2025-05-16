@@ -9,11 +9,14 @@ import { fetchEmailLists } from '@/lib/api/lists';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import EmailListCard from '@/components/lists/EmailListCard';
+import { fetchUserIntegrations } from '@/lib/api/integration';
+import { useAuth } from '@/contexts/AuthContext';
 
 const FetchListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -30,28 +33,49 @@ const FetchListsPage = () => {
     setError(null);
     
     try {
-      // Get API credentials from localStorage
-      const apiUrl = localStorage.getItem('ac_api_url') || '';
-      const apiToken = localStorage.getItem('ac_api_token') || '';
+      // Buscar dados de API para o agente atual
+      const apiUrl = localStorage.getItem(`${agentName}_api_url`) || '';
+      const apiToken = localStorage.getItem(`${agentName}_api_token`) || '';
       
+      // Se não encontrar as credenciais específicas do agente, tentar credenciais genéricas
       if (!apiUrl || !apiToken) {
-        setError("API credentials not found. Please reconnect your ActiveCampaign account.");
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch lists from the webhook
-      const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
-      console.log('Fetched lists:', fetchedLists);
-      
-      if (fetchedLists.length === 0) {
-        setError("No lists found in your ActiveCampaign account.");
+        // Get API credentials from localStorage
+        const genericApiUrl = localStorage.getItem('ac_api_url') || '';
+        const genericApiToken = localStorage.getItem('ac_api_token') || '';
+        
+        if (!genericApiUrl || !genericApiToken) {
+          setError("API credentials not found. Please reconnect your ActiveCampaign account.");
+          setLoading(false);
+          return;
+        }
+        
+        // Use credenciais genéricas
+        const fetchedLists = await fetchEmailLists(genericApiUrl, genericApiToken);
+        console.log('Fetched lists with generic credentials:', fetchedLists);
+        
+        if (fetchedLists.length === 0) {
+          setError("No lists found in your ActiveCampaign account.");
+        } else {
+          setLists(fetchedLists);
+          toast({
+            title: "Lists fetched successfully",
+            description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
+          });
+        }
       } else {
-        setLists(fetchedLists);
-        toast({
-          title: "Lists fetched successfully",
-          description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
-        });
+        // Use credenciais específicas do agente
+        const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
+        console.log('Fetched lists with agent credentials:', fetchedLists);
+        
+        if (fetchedLists.length === 0) {
+          setError("No lists found in your ActiveCampaign account.");
+        } else {
+          setLists(fetchedLists);
+          toast({
+            title: "Lists fetched successfully",
+            description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
+          });
+        }
       }
     } catch (err: any) {
       console.error('Error fetching lists:', err);
