@@ -8,12 +8,13 @@ import { EmailList } from '@/lib/api/types';
 import { Users } from "lucide-react";
 
 interface EmailListCardProps {
-  list: EmailList;
-  selected: boolean;
-  onSelect: (listName: string, isSelected: boolean) => void;
+  list: EmailList | Partial<EmailList>;
+  selected?: boolean;
+  onToggleSelect?: (listId: string, isSelected: boolean) => void;
+  onSelect?: (listName: string, isSelected: boolean) => void;
 }
 
-const EmailListCard = ({ list, selected, onSelect }: EmailListCardProps) => {
+const EmailListCard = ({ list, selected = false, onToggleSelect, onSelect }: EmailListCardProps) => {
   // Generate a color based on the list name for the avatar
   const generateColor = (name: string) => {
     const colors = [
@@ -26,17 +27,28 @@ const EmailListCard = ({ list, selected, onSelect }: EmailListCardProps) => {
     return colors[hash % colors.length];
   };
   
-  const avatarColor = generateColor(list.name);
-  const avatarInitial = list.name.charAt(0).toUpperCase();
+  const name = list.name || "Unknown List";
+  const avatarColor = generateColor(name);
+  const avatarInitial = name.charAt(0).toUpperCase();
+  
+  const handleCheckedChange = (checked: boolean) => {
+    if (onToggleSelect && list.id) {
+      onToggleSelect(list.id, checked);
+    } else if (onSelect && list.name) {
+      onSelect(list.name, checked);
+    }
+  };
   
   return (
     <Card className={`relative transition-all ${selected ? 'border-blue-500 border-2 shadow-md' : 'border-gray-200'}`}>
-      <div className="absolute right-3 top-3">
-        <Checkbox 
-          checked={selected} 
-          onCheckedChange={(checked) => onSelect(list.name, checked === true)}
-        />
-      </div>
+      {(onToggleSelect || onSelect) && (
+        <div className="absolute right-3 top-3">
+          <Checkbox 
+            checked={selected} 
+            onCheckedChange={(checked) => handleCheckedChange(checked === true)}
+          />
+        </div>
+      )}
       
       <CardHeader className="flex flex-col items-center pt-6 pb-3">
         <Avatar className={`h-16 w-16 ${avatarColor} text-white`}>
@@ -44,28 +56,38 @@ const EmailListCard = ({ list, selected, onSelect }: EmailListCardProps) => {
             {avatarInitial}
           </AvatarFallback>
         </Avatar>
-        <CardTitle className="mt-3 text-center text-lg">{list.name}</CardTitle>
+        <CardTitle className="mt-3 text-center text-lg">{name}</CardTitle>
         <Badge variant="outline" className="flex items-center gap-1 mt-2">
           <Users className="h-3 w-3" />
-          {list.active_subscribers}
+          {list.active_subscribers || "0"}
         </Badge>
       </CardHeader>
       
       <CardContent className="text-sm text-gray-600 pb-3">
-        <div className="mb-2">
-          <span className="font-medium text-gray-800">Lembrete do remetente:</span>
-          <p className="italic">"{list.sender_reminder}"</p>
-        </div>
-        <div className="mt-3">
-          <span className="font-medium text-gray-800">Insight:</span>
-          <p className="text-xs">{list.insight}</p>
-        </div>
+        {list.sender_reminder && (
+          <div className="mb-2">
+            <span className="font-medium text-gray-800">Lembrete do remetente:</span>
+            <p className="italic">"{list.sender_reminder}"</p>
+          </div>
+        )}
+        {list.insight && (
+          <div className="mt-3">
+            <span className="font-medium text-gray-800">Insight:</span>
+            <p className="text-xs">{list.insight}</p>
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="pt-0 justify-center">
-        <p className="text-xs text-gray-500 text-center">
-          Clique para selecionar esta lista
-        </p>
+        {(onToggleSelect || onSelect) ? (
+          <p className="text-xs text-gray-500 text-center">
+            Clique para selecionar esta lista
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 text-center">
+            Connected list
+          </p>
+        )}
       </CardFooter>
     </Card>
   );

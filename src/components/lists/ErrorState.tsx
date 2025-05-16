@@ -5,10 +5,19 @@ import { Button } from "@/components/ui/button";
 
 interface ErrorStateProps {
   error: string;
+  onRetry?: () => void;
 }
 
-const ErrorState = ({ error }: ErrorStateProps) => {
+const ErrorState = ({ error, onRetry }: ErrorStateProps) => {
   const navigate = useNavigate();
+  
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+    } else {
+      navigate('/integrate');
+    }
+  };
   
   return (
     <div className="bg-red-50 p-4 rounded-lg text-center">
@@ -16,9 +25,9 @@ const ErrorState = ({ error }: ErrorStateProps) => {
       <Button 
         variant="outline" 
         className="mt-4" 
-        onClick={() => navigate('/integrate')}
+        onClick={handleRetry}
       >
-        Back to Agent Setup
+        {onRetry ? "Try Again" : "Back to Agent Setup"}
       </Button>
     </div>
   );

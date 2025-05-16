@@ -8,12 +8,16 @@ import ErrorState from '@/components/lists/ErrorState';
 import EmptyState from '@/components/lists/EmptyState';
 import EmailListCard from '@/components/lists/EmailListCard';
 
+interface ConnectedList {
+  id: string;
+  name: string;
+}
+
 const AgentListsPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Fix the type here to match what fetchConnectedLists returns
-  const [connectedLists, setConnectedLists] = useState<{ id: string; name: string }[]>([]);
+  const [connectedLists, setConnectedLists] = useState<ConnectedList[]>([]);
 
   useEffect(() => {
     const loadConnectedLists = async () => {
@@ -48,7 +52,10 @@ const AgentListsPage = () => {
           {loading ? (
             <LoadingState />
           ) : error ? (
-            <ErrorState error={error} onRetry={() => window.location.reload()} />
+            <ErrorState 
+              error={error} 
+              onRetry={() => window.location.reload()}
+            />
           ) : connectedLists.length === 0 ? (
             <EmptyState 
               message={`You haven't connected any lists for ${agentName} yet.`}
@@ -65,9 +72,7 @@ const AgentListsPage = () => {
                     name: list.name,
                     active_subscribers: "0",
                     insight: "",
-                    selected: false
                   }}
-                  onToggleSelect={() => {}}
                 />
               ))}
             </div>
