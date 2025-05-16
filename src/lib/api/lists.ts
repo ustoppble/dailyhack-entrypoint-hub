@@ -12,6 +12,7 @@ const AIRTABLE_LISTS_TABLE_ID = 'tblhqy7BdNwj0SPHD';
 export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise<EmailList[]> => {
   try {
     console.log('Fetching ActiveCampaign lists for URL:', apiUrl);
+    console.log('Using token:', apiToken);
     
     // Using GET request with query parameters
     const response = await axios.get(WEBHOOK_URL, {
@@ -19,7 +20,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
         api: apiUrl,
         token: apiToken
       },
-      timeout: 15000, // 15 second timeout
+      timeout: 30000, // Increase timeout to 30 seconds
     });
     
     console.log('n8n webhook response for lists:', response.data);
@@ -42,7 +43,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
       throw new Error(`Error fetching lists: ${error.response.status} - ${error.response.data || 'Unknown error'}`);
     } else if (error.request) {
       console.error('No response received:', error.request);
-      throw new Error('No response received from webhook. Check your internet connection.');
+      throw new Error('No response received from webhook. Check your internet connection or try again later.');
     }
     
     throw error;

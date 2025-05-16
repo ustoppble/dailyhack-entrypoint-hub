@@ -20,62 +20,62 @@ const FetchListsPage = () => {
   const [loading, setLoading] = useState(false);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [apiUrl, setApiUrl] = useState<string>('');
+  const [apiToken, setApiToken] = useState<string>('');
 
-  // Fetch lists when the page loads
+  // Initialize API credentials when the component loads
   useEffect(() => {
-    fetchLists();
-  }, []);
+    if (!agentName) return;
+    
+    // Check for agent-specific credentials first
+    const storedApiUrl = localStorage.getItem(`${agentName}_api_url`);
+    const storedApiToken = localStorage.getItem(`${agentName}_api_token`);
+    
+    if (storedApiUrl && storedApiToken) {
+      console.log(`Using ${agentName} specific credentials`);
+      setApiUrl(storedApiUrl);
+      setApiToken(storedApiToken);
+    } else {
+      // Fall back to generic credentials
+      const genericApiUrl = localStorage.getItem('ac_api_url');
+      const genericApiToken = localStorage.getItem('ac_api_token');
+      
+      if (genericApiUrl && genericApiToken) {
+        console.log('Using generic credentials');
+        setApiUrl(genericApiUrl);
+        setApiToken(genericApiToken);
+      }
+    }
+  }, [agentName]);
+
+  // Fetch lists when credentials are loaded
+  useEffect(() => {
+    if (apiUrl && apiToken) {
+      fetchLists();
+    }
+  }, [apiUrl, apiToken]);
 
   const fetchLists = async () => {
-    if (!agentName) return;
+    if (!agentName || !apiUrl || !apiToken) {
+      setError("API credentials not found. Please reconnect your ActiveCampaign account.");
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      // Buscar dados de API para o agente atual
-      const apiUrl = localStorage.getItem(`${agentName}_api_url`) || '';
-      const apiToken = localStorage.getItem(`${agentName}_api_token`) || '';
+      console.log(`Fetching lists for agent ${agentName} with URL ${apiUrl}`);
+      const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
       
-      // Se não encontrar as credenciais específicas do agente, tentar credenciais genéricas
-      if (!apiUrl || !apiToken) {
-        // Get API credentials from localStorage
-        const genericApiUrl = localStorage.getItem('ac_api_url') || '';
-        const genericApiToken = localStorage.getItem('ac_api_token') || '';
-        
-        if (!genericApiUrl || !genericApiToken) {
-          setError("API credentials not found. Please reconnect your ActiveCampaign account.");
-          setLoading(false);
-          return;
-        }
-        
-        // Use credenciais genéricas
-        const fetchedLists = await fetchEmailLists(genericApiUrl, genericApiToken);
-        console.log('Fetched lists with generic credentials:', fetchedLists);
-        
-        if (fetchedLists.length === 0) {
-          setError("No lists found in your ActiveCampaign account.");
-        } else {
-          setLists(fetchedLists);
-          toast({
-            title: "Lists fetched successfully",
-            description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
-          });
-        }
+      if (fetchedLists.length === 0) {
+        setError("No lists found in your ActiveCampaign account.");
       } else {
-        // Use credenciais específicas do agente
-        const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
-        console.log('Fetched lists with agent credentials:', fetchedLists);
-        
-        if (fetchedLists.length === 0) {
-          setError("No lists found in your ActiveCampaign account.");
-        } else {
-          setLists(fetchedLists);
-          toast({
-            title: "Lists fetched successfully",
-            description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
-          });
-        }
+        setLists(fetchedLists);
+        toast({
+          title: "Lists fetched successfully",
+          description: `Found ${fetchedLists.length} lists in your ActiveCampaign account.`,
+        });
       }
     } catch (err: any) {
       console.error('Error fetching lists:', err);
@@ -144,6 +144,13 @@ const FetchListsPage = () => {
               ))}
             </div>
           )}
+          
+          {/* Debug info - display API credentials */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-md text-xs text-gray-500">
+            <p>Agent: {agentName}</p>
+            <p>API URL: {apiUrl ? apiUrl : "Not set"}</p>
+            <p>API Token: {apiToken ? "Set (hidden)" : "Not set"}</p>
+          </div>
         </CardContent>
       </Card>
     </div>
