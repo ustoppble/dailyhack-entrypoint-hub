@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,13 +33,19 @@ const emailFormSchema = z.object({
 
 type EmailPlannerFormValues = z.infer<typeof emailFormSchema>;
 
+// List item interface with id and name
+interface ListItem {
+  id: string;
+  name: string;
+}
+
 const EmailPlannerPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [lists, setLists] = useState<string[]>([]);
+  const [lists, setLists] = useState<ListItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +109,7 @@ const EmailPlannerPage = () => {
       // Prepare data to send to webhook
       const requestData = {
         agentName,
-        lists: values.selectedLists,
+        lists: values.selectedLists, // this now contains list IDs instead of names
         mainGoal: values.mainGoal,
         emailCount: values.emailCount,
       };
@@ -111,8 +118,14 @@ const EmailPlannerPage = () => {
       const response = await axios.post(webhookUrl, requestData);
       console.log('Webhook response:', response.data);
       
+      // Get list names for the success message
+      const selectedListNames = values.selectedLists.map(listId => {
+        const list = lists.find(list => list.id === listId);
+        return list ? list.name : listId;
+      });
+      
       const emailCountText = values.emailCount === "autopilot" ? "Autopilot" : `${values.emailCount} email(s)`;
-      const successMessage = `Your email campaign is now in production! ${emailCountText} will be sent to ${values.selectedLists.join(", ")}.`;
+      const successMessage = `Your email campaign is now in production! ${emailCountText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
       
@@ -224,30 +237,30 @@ const EmailPlannerPage = () => {
                           ) : lists.length > 0 ? (
                             lists.map((list) => (
                               <FormField
-                                key={list}
+                                key={list.id}
                                 control={form.control}
                                 name="selectedLists"
                                 render={({ field }) => {
                                   return (
                                     <FormItem
-                                      key={list}
+                                      key={list.id}
                                       className="flex flex-row items-start space-x-3 space-y-0"
                                     >
                                       <FormControl>
                                         <Checkbox
-                                          checked={field.value?.includes(list)}
+                                          checked={field.value?.includes(list.id)}
                                           onCheckedChange={(checked) => {
                                             const updatedLists = checked
-                                              ? [...field.value, list]
+                                              ? [...field.value, list.id]
                                               : field.value?.filter(
-                                                  (value) => value !== list
+                                                  (value) => value !== list.id
                                                 );
                                             field.onChange(updatedLists);
                                           }}
                                         />
                                       </FormControl>
                                       <FormLabel className="font-normal cursor-pointer">
-                                        {list}
+                                        {list.name}
                                       </FormLabel>
                                     </FormItem>
                                   );
