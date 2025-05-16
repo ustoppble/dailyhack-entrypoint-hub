@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +8,7 @@ import { fetchEmailLists } from '@/lib/api/lists';
 import { EmailList } from '@/lib/api/types';
 import LoadingState from '@/components/lists/LoadingState';
 import EmailListCard from '@/components/lists/EmailListCard';
-import { fetchUserIntegrations } from '@/lib/api/integration';
+import { fetchUserIntegrations, fetchIntegrationByUserAndAgent } from '@/lib/api/integration';
 import { useAuth } from '@/contexts/AuthContext';
 
 const FetchListsPage = () => {
@@ -22,41 +21,53 @@ const FetchListsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string>('');
   const [apiToken, setApiToken] = useState<string>('');
+  const [integrationLoading, setIntegrationLoading] = useState(true);
 
-  // Initialize API credentials when the component loads
+  // Load integration details from Airtable when component loads
   useEffect(() => {
-    if (!agentName) return;
-    
-    // Format the API URL based on the agent name
-    const formattedApiUrl = `https://${agentName}.api-us1.com`;
-    
-    // Check for agent-specific token first
-    const storedApiToken = localStorage.getItem(`${agentName}_api_token`);
-    
-    if (storedApiToken) {
-      console.log(`Using ${agentName} specific credentials`);
-      setApiUrl(formattedApiUrl);
-      setApiToken(storedApiToken);
-    } else {
-      // Fall back to generic token
-      const genericApiToken = localStorage.getItem('ac_api_token');
-      
-      if (genericApiToken) {
-        console.log('Using generic token with agent-specific URL');
-        setApiUrl(formattedApiUrl);
-        setApiToken(genericApiToken);
-      } else {
-        setError("API token not found. Please connect your ActiveCampaign account.");
-      }
+    if (!agentName || !user?.id) {
+      setError("User not authenticated or agent name missing");
+      setIntegrationLoading(false);
+      return;
     }
-  }, [agentName]);
+    
+    const loadIntegrationDetails = async () => {
+      try {
+        setIntegrationLoading(true);
+        
+        // Fetch integration specifically for this user and agent
+        console.log(`Fetching integration for user ${user.id} and agent ${agentName}`);
+        const integration = await fetchIntegrationByUserAndAgent(user.id, agentName);
+        
+        if (integration && integration.token) {
+          // Use the API token from Airtable
+          console.log(`Found integration with token for ${agentName}`);
+          
+          // Format the API URL based on the agent name
+          const formattedApiUrl = `https://${agentName}.api-us1.com`;
+          setApiUrl(formattedApiUrl);
+          setApiToken(integration.token);
+        } else {
+          console.log(`No integration or token found for agent ${agentName}`);
+          setError(`No API token found for agent "${agentName}". Please connect this agent first.`);
+        }
+      } catch (err) {
+        console.error('Error loading integration details:', err);
+        setError("Failed to load integration details. Please try again later.");
+      } finally {
+        setIntegrationLoading(false);
+      }
+    };
+    
+    loadIntegrationDetails();
+  }, [agentName, user]);
 
-  // Fetch lists when credentials are loaded
+  // Fetch lists when API credentials are loaded
   useEffect(() => {
-    if (apiUrl && apiToken) {
+    if (apiUrl && apiToken && !integrationLoading) {
       fetchLists();
     }
-  }, [apiUrl, apiToken]);
+  }, [apiUrl, apiToken, integrationLoading]);
 
   const fetchLists = async () => {
     if (!agentName || !apiUrl || !apiToken) {
@@ -124,12 +135,21 @@ const FetchListsPage = () => {
         </CardHeader>
         
         <CardContent>
-          {loading ? (
+          {integrationLoading ? (
+            <LoadingState text="Loading integration details..." />
+          ) : loading ? (
             <LoadingState />
           ) : error ? (
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">{error}</p>
-              <Button onClick={fetchLists}>Try Again</Button>
+              {error.includes("token") && (
+                <Button onClick={() => navigate(`/agents`)}>
+                  Connect Agent
+                </Button>
+              )}
+              {!error.includes("token") && (
+                <Button onClick={fetchLists}>Try Again</Button>
+              )}
             </div>
           ) : lists.length === 0 ? (
             <div className="text-center py-8">
@@ -150,6 +170,7 @@ const FetchListsPage = () => {
           
           {/* Debug info - display API credentials */}
           <div className="mt-8 p-4 bg-gray-50 rounded-md text-xs text-gray-500">
+            <p>User ID: {user?.id || "Not authenticated"}</p>
             <p>Agent: {agentName}</p>
             <p>API URL: {apiUrl ? apiUrl : "Not set"}</p>
             <p>API Token: {apiToken ? "Set (hidden)" : "Not set"}</p>

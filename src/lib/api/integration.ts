@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { airtableIntegrationApi } from './client';
 import { ACIntegration, VerificationResult } from './types';
@@ -214,8 +215,9 @@ export const updateActiveCampaignIntegration = async (
 
 /**
  * Fetch all ActiveCampaign integrations for a specific user
+ * Now with option to include tokens
  */
-export const fetchUserIntegrations = async (userId: string): Promise<{id: string, api: string}[]> => {
+export const fetchUserIntegrations = async (userId: string, includeTokens: boolean = false): Promise<{id: string, api: string, token?: string}[]> => {
   try {
     console.log('Fetching integrations for user:', userId);
 
@@ -229,7 +231,9 @@ export const fetchUserIntegrations = async (userId: string): Promise<{id: string
     if (response.data && response.data.records && response.data.records.length > 0) {
       return response.data.records.map((record: any) => ({
         id: record.id,
-        api: record.fields.api || 'Unknown Account'
+        api: record.fields.api || 'Unknown Account',
+        // Only include the token if requested
+        ...(includeTokens && { token: record.fields.token || '' })
       }));
     }
     
@@ -237,5 +241,35 @@ export const fetchUserIntegrations = async (userId: string): Promise<{id: string
   } catch (error: any) {
     console.error('Error fetching user integrations:', error);
     throw new Error(`Failed to fetch integrations: ${error.message}`);
+  }
+};
+
+/**
+ * Fetch a specific integration by user ID and agent name
+ */
+export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: string): Promise<{id: string, api: string, token: string} | null> => {
+  try {
+    console.log(`Fetching integration for user ${userId} and agent ${agentName}`);
+    
+    // Filter by both user ID and agent name (API)
+    const filterByFormula = encodeURIComponent(`AND({id_users}='${userId}', {api}='${agentName}')`);
+    
+    const response = await airtableIntegrationApi.get(`?filterByFormula=${filterByFormula}`);
+    
+    console.log('Specific integration response:', response.data);
+    
+    if (response.data && response.data.records && response.data.records.length > 0) {
+      const record = response.data.records[0];
+      return {
+        id: record.id,
+        api: record.fields.api || agentName,
+        token: record.fields.token || ''
+      };
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error(`Error fetching integration for user ${userId} and agent ${agentName}:`, error);
+    throw new Error(`Failed to fetch specific integration: ${error.message}`);
   }
 };
