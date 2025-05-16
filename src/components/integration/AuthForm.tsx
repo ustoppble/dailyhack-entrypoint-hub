@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { validateUserCredentials } from '@/lib/api-service';
+import { validateUserCredentials } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -41,7 +41,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setErrorMessage('');
     
     try {
-      console.log('Auth form submitted with data:', { ...data, password: '***hidden***' });
+      console.log('Auth form submitted with data:', { email: data.email, password: '***hidden***' });
       
       const authenticatedUser = await validateUserCredentials(data.email, data.password);
       
@@ -56,7 +56,9 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         return;
       }
       
-      console.log('User authenticated successfully');
+      console.log('User authenticated successfully', authenticatedUser);
+      
+      // Make sure we're setting the user correctly in the context
       setUser(authenticatedUser);
       
       toast({
@@ -110,6 +112,10 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             )}
           />
         </div>
+        
+        {errorMessage && (
+          <div className="text-sm font-medium text-destructive">{errorMessage}</div>
+        )}
         
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (

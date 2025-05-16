@@ -29,7 +29,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             ) : (
               <>
                 <Link to="/agents" className="text-gray-600 hover:text-blue-700">Agents</Link>
-                <Link to="/confirmation" className="text-gray-600 hover:text-blue-700">Next Steps</Link>
               </>
             )}
           </nav>

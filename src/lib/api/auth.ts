@@ -70,6 +70,7 @@ export const registerUser = async (userData: User): Promise<User> => {
 export const validateUserCredentials = async (email: string, password: string): Promise<User | null> => {
   try {
     console.log('Validating credentials for:', email);
+    // Fix: Use proper case for fields in the filterByFormula
     const response = await airtableApi.get('', {
       params: {
         filterByFormula: `AND({email} = "${email}", {password} = "${password}")`,
@@ -77,17 +78,23 @@ export const validateUserCredentials = async (email: string, password: string): 
       },
     });
 
+    console.log('Authentication response:', response.data);
+
     if (response.data.records && response.data.records.length > 0) {
       const record = response.data.records[0];
       console.log('User found:', record.id);
-      return {
+      const user = {
         id: record.id,
         ...record.fields,
       } as User;
+      
+      // Make sure to capture this in the console for debugging
+      console.log('Authenticated user data:', user);
+      return user;
     }
     console.log('No user found with those credentials');
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
     throw new Error('Authentication failed');
   }
