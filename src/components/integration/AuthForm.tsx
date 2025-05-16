@@ -41,7 +41,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setErrorMessage('');
     
     try {
-      console.log('Auth form submitted with data:', { email: data.email, password: '***hidden***' });
+      console.log('Auth form submitted with email:', data.email);
       
       const authenticatedUser = await validateUserCredentials(data.email, data.password);
       
@@ -56,14 +56,14 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         return;
       }
       
-      console.log('User authenticated successfully', authenticatedUser);
+      console.log('User authenticated successfully');
       
       // Make sure we're setting the user correctly in the context
       setUser(authenticatedUser);
       
       toast({
-        title: "Authentication successful",
-        description: "You can now connect your ActiveCampaign account.",
+        title: "Login successful!",
+        description: "Welcome back to DailyHack.",
       });
       
       onAuthSuccess();
@@ -91,7 +91,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="john@example.com" {...field} />
+                  <Input type="email" placeholder="your.email@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -105,7 +105,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="******" {...field} />
+                  <Input type="password" placeholder="********" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -121,7 +121,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Authenticating...
+              Logging in...
             </>
           ) : (
             "Log In"

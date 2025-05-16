@@ -46,28 +46,28 @@ const AgentListsPage = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <LoadingState message="Loading connected lists..." />
+            <LoadingState />
           ) : error ? (
-            <ErrorState message={error} retry={() => window.location.reload()} />
+            <ErrorState error={error} onRetry={() => window.location.reload()} />
           ) : connectedLists.length === 0 ? (
             <EmptyState 
-              title="No Connected Lists" 
-              description={`You haven't connected any lists for ${agentName} yet.`}
-              actionHref={`/lists`}
-              actionText="Connect Lists"
+              message={`You haven't connected any lists for ${agentName} yet.`}
+              actionUrl={`/lists`}
+              actionLabel="Connect Lists"
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {connectedLists.map((list) => (
                 <EmailListCard
                   key={list.id}
-                  title={list.name}
-                  description=""
-                  subscriberCount={0}
-                  isSelected={false}
-                  onSelect={() => {}}
-                  listId={list.id}
-                  insight=""
+                  list={{
+                    id: list.id,
+                    name: list.name,
+                    active_subscribers: "0",
+                    insight: "",
+                    selected: false
+                  }}
+                  onToggleSelect={() => {}}
                 />
               ))}
             </div>

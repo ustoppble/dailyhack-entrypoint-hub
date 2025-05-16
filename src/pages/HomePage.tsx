@@ -39,17 +39,17 @@ const HomePage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Already registered?</CardTitle>
-                <CardDescription>Connect your ActiveCampaign account.</CardDescription>
+                <CardDescription>Log in to your account.</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">
-                  If you've already registered, you can connect your ActiveCampaign
-                  account to get started with DailyHack.
+                  If you already have an account, log in to access your dashboard
+                  and marketing tools.
                 </p>
               </CardContent>
               <CardFooter>
                 <Button asChild variant="outline" className="w-full">
-                  <Link to="/integrate">Connect ActiveCampaign</Link>
+                  <Link to="/login">Log In</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -70,7 +70,7 @@ const HomePage = () => {
                 <Link to="/integrate">Integrate ActiveCampaign</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/confirmation">View Next Steps</Link>
+                <Link to="/dashboard">Dashboard</Link>
               </Button>
             </CardFooter>
           </Card>
