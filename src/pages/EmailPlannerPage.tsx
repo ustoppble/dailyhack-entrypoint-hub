@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -18,13 +19,13 @@ import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
 import { Checkbox } from '@/components/ui/checkbox';
 
-// Updated schema with only mainGoal and emailCount
+// Updated schema with emailFrequency instead of emailCount
 const emailFormSchema = z.object({
   mainGoal: z.string().min(3, {
     message: "Main goal must be at least 3 characters",
   }),
-  emailCount: z.string({
-    required_error: "Please select how many emails to produce",
+  emailFrequency: z.enum(['once', 'twice'], {
+    required_error: "Please select how many emails to produce per day",
   }),
   selectedLists: z.array(z.string()).min(1, {
     message: "Please select at least one list",
@@ -54,7 +55,7 @@ const EmailPlannerPage = () => {
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
       mainGoal: "",
-      emailCount: "1",
+      emailFrequency: "once",
       selectedLists: [],
     },
   });
@@ -119,7 +120,7 @@ const EmailPlannerPage = () => {
           agentName,
           lists: [listId], // Only send one list ID per request
           mainGoal: values.mainGoal,
-          emailCount: values.emailCount,
+          emailFrequency: values.emailFrequency, // New field instead of emailCount
         };
         
         // Send the form data to the specified webhook for this list
@@ -127,17 +128,10 @@ const EmailPlannerPage = () => {
         console.log(`Webhook response for list ${listId}:`, response.data);
       }
       
-      const emailCountText = values.emailCount === "autopilot" ? "Autopilot" : `${values.emailCount} email(s)`;
-      const successMessage = `Your email campaign is now in production! ${emailCountText} will be sent to ${selectedListNames.join(", ")}.`;
+      const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
+      const successMessage = `Your email campaign is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
-      
-      // Remove the toast notification that duplicates the success message
-      // toast({
-      //   title: "Success!",
-      //   description: "Your email campaign has been created",
-      // });
-      
     } catch (err: any) {
       console.error('Error activating email autopilot:', err);
       setError(err.message || "An error occurred while activating your email autopilot");
@@ -291,30 +285,37 @@ const EmailPlannerPage = () => {
                     )}
                   />
                   
+                  {/* Radio button email frequency selection */}
                   <FormField
                     control={form.control}
-                    name="emailCount"
+                    name="emailFrequency"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Number of Emails to Produce</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="How many emails should be produced?" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1">1 Email</SelectItem>
-                            <SelectItem value="3">3 Emails</SelectItem>
-                            <SelectItem value="5">5 Emails</SelectItem>
-                            <SelectItem value="7">7 Emails</SelectItem>
-                            <SelectItem value="10">10 Emails</SelectItem>
-                            <SelectItem value="autopilot">Continuous Autopilot</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <FormItem className="space-y-3">
+                        <FormLabel>Number of Emails per Day</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                          >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="once" id="once" />
+                              </FormControl>
+                              <FormLabel className="font-normal" htmlFor="once">
+                                1 email per day (08h)
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="twice" id="twice" />
+                              </FormControl>
+                              <FormLabel className="font-normal" htmlFor="twice">
+                                2 emails per day (08h and 20h)
+                              </FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
