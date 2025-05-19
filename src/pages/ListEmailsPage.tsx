@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -13,10 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
-import { fetchEmailsForList, EmailRecord, updateEmailStatus } from '@/lib/api/autopilot';
+import { fetchEmailsForList, EmailRecord } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 
 const ListEmailsPage = () => {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ const ListEmailsPage = () => {
   const [listName, setListName] = useState<string>('');
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadEmails();
@@ -132,19 +135,50 @@ const ListEmailsPage = () => {
       return;
     }
 
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to approve emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
     let successCount = 0;
     let failCount = 0;
 
-    // Update each selected email
+    // The webhook URL for email approval
+    const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mailapprove';
+
+    // Process each selected email
     for (const emailId of selectedEmails) {
       try {
-        const success = await updateEmailStatus(emailId, 1); // 1 for approved status
-        if (success) {
-          successCount++;
-        } else {
-          failCount++;
+        // Prepare the payload for the webhook
+        const payload = {
+          activehosted: agentName,
+          userId: user.id,
+          emailId: emailId
+        };
+
+        console.log('Sending approval request to webhook:', payload);
+        
+        // Send the POST request to the webhook
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Webhook error:', errorData);
+          throw new Error(`Webhook error: ${response.status}`);
         }
+
+        successCount++;
       } catch (error) {
         console.error(`Error approving email ${emailId}:`, error);
         failCount++;
