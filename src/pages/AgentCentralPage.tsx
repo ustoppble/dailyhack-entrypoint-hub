@@ -3,7 +3,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { List, BookOpen, Mail } from 'lucide-react';
+import { List, BookOpen, Mail, Zap } from 'lucide-react';
 
 const AgentCentralPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
@@ -60,19 +60,19 @@ const AgentCentralPage = () => {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Mail className="mr-2" />
-                Email Planner
+                <Zap className="mr-2" />
+                Email Autopilot
               </CardTitle>
               <CardDescription>
-                Plan and draft email campaigns
+                Automate your email campaigns
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Create and plan email campaigns with AI assistance.
+                Activate automated email production and delivery with AI assistance.
               </p>
               <Button asChild className="w-full">
-                <Link to={`/agents/${agentName}/email-planner`}>Plan Emails</Link>
+                <Link to={`/agents/${agentName}/email-planner`}>Activate Autopilot</Link>
               </Button>
             </CardContent>
           </Card>
