@@ -240,11 +240,11 @@ const EmailPlannerPage = () => {
       
       {/* Manage Autopilot Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Manage Email Autopilot</DialogTitle>
+            <DialogTitle>Delete Email Autopilot</DialogTitle>
             <DialogDescription>
-              Update settings for this email autopilot or delete it.
+              Delete this email autopilot campaign.
             </DialogDescription>
           </DialogHeader>
           
