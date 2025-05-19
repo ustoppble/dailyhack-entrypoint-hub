@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Table, 
   TableBody, 
@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { fetchEmailsForList, EmailRecord } from '@/lib/api-service';
+import { format } from 'date-fns';
+import { fetchEmailsForList, EmailRecord } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 
 interface EmailsListProps {
@@ -25,15 +25,23 @@ interface EmailsListProps {
 
 const EmailsList = ({ listId, listName, onClose }: EmailsListProps) => {
   const navigate = useNavigate();
+  const { agentName } = useParams<{ agentName: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<EmailRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadEmails = async () => {
+      if (!agentName) {
+        setError('Agent name not found');
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
-        const fetchedEmails = await fetchEmailsForList(listId);
+        // Pass both listId and agentName to filter emails correctly
+        const fetchedEmails = await fetchEmailsForList(listId, agentName);
         setEmails(fetchedEmails);
       } catch (err: any) {
         setError('Failed to load emails: ' + (err.message || 'Unknown error'));
@@ -44,12 +52,12 @@ const EmailsList = ({ listId, listName, onClose }: EmailsListProps) => {
     };
 
     loadEmails();
-  }, [listId]);
+  }, [listId, agentName]);
 
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleString();
+      return format(date, 'PPpp'); // Format: "Apr 29, 2021, 1:30 PM"
     } catch (e) {
       return dateString;
     }

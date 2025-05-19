@@ -5,7 +5,7 @@ import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 // Airtable table ID for the autopilot data
 const AIRTABLE_AUTOPILOT_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
 // Airtable table ID for the emails data
-const AIRTABLE_EMAILS_TABLE_ID = 'tblEmails';
+const AIRTABLE_EMAILS_TABLE_ID = 'tblWeAwzXeMhK7P6z';
 
 // Enhanced interface for autopilot records
 export interface AutopilotRecord {
@@ -28,6 +28,7 @@ export interface EmailRecord {
   status: number;
   content?: string;
   list_id: number;
+  activehosted?: string;
 }
 
 // Create a new autopilot record
@@ -233,45 +234,48 @@ export const updateAutopilotRecord = async (
   }
 };
 
-// Fetch emails for a specific list
-export const fetchEmailsForList = async (listId: number): Promise<EmailRecord[]> => {
+// Fetch emails for a specific list and activehosted
+export const fetchEmailsForList = async (listId: number, agentName: string): Promise<EmailRecord[]> => {
   try {
-    // This is a placeholder since we don't have the actual emails table
-    // In a real implementation, you would query the emails table with the list_id filter
+    // Get emails from the emails table with both list_id and activehosted filters
     const emailsApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_EMAILS_TABLE_ID}`;
     
-    // Add list_id filter
-    const filterFormula = encodeURIComponent(`{list_id} = ${listId}`);
+    // Add combined filter for both list_id and activehosted
+    const filterFormula = encodeURIComponent(`AND({list_id} = ${listId}, {activehosted} = "${agentName}")`);
     const fullUrl = `${emailsApiUrl}?filterByFormula=${filterFormula}`;
     
-    console.log('Fetching emails for list ID:', listId);
+    console.log('Fetching emails for list ID:', listId, 'and agent:', agentName);
     
-    // Since we don't have an actual emails table yet, return some mock data
-    // In a production app, you would make the actual API call here
-    const mockEmails: EmailRecord[] = [
-      {
-        id: 'email1',
-        date: '2025-05-19T08:30:00Z',
-        title: 'Welcome to our newsletter',
-        campaign_name: 'Onboarding Series',
-        id_email: 1001,
-        status: 1,
-        content: '<h1>Welcome!</h1><p>Thank you for subscribing to our newsletter.</p>',
-        list_id: listId
-      },
-      {
-        id: 'email2',
-        date: '2025-05-20T08:30:00Z',
-        title: 'Your first steps',
-        campaign_name: 'Onboarding Series',
-        id_email: 1002,
-        status: 0,
-        content: '<h1>Getting Started</h1><p>Here are some tips to get you started.</p>',
-        list_id: listId
+    const response = await fetch(fullUrl, {
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
       }
-    ];
+    });
     
-    return mockEmails;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Airtable API error when fetching emails:', errorData);
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Emails fetched:', data);
+    
+    // Map the Airtable response to our EmailRecord interface
+    const emails = data.records.map((record: any) => ({
+      id: record.id,
+      date: record.fields.date || '',
+      title: record.fields.title || '',
+      campaign_name: record.fields.campaign_name || '',
+      id_email: record.fields.id_email,
+      status: record.fields.status || 0,
+      content: record.fields.content || '',
+      list_id: record.fields.list_id,
+      activehosted: record.fields.activehosted
+    }));
+    
+    return emails;
   } catch (error) {
     console.error('Error fetching emails for list:', error);
     return [];
@@ -281,49 +285,40 @@ export const fetchEmailsForList = async (listId: number): Promise<EmailRecord[]>
 // Fetch a single email by ID
 export const fetchEmailById = async (emailId: string): Promise<EmailRecord | null> => {
   try {
-    // This is a placeholder since we don't have the actual emails table
-    // In a real implementation, you would query the emails table with the email ID
+    // Query the emails table with the specific record ID
+    const emailUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_EMAILS_TABLE_ID}/${emailId}`;
     
     console.log('Fetching email with ID:', emailId);
     
-    // Mock data for demonstration
-    const mockEmail: EmailRecord = {
-      id: emailId,
-      date: '2025-05-19T08:30:00Z',
-      title: 'Welcome to our newsletter',
-      campaign_name: 'Onboarding Series',
-      id_email: 1001,
-      status: 1,
-      content: `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-              h1 { color: #0066cc; }
-              .content { border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
-              .footer { margin-top: 30px; font-size: 12px; color: #888; text-align: center; }
-            </style>
-          </head>
-          <body>
-            <h1>Welcome to Our Newsletter!</h1>
-            <div class="content">
-              <p>Dear Subscriber,</p>
-              <p>Thank you for joining our newsletter. We're excited to have you on board!</p>
-              <p>You'll be receiving valuable insights, tips, and updates about our products and services.</p>
-              <p>If you have any questions, feel free to reply to this email.</p>
-              <p>Best regards,<br>The Team</p>
-            </div>
-            <div class="footer">
-              <p>© 2025 Our Company. All rights reserved.</p>
-              <p>You're receiving this email because you subscribed to our newsletter.</p>
-            </div>
-          </body>
-        </html>
-      `,
-      list_id: 123
+    const response = await fetch(emailUrl, {
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Airtable API error when fetching email:', errorData);
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    const record = await response.json();
+    
+    // Map the Airtable response to our EmailRecord interface
+    const email: EmailRecord = {
+      id: record.id,
+      date: record.fields.date || '',
+      title: record.fields.title || '',
+      campaign_name: record.fields.campaign_name || '',
+      id_email: record.fields.id_email,
+      status: record.fields.status || 0,
+      content: record.fields.content || '',
+      list_id: record.fields.list_id,
+      activehosted: record.fields.activehosted
     };
     
-    return mockEmail;
+    return email;
   } catch (error) {
     console.error('Error fetching email by ID:', error);
     return null;
