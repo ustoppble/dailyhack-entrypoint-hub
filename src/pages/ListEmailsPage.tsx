@@ -39,12 +39,8 @@ const ListEmailsPage = () => {
         const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
         setEmails(fetchedEmails);
         
-        // Try to get the list name from the first email if available
-        if (fetchedEmails.length > 0 && fetchedEmails[0].list_name) {
-          setListName(fetchedEmails[0].list_name);
-        } else {
-          setListName(`List #${listId}`);
-        }
+        // Set list name based on the list ID since list_name might not exist on EmailRecord
+        setListName(`List #${listId}`);
       } catch (err: any) {
         setError('Failed to load emails: ' + (err.message || 'Unknown error'));
         console.error('Error fetching emails:', err);
