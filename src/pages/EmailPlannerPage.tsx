@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,8 @@ import {
   fetchAutopilotRecords,
   AutopilotRecord,
   fetchCampaignGoals,
-  CampaignGoal 
+  CampaignGoal,
+  deleteAutopilotRecord
 } from '@/lib/api-service';
 import { Checkbox } from '@/components/ui/checkbox';
 import LoadingState from '@/components/lists/LoadingState';
@@ -32,6 +34,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import ManageAutopilotForm from '@/components/autopilot/ManageAutopilotForm';
+import EmailsList from '@/components/autopilot/EmailsList';
 
 // Updated schema with goal selection instead of text input
 const emailFormSchema = z.object({
@@ -60,6 +72,7 @@ const EmailPlannerPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [lists, setLists] = useState<ListItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,6 +82,11 @@ const EmailPlannerPage = () => {
   const [dataReady, setDataReady] = useState(false);
   const [campaignGoals, setCampaignGoals] = useState<CampaignGoal[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
+  
+  // Dialog state for manage and view emails
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [viewEmailsDialogOpen, setViewEmailsDialogOpen] = useState(false);
+  const [selectedAutopilot, setSelectedAutopilot] = useState<AutopilotRecord | null>(null);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -96,51 +114,64 @@ const EmailPlannerPage = () => {
     return cronId === 1 ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
   };
   
-  useEffect(() => {
-    const loadData = async () => {
-      if (!agentName) return;
-      
-      try {
-        setIsLoading(true);
-        setDataReady(false);
-        
-        // Fetch all data before displaying anything
-        const [autopilotRecords, connectedLists, goals] = await Promise.all([
-          fetchAutopilotRecords(agentName),
-          fetchConnectedLists(agentName),
-          fetchCampaignGoals(agentName)
-        ]);
-        
-        // Enhance autopilot records with list names
-        const enhancedAutopilotRecords = autopilotRecords.map(record => ({
-          ...record,
-          listName: connectedLists.find(l => Number(l.id) === record.listId)?.name
-        }));
-        
-        setAutopilotData(enhancedAutopilotRecords);
-        console.log('Autopilot records:', enhancedAutopilotRecords);
-        
-        // Mark lists that already have autopilot
-        const listsWithAutopilotStatus = connectedLists.map(list => ({
-          ...list,
-          hasAutopilot: autopilotRecords.some(record => record.listId === Number(list.id))
-        }));
-        
-        setLists(listsWithAutopilotStatus);
-        setCampaignGoals(goals);
-        
-        // Only now we mark data as ready
-        setDataReady(true);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        setError("Failed to load lists or campaign goals data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Handle clicking manage button for an autopilot
+  const handleManageAutopilot = (autopilot: AutopilotRecord) => {
+    setSelectedAutopilot(autopilot);
+    setManageDialogOpen(true);
+  };
+  
+  // Handle clicking view emails button for an autopilot
+  const handleViewEmails = (autopilot: AutopilotRecord) => {
+    setSelectedAutopilot(autopilot);
+    setViewEmailsDialogOpen(true);
+  };
+  
+  // Refresh data after changes
+  const refreshData = async () => {
+    if (!agentName) return;
     
-    loadData();
-  }, [agentName, form]);
+    try {
+      setIsLoading(true);
+      setDataReady(false);
+      
+      // Fetch all data before displaying anything
+      const [autopilotRecords, connectedLists, goals] = await Promise.all([
+        fetchAutopilotRecords(agentName),
+        fetchConnectedLists(agentName),
+        fetchCampaignGoals(agentName)
+      ]);
+      
+      // Enhance autopilot records with list names
+      const enhancedAutopilotRecords = autopilotRecords.map(record => ({
+        ...record,
+        listName: connectedLists.find(l => Number(l.id) === record.listId)?.name
+      }));
+      
+      setAutopilotData(enhancedAutopilotRecords);
+      console.log('Autopilot records:', enhancedAutopilotRecords);
+      
+      // Mark lists that already have autopilot
+      const listsWithAutopilotStatus = connectedLists.map(list => ({
+        ...list,
+        hasAutopilot: autopilotRecords.some(record => record.listId === Number(list.id))
+      }));
+      
+      setLists(listsWithAutopilotStatus);
+      setCampaignGoals(goals);
+      
+      // Only now we mark data as ready
+      setDataReady(true);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setError("Failed to load lists or campaign goals data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    refreshData();
+  }, [agentName]);
   
   const onSubmit = async (values: EmailPlannerFormValues) => {
     if (!user) {
@@ -214,7 +245,8 @@ const EmailPlannerPage = () => {
         await createAutopilotRecord(
           listId,
           agentName, // Using agentName as the url parameter
-          cronId
+          cronId,
+          values.campaignGoalId // Pass the selected goal ID
         );
       }
       
@@ -222,6 +254,9 @@ const EmailPlannerPage = () => {
       const successMessage = `Your email campaign "${selectedGoalData.offer_name || selectedGoalData.objetivo}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
+      
+      // Refresh data to show new autopilots
+      await refreshData();
     } catch (err: any) {
       console.error('Error activating email autopilot:', err);
       setError(err.message || "An error occurred while activating your email autopilot");
@@ -328,10 +363,20 @@ const EmailPlannerPage = () => {
                           </Badge>
                         </div>
                         <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1"
+                            onClick={() => handleViewEmails(autopilot)}
+                          >
                             <Eye className="h-4 w-4" /> View Emails
                           </Button>
-                          <Button variant="outline" size="sm" className="gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1"
+                            onClick={() => handleManageAutopilot(autopilot)}
+                          >
                             <Settings className="h-4 w-4" /> Manage
                           </Button>
                         </div>
@@ -550,6 +595,44 @@ const EmailPlannerPage = () => {
           </>
         )}
       </div>
+      
+      {/* Manage Autopilot Dialog */}
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage Email Autopilot</DialogTitle>
+            <DialogDescription>
+              Update settings for this email autopilot or delete it.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAutopilot && (
+            <ManageAutopilotForm 
+              autopilot={selectedAutopilot}
+              lists={lists}
+              campaignGoals={campaignGoals}
+              onSuccess={() => {
+                setManageDialogOpen(false);
+                refreshData();
+              }}
+              onCancel={() => setManageDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Emails Dialog */}
+      <Dialog open={viewEmailsDialogOpen} onOpenChange={setViewEmailsDialogOpen}>
+        <DialogContent className="sm:max-w-4xl">
+          {selectedAutopilot && (
+            <EmailsList 
+              listId={selectedAutopilot.listId}
+              listName={selectedAutopilot.listName || `List #${selectedAutopilot.listId}`}
+              onClose={() => setViewEmailsDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
