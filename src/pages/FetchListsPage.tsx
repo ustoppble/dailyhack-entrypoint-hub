@@ -200,15 +200,6 @@ const FetchListsPage = () => {
               ))}
             </div>
           )}
-          
-          {/* Debug info - display API credentials */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-md text-xs text-gray-500">
-            <p>User ID: {user?.id || "Not authenticated"}</p>
-            <p>Agent: {agentName}</p>
-            <p>API URL: {apiUrl ? apiUrl : "Not set"}</p>
-            <p>API Token: {apiToken ? "Set (hidden)" : "Not set"}</p>
-            <p>Connected Lists: {connectedListIds.length}</p>
-          </div>
         </CardContent>
       </Card>
     </div>
