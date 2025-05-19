@@ -19,14 +19,14 @@ interface FirecrawlResponse {
  */
 export async function fetchWebsiteData(link: string, style: string): Promise<FirecrawlResponse> {
   try {
-    console.log('Sending request to Firecrawl with:', { link, style });
+    console.log('Sending request to Firecrawl with:', { style, link });
     
-    const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
+    const response = await fetch('https://primary-production-2e546.up.railway.app/webhook-test/firecrawl', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ link, style })
+      body: JSON.stringify({ style, link })
     });
     
     const data = await response.json();
