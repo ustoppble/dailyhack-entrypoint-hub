@@ -56,3 +56,45 @@ export const createAutopilotRecord = async (
     return false;
   }
 };
+
+// Fetch existing autopilot records for a specific agent/URL
+export const fetchAutopilotRecords = async (url: string): Promise<{listId: number, cronId: number}[]> => {
+  try {
+    // Create a direct API instance for the autopilot table
+    const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
+    
+    // Add URL filter to only get records for this agent
+    const filterFormula = encodeURIComponent(`{url} = "${url}"`);
+    const fullUrl = `${autopilotApiUrl}?filterByFormula=${filterFormula}`;
+    
+    console.log('Fetching autopilot records for URL:', url);
+    
+    const response = await fetch(fullUrl, {
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Airtable API error when fetching autopilot records:', errorData);
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Autopilot records fetched:', data);
+    
+    // Extract the list IDs and cron IDs from the response
+    const records = data.records.map((record: any) => ({
+      listId: record.fields.id_list,
+      cronId: record.fields.id_cron
+    }));
+    
+    return records;
+  } catch (error) {
+    console.error('Error fetching autopilot records:', error);
+    return [];
+  }
+};
+

@@ -12,10 +12,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
-import { fetchConnectedLists, createAutopilotRecord } from '@/lib/api-service';
+import { fetchConnectedLists, createAutopilotRecord, fetchAutopilotRecords } from '@/lib/api-service';
 import { Checkbox } from '@/components/ui/checkbox';
 
 // Updated schema with emailFrequency instead of emailCount
@@ -37,6 +37,7 @@ type EmailPlannerFormValues = z.infer<typeof emailFormSchema>;
 interface ListItem {
   id: string;
   name: string;
+  hasAutopilot?: boolean;
 }
 
 const EmailPlannerPage = () => {
@@ -49,6 +50,7 @@ const EmailPlannerPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autopilotData, setAutopilotData] = useState<{listId: number, cronId: number}[]>([]);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -60,23 +62,36 @@ const EmailPlannerPage = () => {
   });
   
   useEffect(() => {
-    const loadConnectedLists = async () => {
+    const loadData = async () => {
       if (!agentName) return;
       
       try {
         setIsLoading(true);
+        
+        // Fetch existing autopilot records for this agent
+        const autopilotRecords = await fetchAutopilotRecords(agentName);
+        setAutopilotData(autopilotRecords);
+        console.log('Autopilot records:', autopilotRecords);
+        
         // Fetch the lists that are already connected to this agent
         const connectedLists = await fetchConnectedLists(agentName);
-        setLists(connectedLists);
+        
+        // Mark lists that already have autopilot
+        const listsWithAutopilotStatus = connectedLists.map(list => ({
+          ...list,
+          hasAutopilot: autopilotRecords.some(record => record.listId === Number(list.id))
+        }));
+        
+        setLists(listsWithAutopilotStatus);
       } catch (error) {
-        console.error("Error loading connected lists:", error);
-        setError("Failed to load connected lists");
+        console.error("Error loading data:", error);
+        setError("Failed to load lists or autopilot data");
       } finally {
         setIsLoading(false);
       }
     };
     
-    loadConnectedLists();
+    loadData();
   }, [agentName]);
   
   const onSubmit = async (values: EmailPlannerFormValues) => {
@@ -114,6 +129,13 @@ const EmailPlannerPage = () => {
       
       // Process each list individually
       for (const listId of values.selectedLists) {
+        // Skip lists that already have autopilot
+        const hasExistingAutopilot = autopilotData.some(record => record.listId === Number(listId));
+        if (hasExistingAutopilot) {
+          console.log(`Skipping list ${listId} as it already has an autopilot`);
+          continue;
+        }
+        
         // Prepare data to send to webhook - one list per request
         const requestData = {
           agentName,
@@ -257,6 +279,7 @@ const EmailPlannerPage = () => {
                                         <Checkbox
                                           checked={field.value?.includes(list.id)}
                                           onCheckedChange={(checked) => {
+                                            if (list.hasAutopilot) return; // Prevent checking if already has autopilot
                                             const updatedLists = checked
                                               ? [...field.value, list.id]
                                               : field.value?.filter(
@@ -264,11 +287,20 @@ const EmailPlannerPage = () => {
                                                 );
                                             field.onChange(updatedLists);
                                           }}
+                                          disabled={list.hasAutopilot}
                                         />
                                       </FormControl>
-                                      <FormLabel className="font-normal cursor-pointer">
-                                        {list.name}
-                                      </FormLabel>
+                                      <div className="flex items-center gap-2">
+                                        <FormLabel className={`font-normal ${list.hasAutopilot ? 'text-gray-400' : 'cursor-pointer'}`}>
+                                          {list.name}
+                                        </FormLabel>
+                                        {list.hasAutopilot && (
+                                          <div className="flex items-center text-sm text-amber-600">
+                                            <AlertCircle className="h-3 w-3 mr-1" />
+                                            <span>Already in autopilot</span>
+                                          </div>
+                                        )}
+                                      </div>
                                     </FormItem>
                                   );
                                 }}
