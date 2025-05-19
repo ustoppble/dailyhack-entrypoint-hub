@@ -19,7 +19,7 @@ const authFormSchema = z.object({
 type AuthFormValues = z.infer<typeof authFormSchema>;
 
 interface AuthFormProps {
-  onAuthSuccess: () => void;
+  onAuthSuccess: (userId: string) => void;
 }
 
 const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
@@ -66,7 +66,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         description: "Welcome back to DailyHack.",
       });
       
-      onAuthSuccess();
+      onAuthSuccess(authenticatedUser.id);
     } catch (error: any) {
       console.error('Authentication error:', error);
       setErrorMessage(error.message || "An unexpected error occurred");
