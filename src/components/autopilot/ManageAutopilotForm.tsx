@@ -74,33 +74,51 @@ const ManageAutopilotForm = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
 
+  // Fix: Make sure we have the campaign goal ID as a string, not undefined
+  const campaignGoalId = autopilot.offerId || "";
+  console.log("Initial campaign goal ID:", campaignGoalId); // Debug log
+
   const form = useForm<ManageFormValues>({
     resolver: zodResolver(manageFormSchema),
     defaultValues: {
       listId: String(autopilot.listId),
-      campaignGoalId: autopilot.offerId || "",
+      campaignGoalId: campaignGoalId,
       emailFrequency: autopilot.cronId === 1 ? "once" : "twice",
     },
   });
 
   // Handle goal selection and update selected goal state
   const handleGoalSelection = (goalId: string) => {
+    console.log("Selecting goal:", goalId);
     const goal = campaignGoals.find(g => g.id === goalId);
     setSelectedGoal(goal || null);
   };
 
   // Load the initial selected goal if there's an offerId
   useEffect(() => {
+    console.log("Autopilot offerId:", autopilot.offerId);
+    console.log("Available campaign goals:", campaignGoals);
     if (autopilot.offerId) {
       const goal = campaignGoals.find(g => g.id === autopilot.offerId);
+      console.log("Found goal:", goal);
       setSelectedGoal(goal || null);
+      
+      // Ensure the form value is set correctly
+      form.setValue("campaignGoalId", autopilot.offerId);
     }
-  }, [autopilot.offerId, campaignGoals]);
+  }, [autopilot.offerId, campaignGoals, form]);
 
   const onSubmit = async (values: ManageFormValues) => {
     setIsSubmitting(true);
     try {
       const cronId = values.emailFrequency === "once" ? 1 : 2;
+      
+      console.log("Updating autopilot with values:", {
+        id: autopilot.id,
+        listId: values.listId,
+        cronId,
+        offerId: values.campaignGoalId
+      });
       
       const success = await updateAutopilotRecord(
         autopilot.id,
@@ -219,6 +237,7 @@ const ManageAutopilotForm = ({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -251,6 +270,7 @@ const ManageAutopilotForm = ({
                     handleGoalSelection(value);
                   }}
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -305,6 +325,7 @@ const ManageAutopilotForm = ({
                   <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    value={field.value}
                     className="flex flex-col space-y-1"
                   >
                     <FormItem className="flex items-center space-x-3 space-y-0">
