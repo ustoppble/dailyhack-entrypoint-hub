@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Tag, FileText, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, FileText, CheckCircle, Clock, FileEdit } from 'lucide-react';
 import { fetchEmailById, EmailRecord } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 
@@ -69,7 +69,7 @@ const EmailViewPage = () => {
         <div className="flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-500" />
           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-            Sent
+            Approved
           </Badge>
         </div>
       );
@@ -77,9 +77,9 @@ const EmailViewPage = () => {
     
     return (
       <div className="flex items-center gap-2">
-        <Clock className="h-4 w-4 text-amber-500" />
+        <FileEdit className="h-4 w-4 text-amber-500" />
         <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-          Scheduled
+          Draft
         </Badge>
       </div>
     );
