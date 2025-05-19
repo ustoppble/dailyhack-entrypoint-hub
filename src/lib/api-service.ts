@@ -7,3 +7,5 @@ export * from './api/client';
 export * from './api/constants';
 // Export lists functionality but avoid EmailList type duplication
 export { fetchEmailLists, saveSelectedLists, fetchConnectedLists, deleteConnectedList } from './api/lists';
+// Export autopilot functionality
+export * from './api/autopilot';

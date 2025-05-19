@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -16,7 +15,7 @@ import axios from 'axios';
 import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
-import { fetchConnectedLists } from '@/lib/api/lists';
+import { fetchConnectedLists, createAutopilotRecord } from '@/lib/api-service';
 import { Checkbox } from '@/components/ui/checkbox';
 
 // Updated schema with emailFrequency instead of emailCount
@@ -126,6 +125,14 @@ const EmailPlannerPage = () => {
         // Send the form data to the specified webhook for this list
         const response = await axios.post(webhookUrl, requestData);
         console.log(`Webhook response for list ${listId}:`, response.data);
+        
+        // Create record in Airtable autopilot table
+        const cronId = values.emailFrequency === "once" ? 1 : 2;
+        await createAutopilotRecord(
+          listId,
+          agentName, // Using agentName as the url parameter
+          cronId
+        );
       }
       
       const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
@@ -365,4 +372,3 @@ const EmailPlannerPage = () => {
 };
 
 export default EmailPlannerPage;
-
