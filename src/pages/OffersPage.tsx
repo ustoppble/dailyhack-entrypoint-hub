@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoadingState from '@/components/lists/LoadingState';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchCampaignGoals, CampaignGoal } from '@/lib/api/goals';
@@ -22,7 +21,6 @@ const OffersPage = () => {
   const [offers, setOffers] = useState<CampaignGoal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('list');
 
   const loadOffers = async () => {
     if (!agentName) return;
@@ -57,7 +55,6 @@ const OffersPage = () => {
       description: message,
     });
     loadOffers();
-    setActiveTab('list'); // Switch to list view after successful creation
   };
   
   const handleError = (message: string) => {
@@ -106,53 +103,45 @@ const OffersPage = () => {
 
         <StatusMessage error={error} success={success} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* Campaign Goals List Section */}
+        <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <TabsList>
-              <TabsTrigger value="list">All Goals</TabsTrigger>
-              <TabsTrigger value="create">Create New</TabsTrigger>
-            </TabsList>
-            
-            {activeTab === 'list' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={loadOffers}
-              >
-                Refresh
-              </Button>
-            )}
+            <h2 className="text-xl font-semibold">All Campaign Goals</h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={loadOffers}
+            >
+              Refresh
+            </Button>
           </div>
           
-          <TabsContent value="list">
-            {isLoading ? (
-              <LoadingState text="Loading campaign goals..." />
-            ) : (
-              <OffersList 
-                offers={offers}
-                onDelete={handleDeleteOffer}
-                onRefresh={loadOffers}
-              />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="create">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create New Campaign Goal</CardTitle>
-                <CardDescription>
-                  Fill out the form below to create a new campaign goal for your email automation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OfferForm 
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          {isLoading ? (
+            <LoadingState text="Loading campaign goals..." />
+          ) : (
+            <OffersList 
+              offers={offers}
+              onDelete={handleDeleteOffer}
+              onRefresh={loadOffers}
+            />
+          )}
+        </div>
+        
+        {/* Create New Campaign Goal Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Campaign Goal</CardTitle>
+            <CardDescription>
+              Fill out the form below to create a new campaign goal for your email automation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OfferForm 
+              onSuccess={handleSuccess}
+              onError={handleError}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

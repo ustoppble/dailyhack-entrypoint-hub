@@ -9,12 +9,12 @@ import { ArrowLeft } from 'lucide-react';
 import StatusMessage from '@/components/integration/StatusMessage';
 import LoadingState from '@/components/lists/LoadingState';
 import OfferForm from '@/components/offers/OfferForm';
+import PageHeader from '@/components/autopilot/PageHeader';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 
 interface OfferData {
   offer_name: string;
   goal: string;
-  objetivo: string;
   link: string;
   style: 'softsell' | 'hardsell' | 'nutring' | 'event';
   description?: string;
@@ -59,7 +59,6 @@ const OfferEditPage = () => {
         setOfferData({
           offer_name: data.fields.offer_name || '',
           goal: data.fields.goal || '',
-          objetivo: data.fields.objetivo || '',
           link: data.fields.link || '',
           style: data.fields.style || 'nutring',
           description: data.fields.description || ''
@@ -119,6 +118,8 @@ const OfferEditPage = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mx-auto">
+        {agentName && <PageHeader agentName={agentName} />}
+        
         <Button
           variant="ghost"
           className="mb-6 pl-0 flex items-center"

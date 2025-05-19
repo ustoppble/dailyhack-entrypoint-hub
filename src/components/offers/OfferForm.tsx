@@ -29,7 +29,6 @@ import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/l
 const offerFormSchema = z.object({
   offer_name: z.string().min(1, 'Offer name is required'),
   goal: z.string().min(1, 'Goal is required'),
-  objetivo: z.string().min(1, 'Objective is required'),
   link: z.string().url('Must be a valid URL').or(z.string().length(0)),
   style: z.enum(['softsell', 'hardsell', 'nutring', 'event']),
   description: z.string().optional(),
@@ -62,7 +61,6 @@ const OfferForm = ({
     defaultValues: initialData || {
       offer_name: '',
       goal: '',
-      objetivo: '',
       link: '',
       style: 'nutring',
       description: '',
@@ -166,23 +164,6 @@ const OfferForm = ({
               <FormControl>
                 <Input
                   placeholder="Enter goal"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="objetivo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Objective</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter objective"
                   {...field}
                 />
               </FormControl>

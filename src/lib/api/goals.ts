@@ -3,10 +3,9 @@ import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from './c
 
 export interface CampaignGoal {
   id: string;
-  objetivo: string;
-  goal: string;  // Added this property
+  goal: string;
   link: string;
-  style: 'softsell' | 'hardsell' | 'nutring' | 'event';  // Added 'event' as I saw it in the console logs
+  style: 'softsell' | 'hardsell' | 'nutring' | 'event';
   activehosted: string;
   offer_name: string;
   description?: string;
@@ -40,8 +39,7 @@ export const fetchCampaignGoals = async (activeHostedAgent: string): Promise<Cam
     // Map the Airtable records to our CampaignGoal interface
     const goals = data.records.map((record: any) => ({
       id: record.id,
-      objetivo: record.fields.objetivo || '',
-      goal: record.fields.goal || '',  // Added field mapping here
+      goal: record.fields.goal || '',
       link: record.fields.link || '',
       style: record.fields.style || 'nutring',
       activehosted: record.fields.activehosted || '',
