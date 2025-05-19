@@ -134,10 +134,6 @@ const OffersList = ({ offers, onDelete, onRefresh }: OffersListProps) => {
                   </a>
                 </div>
               )}
-              
-              {offer.description && (
-                <p className="text-sm text-gray-600 mt-2">{offer.description}</p>
-              )}
             </div>
           </CardContent>
         </Card>

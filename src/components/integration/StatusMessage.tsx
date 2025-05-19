@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, InfoIcon, CheckCircle, WifiOff } from 'lucide-react';
+import { AlertCircle, InfoIcon, WifiOff } from 'lucide-react';
 
 interface StatusMessageProps {
   error?: string;
@@ -66,13 +66,7 @@ const StatusMessage = ({
         </Alert>
       )}
       
-      {success && (
-        <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-          <CheckCircle className="h-4 w-4" />
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
+      {/* Success message has been removed as requested */}
     </>
   );
 };

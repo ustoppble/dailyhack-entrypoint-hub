@@ -1,384 +1,260 @@
-
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  Form, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormMessage 
-} from '@/components/ui/form';
+import { AutopilotRecord, CampaignGoal } from '@/lib/api-service';
 import { Button } from '@/components/ui/button';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Save, Trash2, AlertTriangle } from 'lucide-react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { AutopilotRecord, updateAutopilotRecord, deleteAutopilotRecord } from '@/lib/api-service';
-import { CampaignGoal } from '@/lib/api-service';
-
-interface ListItem {
-  id: string;
-  name: string;
-}
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 
 interface ManageAutopilotFormProps {
   autopilot: AutopilotRecord;
-  lists: ListItem[];
+  lists: any[];
   campaignGoals: CampaignGoal[];
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const manageFormSchema = z.object({
-  listId: z.string({
-    required_error: "Please select a list",
+const formSchema = z.object({
+  listId: z.string().min(1, {
+    message: "List ID is required.",
   }),
-  campaignGoalId: z.string({
-    required_error: "Please select a campaign goal",
+  campaignGoalId: z.string().min(1, {
+    message: "Campaign Goal is required.",
   }),
-  emailFrequency: z.enum(['once', 'twice'], {
-    required_error: "Please select how many emails to produce per day",
-  }),
-});
+  active: z.boolean().default(true),
+})
 
-type ManageFormValues = z.infer<typeof manageFormSchema>;
-
-const ManageAutopilotForm = ({ 
-  autopilot, 
-  lists, 
-  campaignGoals, 
-  onSuccess, 
-  onCancel 
-}: ManageAutopilotFormProps) => {
+const ManageAutopilotForm: React.FC<ManageAutopilotFormProps> = ({ autopilot, lists, campaignGoals, onSuccess, onCancel }) => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { agentName } = useParams<{ agentName: string }>();
+  const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
 
-  // Fix: Make sure we have the campaign goal ID as a string, not undefined
-  const campaignGoalId = autopilot.offerId || "";
-  console.log("Initial campaign goal ID:", campaignGoalId); // Debug log
-
-  const form = useForm<ManageFormValues>({
-    resolver: zodResolver(manageFormSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      listId: String(autopilot.listId),
-      campaignGoalId: campaignGoalId,
-      emailFrequency: autopilot.cronId === 1 ? "once" : "twice",
+      listId: autopilot.listId.toString(),
+      campaignGoalId: autopilot.campaignGoalId,
+      active: autopilot.active,
     },
-  });
-
-  // Handle goal selection and update selected goal state
-  const handleGoalSelection = (goalId: string) => {
-    console.log("Selecting goal:", goalId);
-    const goal = campaignGoals.find(g => g.id === goalId);
-    setSelectedGoal(goal || null);
-  };
-
-  // Load the initial selected goal if there's an offerId
-  useEffect(() => {
-    console.log("Autopilot offerId:", autopilot.offerId);
-    console.log("Available campaign goals:", campaignGoals);
-    if (autopilot.offerId) {
-      const goal = campaignGoals.find(g => g.id === autopilot.offerId);
-      console.log("Found goal:", goal);
-      setSelectedGoal(goal || null);
-      
-      // Ensure the form value is set correctly
-      form.setValue("campaignGoalId", autopilot.offerId);
-    }
-  }, [autopilot.offerId, campaignGoals, form]);
-
-  const onSubmit = async (values: ManageFormValues) => {
-    setIsSubmitting(true);
+  })
+  
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!agentName || !autopilot.id) return;
+    
     try {
-      const cronId = values.emailFrequency === "once" ? 1 : 2;
+      // Prepare the data for updating the Airtable record
+      const fields = {
+        listId: parseInt(values.listId),
+        campaignGoalId: values.campaignGoalId,
+        active: values.active,
+      };
       
-      console.log("Updating autopilot with values:", {
-        id: autopilot.id,
-        listId: values.listId,
-        cronId,
-        offerId: values.campaignGoalId
+      // Make the API call to update the Airtable record
+      const response = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/autopilot/${autopilot.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ fields }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Airtable API error when updating autopilot record:', errorData);
+        throw new Error(`Airtable API error: ${response.status}`);
+      }
+      
+      toast({
+        title: "Autopilot updated",
+        description: "Your autopilot settings have been updated successfully.",
       });
       
-      const success = await updateAutopilotRecord(
-        autopilot.id,
-        values.listId,
-        cronId,
-        values.campaignGoalId
-      );
-
-      if (success) {
-        toast({
-          title: "Autopilot updated",
-          description: "Your email autopilot has been updated successfully.",
-        });
-        onSuccess();
-      } else {
-        toast({
-          title: "Update failed",
-          description: "There was an error updating your autopilot.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error updating autopilot:', error);
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error updating autopilot:", error);
       toast({
-        title: "Update failed",
-        description: "An unexpected error occurred.",
+        title: "Error updating autopilot",
+        description: error.message || "Failed to update autopilot. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (!autopilot.id || !agentName) return;
+
     setIsDeleting(true);
     try {
-      const success = await deleteAutopilotRecord(autopilot.id);
-      
-      if (success) {
-        toast({
-          title: "Autopilot deleted",
-          description: "Your email autopilot has been deleted successfully.",
-        });
-        onSuccess();
-      } else {
-        toast({
-          title: "Delete failed",
-          description: "There was an error deleting your autopilot.",
-          variant: "destructive",
-        });
+      const response = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/autopilot/${autopilot.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Airtable API error when deleting autopilot record:', errorData);
+        throw new Error(`Airtable API error: ${response.status}`);
       }
-    } catch (error) {
-      console.error('Error deleting autopilot:', error);
+
       toast({
-        title: "Delete failed",
-        description: "An unexpected error occurred.",
+        title: "Autopilot deleted",
+        description: "The autopilot has been successfully deleted.",
+      });
+      onSuccess();
+      navigate(`/agents/${agentName}/email-planner`);
+    } catch (error: any) {
+      console.error("Error deleting autopilot:", error);
+      toast({
+        title: "Error deleting autopilot",
+        description: error.message || "Failed to delete autopilot. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
-      setShowDeleteDialog(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Manage Autopilot</h3>
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Autopilot</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this autopilot? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleDelete} 
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* List Selection */}
-          <FormField
-            control={form.control}
-            name="listId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email List</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a list" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {lists.map((list) => (
-                      <SelectItem key={list.id} value={list.id}>
-                        {list.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Campaign Goal Selection */}
-          <FormField
-            control={form.control}
-            name="campaignGoalId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Campaign Goal</FormLabel>
-                <Select 
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    handleGoalSelection(value);
-                  }}
-                  defaultValue={field.value}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a campaign offer" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {campaignGoals.map((goal) => (
-                      <SelectItem key={goal.id} value={goal.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{goal.offer_name || goal.goal}</span>
-                          <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
-                            {goal.style}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedGoal && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-700 mb-2">
-                      {selectedGoal.description || selectedGoal.goal}
-                    </p>
-                    {selectedGoal.link && (
-                      <p className="text-sm text-blue-600 flex items-center">
-                        <a 
-                          href={selectedGoal.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="underline hover:text-blue-800"
-                        >
-                          {selectedGoal.link}
-                        </a>
-                      </p>
-                    )}
-                  </div>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Email Frequency Selection */}
-          <FormField
-            control={form.control}
-            name="emailFrequency"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Number of Emails per Day</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="listId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>List</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                    className="flex flex-col space-y-1"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="once" id="once" />
-                      </FormControl>
-                      <FormLabel className="font-normal" htmlFor="once">
-                        1 email per day (08h)
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="twice" id="twice" />
-                      </FormControl>
-                      <FormLabel className="font-normal" htmlFor="twice">
-                        2 emails per day (08h and 20h)
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a list" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                <SelectContent>
+                  {lists.map((list) => (
+                    <SelectItem key={list.id} value={list.id.toString()}>
+                      {list.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="campaignGoalId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Campaign Goal</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a campaign goal" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {campaignGoals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      {goal.offer_name || goal.goal}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="active"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-sm">Active</FormLabel>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-          <div className="flex justify-end gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" /> Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </Form>
-    </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" type="button" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit">Update Autopilot</Button>
+        </div>
+      </form>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" className="w-full mt-4">
+            Delete Autopilot
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the autopilot
+              and remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Form>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -141,7 +140,7 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
                   </Select>
                   {selectedGoal && (
                     <div className="mt-2">
-                      <p className="text-sm text-gray-700 mb-2">{selectedGoal.description || selectedGoal.goal}</p>
+                      <p className="text-sm text-gray-700 mb-2">{selectedGoal.goal}</p>
                       {selectedGoal.link && (
                         <FormDescription className="flex items-center text-blue-600">
                           <Link className="h-4 w-4 mr-1" />
