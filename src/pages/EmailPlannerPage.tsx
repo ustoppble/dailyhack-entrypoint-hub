@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,11 +110,7 @@ const EmailPlannerPage = () => {
         setLists(listsWithAutopilotStatus);
         setCampaignGoals(goals);
         
-        // Set the first goal as default if available
-        if (goals.length > 0) {
-          form.setValue('campaignGoalId', goals[0].id);
-          setSelectedGoal(goals[0]);
-        }
+        // We no longer set any default goal - we'll require user selection
         
         // Only now we mark data as ready
         setDataReady(true);
@@ -207,7 +202,7 @@ const EmailPlannerPage = () => {
       }
       
       const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
-      const successMessage = `Your email campaign "${selectedGoalData.objetivo}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
+      const successMessage = `Your email campaign "${selectedGoalData.offer_name || selectedGoalData.objetivo}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
     } catch (err: any) {
@@ -316,11 +311,10 @@ const EmailPlannerPage = () => {
                             field.onChange(value);
                             handleGoalSelection(value);
                           }}
-                          defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a campaign goal" />
+                              <SelectValue placeholder="Select a campaign offer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -328,7 +322,7 @@ const EmailPlannerPage = () => {
                               campaignGoals.map((goal) => (
                                 <SelectItem key={goal.id} value={goal.id}>
                                   <div className="flex items-center justify-between w-full">
-                                    <span>{goal.objetivo}</span>
+                                    <span>{goal.offer_name || goal.objetivo}</span>
                                     <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
                                       {goal.style}
                                     </span>
@@ -341,17 +335,22 @@ const EmailPlannerPage = () => {
                           </SelectContent>
                         </Select>
                         {selectedGoal && (
-                          <FormDescription className="flex items-center mt-2 text-blue-600">
-                            <Link className="h-4 w-4 mr-1" />
-                            <a 
-                              href={selectedGoal.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="underline hover:text-blue-800"
-                            >
-                              {selectedGoal.link}
-                            </a>
-                          </FormDescription>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-700 mb-2">{selectedGoal.description || selectedGoal.objetivo}</p>
+                            {selectedGoal.link && (
+                              <FormDescription className="flex items-center text-blue-600">
+                                <Link className="h-4 w-4 mr-1" />
+                                <a 
+                                  href={selectedGoal.link} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="underline hover:text-blue-800"
+                                >
+                                  {selectedGoal.link}
+                                </a>
+                              </FormDescription>
+                            )}
+                          </div>
                         )}
                         <FormMessage />
                       </FormItem>

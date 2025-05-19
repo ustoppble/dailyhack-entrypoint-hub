@@ -7,6 +7,8 @@ export interface CampaignGoal {
   link: string;
   style: 'softsell' | 'hardsell' | 'nutring';
   activehosted: string;
+  offer_name: string;
+  description?: string;
 }
 
 export const fetchCampaignGoals = async (activeHostedAgent: string): Promise<CampaignGoal[]> => {
@@ -40,7 +42,9 @@ export const fetchCampaignGoals = async (activeHostedAgent: string): Promise<Cam
       objetivo: record.fields.objetivo || '',
       link: record.fields.link || '',
       style: record.fields.style || 'nutring',
-      activehosted: record.fields.activehosted || ''
+      activehosted: record.fields.activehosted || '',
+      offer_name: record.fields.offer_name || '',
+      description: record.fields.description || ''
     }));
     
     return goals;
