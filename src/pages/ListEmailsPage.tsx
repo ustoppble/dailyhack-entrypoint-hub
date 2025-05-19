@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const ListEmailsPage = () => {
   const navigate = useNavigate();
+  // Updated to match the route params from App.tsx
   const { agentName, listId } = useParams<{ agentName: string, listId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<EmailRecord[]>([]);
@@ -107,7 +108,8 @@ const ListEmailsPage = () => {
   };
 
   const handleGoBack = () => {
-    navigate(`/agents/${agentName}/email-planner`);
+    // Updated to navigate back to the email planner
+    navigate(`/agents/${agentName}/planner`);
   };
 
   const handleSelectEmail = (emailId: string) => {
