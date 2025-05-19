@@ -9,3 +9,5 @@ export * from './api/constants';
 export { fetchEmailLists, saveSelectedLists, fetchConnectedLists, deleteConnectedList } from './api/lists';
 // Export autopilot functionality
 export * from './api/autopilot';
+// Export campaign goals functionality
+export * from './api/goals';

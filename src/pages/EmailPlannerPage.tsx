@@ -6,23 +6,36 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2, Link } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
-import { fetchConnectedLists, createAutopilotRecord, fetchAutopilotRecords } from '@/lib/api-service';
+import { 
+  fetchConnectedLists, 
+  createAutopilotRecord, 
+  fetchAutopilotRecords, 
+  fetchCampaignGoals,
+  CampaignGoal 
+} from '@/lib/api-service';
 import { Checkbox } from '@/components/ui/checkbox';
 import LoadingState from '@/components/lists/LoadingState';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Updated schema with emailFrequency instead of emailCount
+// Updated schema with goal selection instead of text input
 const emailFormSchema = z.object({
-  mainGoal: z.string().min(3, {
-    message: "Main goal must be at least 3 characters",
+  campaignGoalId: z.string({
+    required_error: "Please select a campaign goal",
   }),
   emailFrequency: z.enum(['once', 'twice'], {
     required_error: "Please select how many emails to produce per day",
@@ -53,15 +66,23 @@ const EmailPlannerPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [autopilotData, setAutopilotData] = useState<{listId: number, cronId: number}[]>([]);
   const [dataReady, setDataReady] = useState(false);
+  const [campaignGoals, setCampaignGoals] = useState<CampaignGoal[]>([]);
+  const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
-      mainGoal: "",
+      campaignGoalId: "",
       emailFrequency: "once",
       selectedLists: [],
     },
   });
+  
+  // Handle goal selection and update selected goal state
+  const handleGoalSelection = (goalId: string) => {
+    const goal = campaignGoals.find(g => g.id === goalId);
+    setSelectedGoal(goal || null);
+  };
   
   useEffect(() => {
     const loadData = async () => {
@@ -72,9 +93,10 @@ const EmailPlannerPage = () => {
         setDataReady(false);
         
         // Fetch all data before displaying anything
-        const [autopilotRecords, connectedLists] = await Promise.all([
+        const [autopilotRecords, connectedLists, goals] = await Promise.all([
           fetchAutopilotRecords(agentName),
-          fetchConnectedLists(agentName)
+          fetchConnectedLists(agentName),
+          fetchCampaignGoals(agentName)
         ]);
         
         setAutopilotData(autopilotRecords);
@@ -87,19 +109,26 @@ const EmailPlannerPage = () => {
         }));
         
         setLists(listsWithAutopilotStatus);
+        setCampaignGoals(goals);
+        
+        // Set the first goal as default if available
+        if (goals.length > 0) {
+          form.setValue('campaignGoalId', goals[0].id);
+          setSelectedGoal(goals[0]);
+        }
         
         // Only now we mark data as ready
         setDataReady(true);
       } catch (error) {
         console.error("Error loading data:", error);
-        setError("Failed to load lists or autopilot data");
+        setError("Failed to load lists or campaign goals data");
       } finally {
         setIsLoading(false);
       }
     };
     
     loadData();
-  }, [agentName]);
+  }, [agentName, form]);
   
   const onSubmit = async (values: EmailPlannerFormValues) => {
     if (!user) {
@@ -115,6 +144,17 @@ const EmailPlannerPage = () => {
       toast({
         title: "Error",
         description: "Agent name not found",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Make sure we have a valid goal
+    const selectedGoalData = campaignGoals.find(g => g.id === values.campaignGoalId);
+    if (!selectedGoalData) {
+      toast({
+        title: "Error",
+        description: "Please select a valid campaign goal",
         variant: "destructive",
       });
       return;
@@ -147,8 +187,10 @@ const EmailPlannerPage = () => {
         const requestData = {
           agentName,
           lists: [listId], // Only send one list ID per request
-          mainGoal: values.mainGoal,
-          emailFrequency: values.emailFrequency, // New field instead of emailCount
+          mainGoal: selectedGoalData.objetivo, // Use the selected goal's objective
+          emailFrequency: values.emailFrequency,
+          goalLink: selectedGoalData.link, // Include the goal link
+          goalStyle: selectedGoalData.style, // Include the goal style
         };
         
         // Send the form data to the specified webhook for this list
@@ -165,7 +207,7 @@ const EmailPlannerPage = () => {
       }
       
       const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
-      const successMessage = `Your email campaign is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
+      const successMessage = `Your email campaign "${selectedGoalData.objetivo}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
     } catch (err: any) {
@@ -256,12 +298,66 @@ const EmailPlannerPage = () => {
             <CardContent className="pt-6">
               <Alert className="mb-6">
                 <AlertDescription>
-                  Activate the autopilot by providing a goal and selecting how many emails to automatically produce and send. Your agent will handle the content creation.
+                  Activate the autopilot by selecting a campaign goal and how many emails to automatically produce and send. Your agent will handle the content creation.
                 </AlertDescription>
               </Alert>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Campaign Goal Selection */}
+                  <FormField
+                    control={form.control}
+                    name="campaignGoalId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Campaign Goal</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleGoalSelection(value);
+                          }}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select a campaign goal" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {campaignGoals.length > 0 ? (
+                              campaignGoals.map((goal) => (
+                                <SelectItem key={goal.id} value={goal.id}>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{goal.objetivo}</span>
+                                    <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
+                                      {goal.style}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="none" disabled>No goals available</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {selectedGoal && (
+                          <FormDescription className="flex items-center mt-2 text-blue-600">
+                            <Link className="h-4 w-4 mr-1" />
+                            <a 
+                              href={selectedGoal.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="underline hover:text-blue-800"
+                            >
+                              {selectedGoal.link}
+                            </a>
+                          </FormDescription>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
                   {/* List selection with multiple checkbox selection */}
                   <FormField
                     control={form.control}
@@ -361,24 +457,6 @@ const EmailPlannerPage = () => {
                               </FormLabel>
                             </FormItem>
                           </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="mainGoal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Campaign Goal</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="What is the goal of this email campaign? What should it achieve? Include all necessary information here..."
-                            className="min-h-[200px]"
-                            {...field}
-                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
