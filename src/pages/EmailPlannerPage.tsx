@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists } from '@/lib/api/lists';
@@ -24,7 +24,7 @@ const emailFormSchema = z.object({
     message: "Main goal must be at least 3 characters",
   }),
   emailCount: z.string({
-    required_error: "Please select how many emails to plan",
+    required_error: "Please select how many emails to produce",
   }),
   selectedLists: z.array(z.string()).min(1, {
     message: "Please select at least one list",
@@ -139,11 +139,11 @@ const EmailPlannerPage = () => {
       // });
       
     } catch (err: any) {
-      console.error('Error setting up email campaign:', err);
-      setError(err.message || "An error occurred while setting up your email campaign");
+      console.error('Error activating email autopilot:', err);
+      setError(err.message || "An error occurred while activating your email autopilot");
       toast({
-        title: "Error setting up email campaign",
-        description: err.message || "An error occurred while setting up your email campaign",
+        title: "Error activating email autopilot",
+        description: err.message || "An error occurred while activating your email autopilot",
         variant: "destructive",
       });
     } finally {
@@ -191,7 +191,7 @@ const EmailPlannerPage = () => {
             <CardHeader className="border-b bg-green-50">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-xl font-bold">Email Campaign Created</CardTitle>
+                <CardTitle className="text-xl font-bold">Email Autopilot Activated</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -213,15 +213,18 @@ const EmailPlannerPage = () => {
         ) : (
           <Card className="shadow-md mb-6">
             <CardHeader className="border-b">
-              <CardTitle className="text-3xl font-bold">Email Planner</CardTitle>
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-3xl font-bold">Email Autopilot</CardTitle>
+              </div>
               <CardDescription>
-                Plan and draft email campaigns for {agentName}
+                Activate automatic email production for {agentName}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <Alert className="mb-6">
                 <AlertDescription>
-                  Provide information about your email campaign to generate a draft. You can include any details you need in the main goal field.
+                  Activate the autopilot by providing a goal and selecting how many emails to automatically produce and send. Your agent will handle the content creation.
                 </AlertDescription>
               </Alert>
               
@@ -233,7 +236,7 @@ const EmailPlannerPage = () => {
                     name="selectedLists"
                     render={() => (
                       <FormItem>
-                        <FormLabel>Select Lists</FormLabel>
+                        <FormLabel>Select Lists to Send To</FormLabel>
                         <div className="border rounded-md p-4 space-y-3">
                           {isLoading ? (
                             <p className="text-center py-2">Loading lists...</p>
@@ -293,14 +296,14 @@ const EmailPlannerPage = () => {
                     name="emailCount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Number of Emails to Plan</FormLabel>
+                        <FormLabel>Number of Emails to Produce</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="How many emails do you want to plan?" />
+                              <SelectValue placeholder="How many emails should be produced?" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -309,7 +312,7 @@ const EmailPlannerPage = () => {
                             <SelectItem value="5">5 Emails</SelectItem>
                             <SelectItem value="7">7 Emails</SelectItem>
                             <SelectItem value="10">10 Emails</SelectItem>
-                            <SelectItem value="autopilot">Autopilot</SelectItem>
+                            <SelectItem value="autopilot">Continuous Autopilot</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -322,10 +325,10 @@ const EmailPlannerPage = () => {
                     name="mainGoal"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Main Goal</FormLabel>
+                        <FormLabel>Campaign Goal</FormLabel>
                         <FormControl>
                           <Textarea 
-                            placeholder="What is the main goal of this email? Include all necessary information here..."
+                            placeholder="What is the goal of this email campaign? What should it achieve? Include all necessary information here..."
                             className="min-h-[200px]"
                             {...field}
                           />
@@ -345,7 +348,7 @@ const EmailPlannerPage = () => {
                         'Processing...'
                       ) : (
                         <>
-                          <Send className="mr-2 h-4 w-4" /> Create Email Campaign
+                          <Zap className="mr-2 h-4 w-4" /> Activate Email Autopilot
                         </>
                       )}
                     </Button>
@@ -361,3 +364,4 @@ const EmailPlannerPage = () => {
 };
 
 export default EmailPlannerPage;
+
