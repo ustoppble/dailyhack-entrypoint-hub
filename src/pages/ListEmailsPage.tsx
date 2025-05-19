@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -154,11 +153,21 @@ const ListEmailsPage = () => {
     // Process each selected email
     for (const emailId of selectedEmails) {
       try {
+        // Find the email record to include its data in the payload
+        const emailRecord = emails.find(email => email.id === emailId);
+        
+        if (!emailRecord) {
+          console.error(`Email with ID ${emailId} not found in the current list`);
+          failCount++;
+          continue;
+        }
+        
         // Prepare the payload for the webhook
         const payload = {
           activehosted: agentName,
           userId: user.id,
-          emailId: emailId
+          emailId: emailId,
+          id_email: emailId // Adding id_email as requested
         };
 
         console.log('Sending approval request to webhook:', payload);
