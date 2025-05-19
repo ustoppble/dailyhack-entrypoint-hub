@@ -8,7 +8,6 @@ export interface CampaignGoal {
   style: 'softsell' | 'hardsell' | 'nutring' | 'event';
   activehosted: string;
   offer_name: string;
-  description?: string;
   id_user?: string;
 }
 
@@ -51,7 +50,6 @@ export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: str
       style: record.fields.style || 'nutring',
       activehosted: record.fields.activehosted || '',
       offer_name: record.fields.offer_name || '',
-      description: record.fields.description || '',
       id_user: record.fields.id_user || ''
     }));
     

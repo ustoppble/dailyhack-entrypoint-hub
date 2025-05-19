@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 
 // Define the form schema
@@ -31,7 +30,6 @@ const offerFormSchema = z.object({
   goal: z.string().min(1, 'Goal is required'),
   link: z.string().url('Must be a valid URL').or(z.string().length(0)),
   style: z.enum(['softsell', 'hardsell', 'nutring', 'event']),
-  description: z.string().optional(),
 });
 
 type OfferFormValues = z.infer<typeof offerFormSchema>;
@@ -63,7 +61,6 @@ const OfferForm = ({
       goal: '',
       link: '',
       style: 'nutring',
-      description: '',
     },
   });
 
@@ -216,23 +213,6 @@ const OfferForm = ({
                   <SelectItem value="event">Event</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description (Optional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter description"
-                  {...field}
-                />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

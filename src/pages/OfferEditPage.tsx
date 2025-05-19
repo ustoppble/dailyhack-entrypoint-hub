@@ -17,7 +17,6 @@ interface OfferData {
   goal: string;
   link: string;
   style: 'softsell' | 'hardsell' | 'nutring' | 'event';
-  description?: string;
 }
 
 const OfferEditPage = () => {
@@ -66,7 +65,6 @@ const OfferEditPage = () => {
           goal: data.fields.goal || '',
           link: data.fields.link || '',
           style: data.fields.style || 'nutring',
-          description: data.fields.description || ''
         });
       } catch (err) {
         console.error('Failed to load offer data:', err);
