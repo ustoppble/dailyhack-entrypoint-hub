@@ -41,12 +41,18 @@ const ListEmailsPage = () => {
       return;
     }
     
+    console.log(`Loading emails for agent: ${agentName} and list ID: ${listId}`);
     setIsLoading(true);
     try {
-      // Fetch emails for the specified list
-      const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
+      // Parse listId as a number since fetchEmailsForList expects a number
+      const parsedListId = parseInt(listId, 10);
+      if (isNaN(parsedListId)) {
+        throw new Error(`Invalid list ID: ${listId}`);
+      }
       
-      // Log emails with their date_set values and status
+      // Fetch emails for the specified list
+      const fetchedEmails = await fetchEmailsForList(parsedListId, agentName);
+      
       console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
         id: e.id,
         date: e.date_set,

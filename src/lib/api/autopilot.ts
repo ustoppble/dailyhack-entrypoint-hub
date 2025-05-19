@@ -15,6 +15,8 @@ export interface AutopilotRecord {
   url: string;
   offerId?: string;
   createdTime?: string;
+  campaignGoalId?: string; // Added for compatibility with ManageAutopilotForm
+  active?: boolean; // Added for compatibility with ManageAutopilotForm
 }
 
 // Interface for email records

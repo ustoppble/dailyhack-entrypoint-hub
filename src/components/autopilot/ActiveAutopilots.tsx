@@ -28,6 +28,7 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
   };
   
   const handleViewEmails = (autopilot: AutopilotRecord) => {
+    console.log(`Navigating to list emails for agent ${agentName} and list ID ${autopilot.listId}`);
     navigate(`/agents/${agentName}/list-emails/${autopilot.listId}`);
   };
 
