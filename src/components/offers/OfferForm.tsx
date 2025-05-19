@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 
 // Define the form schema
@@ -52,7 +54,8 @@ const OfferForm = ({
   const { agentName } = useParams<{ agentName: string }>();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
+  const [isFetchingContent, setIsFetchingContent] = useState(false);
+  
   // Configure the form
   const form = useForm<OfferFormValues>({
     resolver: zodResolver(offerFormSchema),
@@ -63,6 +66,120 @@ const OfferForm = ({
       style: 'nutring',
     },
   });
+  
+  // Get the current style value to conditionally show link input
+  const styleValue = form.watch('style');
+  const linkValue = form.watch('link');
+  
+  // Function to fetch content from Firecrawl
+  const fetchContentFromUrl = async (url: string) => {
+    if (!url) return;
+    
+    setIsFetchingContent(true);
+    
+    try {
+      const apiKey = 'fc-c33c37abfbec499b99465690d943719c';
+      
+      // Make a request to the Firecrawl API
+      const response = await fetch('https://api.firecrawl.dev/v1/crawl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          url: url,
+          limit: 1, // Just crawl the main page
+          scrapeOptions: {
+            formats: ['markdown']
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Firecrawl API error:', errorData);
+        throw new Error(`Failed to fetch content: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Firecrawl crawl initiated:', data);
+      
+      // Now check the status of the crawl
+      if (data.success && data.id) {
+        // Poll for results
+        let crawlComplete = false;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (!crawlComplete && attempts < maxAttempts) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          
+          const statusResponse = await fetch(`https://api.firecrawl.dev/v1/crawl/${data.id}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`
+            }
+          });
+          
+          if (!statusResponse.ok) {
+            continue; // Try again
+          }
+          
+          const statusData = await statusResponse.json();
+          console.log('Crawl status:', statusData);
+          
+          if (statusData.status === 'completed' || statusData.data?.length > 0) {
+            crawlComplete = true;
+            
+            // Extract content from the first page
+            if (statusData.data && statusData.data.length > 0) {
+              const pageData = statusData.data[0];
+              const extractedContent = pageData.markdown || 
+                pageData.html || 
+                `Content extracted from ${url}`;
+              
+              // Format the content to be shorter and more suitable for a goal
+              const formattedContent = formatExtractedContent(extractedContent, url);
+              
+              // Update the goal field
+              form.setValue('goal', formattedContent);
+            }
+          }
+        }
+        
+        if (!crawlComplete) {
+          throw new Error('Could not complete content extraction in time');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching content:', error);
+      onError(`Failed to fetch content: ${(error as Error).message}`);
+    } finally {
+      setIsFetchingContent(false);
+    }
+  };
+  
+  // Helper function to format extracted content
+  const formatExtractedContent = (content: string, url: string) => {
+    // Extract the first 300 characters for the goal
+    let formattedContent = content.substring(0, 300).trim();
+    
+    // Add ellipsis if content was truncated
+    if (content.length > 300) {
+      formattedContent += '...';
+    }
+    
+    return `Content from ${url}: ${formattedContent}`;
+  };
+  
+  // Effect to fetch content when link changes and style is not nurturing
+  React.useEffect(() => {
+    if (styleValue !== 'nutring' && linkValue && !isEditing) {
+      fetchContentFromUrl(linkValue);
+    }
+  }, [linkValue, styleValue]);
 
   const onSubmit = async (data: OfferFormValues) => {
     if (!user) {
@@ -146,57 +263,7 @@ const OfferForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="offer_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Offer Name</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter offer name"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="goal"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Goal</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter goal"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Link (Optional)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="https://example.com"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        {/* Style selection now first */}
         <FormField
           control={form.control}
           name="style"
@@ -224,9 +291,74 @@ const OfferForm = ({
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="offer_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Offer Name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Enter offer name"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Conditionally show link field if style is not nurturing */}
+        {styleValue !== 'nutring' && (
+          <FormField
+            control={form.control}
+            name="link"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Link</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="https://example.com"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          control={form.control}
+          name="goal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Goal</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Textarea
+                    placeholder="Enter goal"
+                    className={isFetchingContent ? "min-h-[120px]" : ""}
+                    {...field}
+                  />
+                  {isFetchingContent && (
+                    <div className="absolute inset-0 bg-white/80 dark:bg-black/80 flex items-center justify-center">
+                      <div className="flex flex-col items-center space-y-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <span className="text-sm">Fetching content...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : isEditing ? 'Update Offer' : 'Create Offer'}
+          <Button type="submit" disabled={isSubmitting || isFetchingContent}>
+            {isSubmitting ? 'Saving...' : isEditing ? 'Update Campaign Goal' : 'Create Campaign Goal'}
           </Button>
         </div>
       </form>
