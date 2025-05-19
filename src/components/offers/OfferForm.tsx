@@ -90,6 +90,8 @@ const OfferForm = ({
         }
       };
 
+      console.log('Submitting offer data:', airtableData);
+
       const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_GOALS_TABLE_ID}`;
       
       // Determine if we're creating or updating
@@ -126,7 +128,10 @@ const OfferForm = ({
       console.log(`Offer ${isEditing ? 'updated' : 'created'} successfully:`, responseData);
       
       onSuccess(`Offer ${isEditing ? 'updated' : 'created'} successfully!`);
-      form.reset(); // Reset form after successful submission if creating new
+      
+      if (!isEditing) {
+        form.reset(); // Reset form after successful submission if creating new
+      }
     } catch (error) {
       console.error('Error submitting offer:', error);
       onError(`Failed to ${isEditing ? 'update' : 'create'} offer: ${(error as Error).message}`);

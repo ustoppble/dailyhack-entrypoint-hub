@@ -23,13 +23,14 @@ const OffersPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadOffers = async () => {
-    if (!agentName) return;
+    if (!agentName || !user?.id) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
-      const campaignGoals = await fetchCampaignGoals(agentName);
+      // Pass user ID to filter offers
+      const campaignGoals = await fetchCampaignGoals(agentName, user.id.toString());
       setOffers(campaignGoals);
     } catch (err) {
       console.error('Failed to load offers:', err);
@@ -46,7 +47,7 @@ const OffersPage = () => {
   
   useEffect(() => {
     loadOffers();
-  }, [agentName]);
+  }, [agentName, user?.id]);
   
   const handleSuccess = (message: string) => {
     setSuccess(message);

@@ -33,7 +33,7 @@ const OfferEditPage = () => {
 
   useEffect(() => {
     const fetchOfferData = async () => {
-      if (!agentName || !offerId) return;
+      if (!agentName || !offerId || !user?.id) return;
       
       try {
         setIsLoading(true);
@@ -54,6 +54,11 @@ const OfferEditPage = () => {
         }
 
         const data = await response.json();
+        
+        // Verify that this offer belongs to the current user
+        if (data.fields.id_user && data.fields.id_user !== user.id.toString()) {
+          throw new Error('You do not have permission to edit this offer');
+        }
         
         // Extract relevant fields for the form
         setOfferData({
@@ -77,7 +82,7 @@ const OfferEditPage = () => {
     };
     
     fetchOfferData();
-  }, [agentName, offerId, toast]);
+  }, [agentName, offerId, user?.id]);
   
   const handleSuccess = (message: string) => {
     setSuccess(message);

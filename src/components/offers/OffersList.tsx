@@ -120,7 +120,6 @@ const OffersList = ({ offers, onDelete, onRefresh }: OffersListProps) => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium">Goal: {offer.goal}</p>
-                  <p className="text-sm text-gray-500">Objective: {offer.objetivo}</p>
                 </div>
                 <Badge className={`${getStyleBadgeColor(offer.style)}`}>
                   {offer.style}

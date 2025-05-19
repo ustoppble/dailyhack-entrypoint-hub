@@ -9,16 +9,23 @@ export interface CampaignGoal {
   activehosted: string;
   offer_name: string;
   description?: string;
+  id_user?: string;
 }
 
-export const fetchCampaignGoals = async (activeHostedAgent: string): Promise<CampaignGoal[]> => {
+export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: string): Promise<CampaignGoal[]> => {
   try {
-    // Create direct API URL with filter for the activehosted value
+    // Create direct API URL with filter for the activehosted value and optionally user ID
     const goalsApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_GOALS_TABLE_ID}`;
-    const filterFormula = encodeURIComponent(`{activehosted} = "${activeHostedAgent}"`);
-    const fullUrl = `${goalsApiUrl}?filterByFormula=${filterFormula}`;
     
-    console.log('Fetching campaign goals for:', activeHostedAgent);
+    let filterFormula = `{activehosted} = "${activeHostedAgent}"`;
+    if (userId) {
+      filterFormula = `AND(${filterFormula}, {id_user} = "${userId}")`;
+    }
+    
+    const encodedFilter = encodeURIComponent(filterFormula);
+    const fullUrl = `${goalsApiUrl}?filterByFormula=${encodedFilter}`;
+    
+    console.log('Fetching campaign goals for:', activeHostedAgent, 'and user:', userId);
     
     const response = await fetch(fullUrl, {
       headers: {
@@ -44,7 +51,8 @@ export const fetchCampaignGoals = async (activeHostedAgent: string): Promise<Cam
       style: record.fields.style || 'nutring',
       activehosted: record.fields.activehosted || '',
       offer_name: record.fields.offer_name || '',
-      description: record.fields.description || ''
+      description: record.fields.description || '',
+      id_user: record.fields.id_user || ''
     }));
     
     return goals;
