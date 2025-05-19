@@ -260,20 +260,25 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
     }
     
     const data = await response.json();
-    console.log('Emails fetched:', data);
+    console.log('Raw email data from Airtable:', data.records);
     
     // Map the Airtable response to our EmailRecord interface
-    const emails = data.records.map((record: any) => ({
-      id: record.id,
-      date: record.fields.date || '',
-      title: record.fields.title || '',
-      campaign_name: record.fields.campaign_name || '',
-      id_email: record.fields.id_email,
-      status: record.fields.status || 0,
-      content: record.fields.content || '',
-      list_id: record.fields.list_id,
-      activehosted: record.fields.activehosted
-    }));
+    const emails = data.records.map((record: any) => {
+      // Log each date field to help with debugging
+      console.log(`Email ID ${record.id} has date:`, record.fields.date);
+      
+      return {
+        id: record.id,
+        date: record.fields.date || '',
+        title: record.fields.title || '',
+        campaign_name: record.fields.campaign_name || '',
+        id_email: record.fields.id_email,
+        status: record.fields.status || 0,
+        content: record.fields.content || '',
+        list_id: record.fields.list_id,
+        activehosted: record.fields.activehosted
+      };
+    });
     
     return emails;
   } catch (error) {

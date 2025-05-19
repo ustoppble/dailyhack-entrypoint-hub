@@ -37,6 +37,10 @@ const ListEmailsPage = () => {
       try {
         // Fetch emails for the specified list
         const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
+        
+        // Add logging to check what date values we're getting
+        console.log('Fetched emails with dates:', fetchedEmails.map(e => e.date));
+        
         setEmails(fetchedEmails);
         
         // Set list name based on the list ID since list_name might not exist on EmailRecord
@@ -53,13 +57,37 @@ const ListEmailsPage = () => {
   }, [listId, agentName]);
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'No date available';
+    
     try {
-      // First try to parse the ISO date string
-      const date = parseISO(dateString);
-      return format(date, 'PPpp'); // Format: "Apr 29, 2021, 1:30 PM"
+      // First try to parse as ISO string
+      const parsedDate = parseISO(dateString);
+      
+      // Check if the parsed date is valid
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Invalid date from parseISO');
+      }
+      
+      return format(parsedDate, 'PPpp'); // Format: "Apr 29, 2021, 1:30 PM"
     } catch (e) {
-      console.error('Error parsing date:', e, dateString);
-      return dateString; // Return the original string if parsing fails
+      console.error('Error parsing ISO date:', e);
+      
+      // Try regular Date constructor as fallback
+      try {
+        const date = new Date(dateString);
+        
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date from Date constructor');
+        }
+        
+        return format(date, 'PPpp');
+      } catch (e2) {
+        console.error('Error creating date with constructor:', e2, 'Raw date string:', dateString);
+        
+        // Just return the original string if all parsing fails
+        return dateString;
+      }
     }
   };
 
