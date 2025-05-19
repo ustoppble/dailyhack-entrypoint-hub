@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
@@ -14,10 +15,12 @@ import axios from 'axios';
 import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2, Link } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
+import { Badge } from '@/components/ui/badge';
 import { 
   fetchConnectedLists, 
   createAutopilotRecord, 
-  fetchAutopilotRecords, 
+  fetchAutopilotRecords,
+  AutopilotRecord,
   fetchCampaignGoals,
   CampaignGoal 
 } from '@/lib/api-service';
@@ -63,7 +66,7 @@ const EmailPlannerPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [autopilotData, setAutopilotData] = useState<{listId: number, cronId: number}[]>([]);
+  const [autopilotData, setAutopilotData] = useState<AutopilotRecord[]>([]);
   const [dataReady, setDataReady] = useState(false);
   const [campaignGoals, setCampaignGoals] = useState<CampaignGoal[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
@@ -82,6 +85,17 @@ const EmailPlannerPage = () => {
     const goal = campaignGoals.find(g => g.id === goalId);
     setSelectedGoal(goal || null);
   };
+
+  // Function to get list name by ID
+  const getListNameById = (listId: number): string => {
+    const list = lists.find(l => Number(l.id) === listId);
+    return list ? list.name : `List #${listId}`;
+  };
+  
+  // Function to get email frequency text
+  const getFrequencyText = (cronId: number): string => {
+    return cronId === 1 ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
+  };
   
   useEffect(() => {
     const loadData = async () => {
@@ -98,8 +112,14 @@ const EmailPlannerPage = () => {
           fetchCampaignGoals(agentName)
         ]);
         
-        setAutopilotData(autopilotRecords);
-        console.log('Autopilot records:', autopilotRecords);
+        // Enhance autopilot records with list names
+        const enhancedAutopilotRecords = autopilotRecords.map(record => ({
+          ...record,
+          listName: connectedLists.find(l => Number(l.id) === record.listId)?.name
+        }));
+        
+        setAutopilotData(enhancedAutopilotRecords);
+        console.log('Autopilot records:', enhancedAutopilotRecords);
         
         // Mark lists that already have autopilot
         const listsWithAutopilotStatus = connectedLists.map(list => ({
@@ -109,8 +129,6 @@ const EmailPlannerPage = () => {
         
         setLists(listsWithAutopilotStatus);
         setCampaignGoals(goals);
-        
-        // We no longer set any default goal - we'll require user selection
         
         // Only now we mark data as ready
         setDataReady(true);
@@ -280,210 +298,249 @@ const EmailPlannerPage = () => {
         ) : isLoading || !dataReady ? (
           <LoadingState text="Loading and validating lists..." />
         ) : (
-          <Card className="shadow-md mb-6">
-            <CardHeader className="border-b">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-500" />
-                <CardTitle className="text-3xl font-bold">Email Autopilot</CardTitle>
-              </div>
-              <CardDescription>
-                Activate automatic email production for {agentName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <Alert className="mb-6">
-                <AlertDescription>
-                  Activate the autopilot by selecting a campaign goal and how many emails to automatically produce and send. Your agent will handle the content creation.
-                </AlertDescription>
-              </Alert>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Campaign Goal Selection */}
-                  <FormField
-                    control={form.control}
-                    name="campaignGoalId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Campaign Goal</FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleGoalSelection(value);
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a campaign offer" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {campaignGoals.length > 0 ? (
-                              campaignGoals.map((goal) => (
-                                <SelectItem key={goal.id} value={goal.id}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{goal.offer_name || goal.objetivo}</span>
-                                    <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
-                                      {goal.style}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="none" disabled>No goals available</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {selectedGoal && (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-700 mb-2">{selectedGoal.description || selectedGoal.objetivo}</p>
-                            {selectedGoal.link && (
-                              <FormDescription className="flex items-center text-blue-600">
-                                <Link className="h-4 w-4 mr-1" />
-                                <a 
-                                  href={selectedGoal.link} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="underline hover:text-blue-800"
-                                >
-                                  {selectedGoal.link}
-                                </a>
-                              </FormDescription>
-                            )}
+          <>
+            {/* Active Autopilots Section */}
+            {autopilotData.length > 0 && (
+              <Card className="shadow-md mb-6">
+                <CardHeader className="border-b bg-blue-50">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-xl font-bold">Active Email Autopilots</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Currently active autopilot campaigns for {agentName}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {autopilotData.map((autopilot) => (
+                      <div key={autopilot.id} className="border rounded-md p-4 bg-white shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium text-lg">
+                              {autopilot.listName || `List #${autopilot.listId}`}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {getFrequencyText(autopilot.cronId)}
+                            </p>
                           </div>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* List selection with multiple checkbox selection */}
-                  <FormField
-                    control={form.control}
-                    name="selectedLists"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Select Lists to Send To</FormLabel>
-                        <div className="border rounded-md p-4 space-y-3">
-                          {lists.length > 0 ? (
-                            lists.map((list) => (
-                              <FormField
-                                key={list.id}
-                                control={form.control}
-                                name="selectedLists"
-                                render={({ field }) => {
-                                  return (
-                                    <FormItem
-                                      key={list.id}
-                                      className="flex flex-row items-start space-x-3 space-y-0"
-                                    >
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(list.id)}
-                                          onCheckedChange={(checked) => {
-                                            if (list.hasAutopilot) return; // Prevent checking if already has autopilot
-                                            const updatedLists = checked
-                                              ? [...field.value, list.id]
-                                              : field.value?.filter(
-                                                  (value) => value !== list.id
-                                                );
-                                            field.onChange(updatedLists);
-                                          }}
-                                          disabled={list.hasAutopilot}
-                                        />
-                                      </FormControl>
-                                      <div className="flex items-center gap-2">
-                                        <FormLabel className={`font-normal ${list.hasAutopilot ? 'text-gray-400' : 'cursor-pointer'}`}>
-                                          {list.name}
-                                        </FormLabel>
-                                        {list.hasAutopilot && (
-                                          <div className="flex items-center text-sm text-amber-600">
-                                            <AlertCircle className="h-3 w-3 mr-1" />
-                                            <span>Already in autopilot</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </FormItem>
-                                  );
-                                }}
-                              />
-                            ))
-                          ) : (
-                            <div className="text-center py-2">
-                              <p className="text-gray-500">No lists connected to this agent</p>
-                              <Button 
-                                variant="link" 
-                                className="mt-1" 
-                                onClick={() => navigate(`/agents/${agentName}/lists`)}
-                              >
-                                Go to Lists
-                              </Button>
+                          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                            Active
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Create New Autopilot Section */}
+            <Card className="shadow-md mb-6">
+              <CardHeader className="border-b">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  <CardTitle className="text-3xl font-bold">Email Autopilot</CardTitle>
+                </div>
+                <CardDescription>
+                  Activate automatic email production for {agentName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <Alert className="mb-6">
+                  <AlertDescription>
+                    Activate the autopilot by selecting a campaign goal and how many emails to automatically produce and send. Your agent will handle the content creation.
+                  </AlertDescription>
+                </Alert>
+                
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Campaign Goal Selection */}
+                    <FormField
+                      control={form.control}
+                      name="campaignGoalId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Campaign Goal</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              handleGoalSelection(value);
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select a campaign offer" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {campaignGoals.length > 0 ? (
+                                campaignGoals.map((goal) => (
+                                  <SelectItem key={goal.id} value={goal.id}>
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{goal.offer_name || goal.objetivo}</span>
+                                      <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
+                                        {goal.style}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>No goals available</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {selectedGoal && (
+                            <div className="mt-2">
+                              <p className="text-sm text-gray-700 mb-2">{selectedGoal.description || selectedGoal.objetivo}</p>
+                              {selectedGoal.link && (
+                                <FormDescription className="flex items-center text-blue-600">
+                                  <Link className="h-4 w-4 mr-1" />
+                                  <a 
+                                    href={selectedGoal.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="underline hover:text-blue-800"
+                                  >
+                                    {selectedGoal.link}
+                                  </a>
+                                </FormDescription>
+                              )}
                             </div>
                           )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Radio button email frequency selection */}
-                  <FormField
-                    control={form.control}
-                    name="emailFrequency"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Number of Emails per Day</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="once" id="once" />
-                              </FormControl>
-                              <FormLabel className="font-normal" htmlFor="once">
-                                1 email per day (08h)
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="twice" id="twice" />
-                              </FormControl>
-                              <FormLabel className="font-normal" htmlFor="twice">
-                                2 emails per day (08h and 20h)
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="px-8"
-                    >
-                      {isSubmitting ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Processing...
-                        </div>
-                      ) : (
-                        <>
-                          <Zap className="mr-2 h-4 w-4" /> Activate Email Autopilot
-                        </>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                    />
+                    
+                    {/* List selection with multiple checkbox selection */}
+                    <FormField
+                      control={form.control}
+                      name="selectedLists"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Select Lists to Send To</FormLabel>
+                          <div className="border rounded-md p-4 space-y-3">
+                            {lists.length > 0 ? (
+                              lists.map((list) => (
+                                <FormField
+                                  key={list.id}
+                                  control={form.control}
+                                  name="selectedLists"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem
+                                        key={list.id}
+                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                      >
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(list.id)}
+                                            onCheckedChange={(checked) => {
+                                              if (list.hasAutopilot) return; // Prevent checking if already has autopilot
+                                              const updatedLists = checked
+                                                ? [...field.value, list.id]
+                                                : field.value?.filter(
+                                                    (value) => value !== list.id
+                                                  );
+                                              field.onChange(updatedLists);
+                                            }}
+                                            disabled={list.hasAutopilot}
+                                          />
+                                        </FormControl>
+                                        <div className="flex items-center gap-2">
+                                          <FormLabel className={`font-normal ${list.hasAutopilot ? 'text-gray-400' : 'cursor-pointer'}`}>
+                                            {list.name}
+                                          </FormLabel>
+                                          {list.hasAutopilot && (
+                                            <div className="flex items-center text-sm text-amber-600">
+                                              <AlertCircle className="h-3 w-3 mr-1" />
+                                              <span>Already in autopilot</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))
+                            ) : (
+                              <div className="text-center py-2">
+                                <p className="text-gray-500">No lists connected to this agent</p>
+                                <Button 
+                                  variant="link" 
+                                  className="mt-1" 
+                                  onClick={() => navigate(`/agents/${agentName}/lists`)}
+                                >
+                                  Go to Lists
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Radio button email frequency selection */}
+                    <FormField
+                      control={form.control}
+                      name="emailFrequency"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel>Number of Emails per Day</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="flex flex-col space-y-1"
+                            >
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="once" id="once" />
+                                </FormControl>
+                                <FormLabel className="font-normal" htmlFor="once">
+                                  1 email per day (08h)
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="twice" id="twice" />
+                                </FormControl>
+                                <FormLabel className="font-normal" htmlFor="twice">
+                                  2 emails per day (08h and 20h)
+                                </FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className="px-8"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing...
+                          </div>
+                        ) : (
+                          <>
+                            <Zap className="mr-2 h-4 w-4" /> Activate Email Autopilot
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
     </div>

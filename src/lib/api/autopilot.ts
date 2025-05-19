@@ -5,6 +5,16 @@ import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 // Airtable table ID for the autopilot data
 const AIRTABLE_AUTOPILOT_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
 
+// Enhanced interface for autopilot records
+export interface AutopilotRecord {
+  id: string;
+  listId: number;
+  listName?: string;
+  cronId: number;
+  url: string;
+  createdTime?: string;
+}
+
 // Create a new autopilot record
 export const createAutopilotRecord = async (
   listId: string, 
@@ -58,7 +68,7 @@ export const createAutopilotRecord = async (
 };
 
 // Fetch existing autopilot records for a specific agent/URL
-export const fetchAutopilotRecords = async (url: string): Promise<{listId: number, cronId: number}[]> => {
+export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecord[]> => {
   try {
     // Create a direct API instance for the autopilot table
     const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
@@ -85,10 +95,13 @@ export const fetchAutopilotRecords = async (url: string): Promise<{listId: numbe
     const data = await response.json();
     console.log('Autopilot records fetched:', data);
     
-    // Extract the list IDs and cron IDs from the response
+    // Extract the list IDs and cron IDs from the response with more complete information
     const records = data.records.map((record: any) => ({
+      id: record.id,
       listId: record.fields.id_list,
-      cronId: record.fields.id_cron
+      cronId: record.fields.id_cron,
+      url: record.fields.url,
+      createdTime: record.createdTime
     }));
     
     return records;
@@ -97,4 +110,3 @@ export const fetchAutopilotRecords = async (url: string): Promise<{listId: numbe
     return [];
   }
 };
-
