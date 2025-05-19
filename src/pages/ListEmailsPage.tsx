@@ -63,57 +63,23 @@ const ListEmailsPage = () => {
     // Try using date_set as our primary date source
     const dateString = email.date_set || email.date;
     
-    // Log the current date string we're trying to format
+    // Debug the date string we're trying to format
     console.log(`Formatting date for email ${email.id}:`, dateString);
     
-    if (!dateString || dateString === 'No date available') {
-      return 'No date available';
-    }
-    
-    // Try multiple date parsing approaches
-    
-    // First approach: direct parseISO
+    // If the dateString is in ISO format (like "2025-05-20T20:06:00.000Z")
+    // it should be directly parseable
     try {
-      const parsedDate = parseISO(dateString);
-      if (!isNaN(parsedDate.getTime())) {
-        const formattedDate = format(parsedDate, 'PPpp');
-        console.log(`Successfully formatted with parseISO: ${formattedDate}`);
-        return formattedDate;
-      }
-    } catch (e) {
-      console.error('Error with parseISO:', e);
-    }
-    
-    // Second approach: try Date constructor
-    try {
-      const date = new Date(dateString);
-      if (!isNaN(date.getTime())) {
-        const formattedDate = format(date, 'PPpp');
-        console.log(`Successfully formatted with Date constructor: ${formattedDate}`);
-        return formattedDate;
-      }
-    } catch (e) {
-      console.error('Error with Date constructor:', e);
-    }
-    
-    // If we have a number, it might be a timestamp
-    if (!isNaN(Number(dateString))) {
-      try {
-        const timestamp = Number(dateString);
-        const date = new Date(timestamp);
+      if (dateString && dateString !== 'No date available') {
+        const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
-          const formattedDate = format(date, 'PPpp');
-          console.log(`Successfully formatted timestamp: ${formattedDate}`);
-          return formattedDate;
+          return format(date, 'PPpp');
         }
-      } catch (e) {
-        console.error('Error parsing timestamp:', e);
       }
+    } catch (e) {
+      console.error('Error formatting date:', e);
     }
     
-    // Last resort: return the original string
-    console.log(`Could not format date, returning original: ${dateString}`);
-    return dateString;
+    return 'No date available';
   };
 
   const getStatusBadge = (status: number) => {
