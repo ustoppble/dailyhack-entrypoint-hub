@@ -1,6 +1,6 @@
 
 import { airtableApi } from './client';
-import { AIRTABLE_BASE_ID } from './constants';
+import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
 // Airtable table ID for the autopilot data
 const AIRTABLE_AUTOPILOT_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
@@ -30,15 +30,22 @@ export const createAutopilotRecord = async (
     
     console.log('Creating autopilot record:', recordData);
     
-    // Make the API call
+    // Make the API call with the correct Authorization header
+    // Using the API key directly instead of getting it from airtableApi.defaults.headers
     const response = await fetch(autopilotApiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${airtableApi.defaults.headers.Authorization}`,
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(recordData)
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Airtable API error:', errorData);
+      throw new Error(`Airtable API error: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
     
     const data = await response.json();
     console.log('Autopilot record created:', data);
