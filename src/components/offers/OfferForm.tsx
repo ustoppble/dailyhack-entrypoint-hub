@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -26,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { fetchWebsiteData } from '@/lib/api/firecrawl';
 
 // Define the form schema
 const offerFormSchema = z.object({
@@ -91,27 +91,10 @@ const OfferForm = ({
     setFirecrawlError(null); // Clear previous errors
     
     try {
-      console.log('Sending request to Firecrawl with:', { link, style });
+      const data = await fetchWebsiteData(link, style);
       
-      const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ link, style })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Firecrawl API error:', data);
-        
-        // Handle specific error messages from the server
-        if (data.message) {
-          throw new Error(`Server error: ${data.message}`);
-        } else {
-          throw new Error(`Error ${response.status}: The server could not process your request`);
-        }
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch website data');
       }
       
       if (data.offer_name) {
@@ -239,24 +222,6 @@ const OfferForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Link</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="https://example.com"
-                  {...field}
-                  onChange={handleLinkChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="style"
           render={({ field }) => (
             <FormItem>
@@ -284,6 +249,24 @@ const OfferForm = ({
                   <SelectItem value="event">Event</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="link"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Link</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="https://example.com"
+                  {...field}
+                  onChange={handleLinkChange}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
