@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import './App.css';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/Layout';
@@ -30,7 +30,7 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Layout />}>
+          <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<HomePage />} />
             <Route path="integrate" element={<IntegratePage />} />
             <Route path="agents" element={<AgentsPage />} />
