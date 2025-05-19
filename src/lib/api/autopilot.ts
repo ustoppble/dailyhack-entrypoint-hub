@@ -1,4 +1,3 @@
-
 import { airtableApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
@@ -29,6 +28,7 @@ export interface EmailRecord {
   content?: string;
   list_id: number;
   activehosted?: string;
+  date_set?: string; // Added date_set field
 }
 
 // Create a new autopilot record
@@ -266,10 +266,23 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
     const emails = data.records.map((record: any) => {
       // Log each date field to help with debugging
       console.log(`Email ID ${record.id} has date:`, record.fields.date);
+      console.log(`Email ID ${record.id} has date_set:`, record.fields.date_set);
+      
+      // Extract actual date from date_set field if available
+      let dateValue = '';
+      if (record.fields.date_set) {
+        if (typeof record.fields.date_set === 'string') {
+          dateValue = record.fields.date_set;
+        } else if (record.fields.date_set && typeof record.fields.date_set === 'object') {
+          // If it's an object, try to get the value property
+          dateValue = record.fields.date_set.value || '';
+        }
+      }
       
       return {
         id: record.id,
-        date: record.fields.date || '',
+        date: dateValue,
+        date_set: dateValue, // Use date_set as our primary date field
         title: record.fields.title || '',
         campaign_name: record.fields.campaign_name || '',
         id_email: record.fields.id_email,
@@ -314,6 +327,7 @@ export const fetchEmailById = async (emailId: string): Promise<EmailRecord | nul
     const email: EmailRecord = {
       id: record.id,
       date: record.fields.date || '',
+      date_set: record.fields.date_set || '',
       title: record.fields.title || '',
       campaign_name: record.fields.campaign_name || '',
       id_email: record.fields.id_email,

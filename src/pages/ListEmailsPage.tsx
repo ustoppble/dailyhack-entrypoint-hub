@@ -39,7 +39,7 @@ const ListEmailsPage = () => {
         const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
         
         // Add logging to check what date values we're getting
-        console.log('Fetched emails with dates:', fetchedEmails.map(e => e.date));
+        console.log('Fetched emails with dates:', fetchedEmails.map(e => ({ date: e.date, date_set: e.date_set })));
         
         setEmails(fetchedEmails);
         
@@ -56,7 +56,10 @@ const ListEmailsPage = () => {
     loadEmails();
   }, [listId, agentName]);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (email: EmailRecord) => {
+    // Try date_set first, then fallback to date
+    const dateString = email.date_set || email.date;
+    
     if (!dateString) return 'No date available';
     
     try {
@@ -162,7 +165,7 @@ const ListEmailsPage = () => {
                   {emails.map((email) => (
                     <TableRow key={email.id}>
                       <TableCell className="font-medium">
-                        {formatDate(email.date)}
+                        {formatDate(email)}
                       </TableCell>
                       <TableCell>{email.title}</TableCell>
                       <TableCell>{email.campaign_name}</TableCell>
