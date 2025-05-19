@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fetchEmailsForList, EmailRecord } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 
@@ -54,10 +54,12 @@ const ListEmailsPage = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      // First try to parse the ISO date string
+      const date = parseISO(dateString);
       return format(date, 'PPpp'); // Format: "Apr 29, 2021, 1:30 PM"
     } catch (e) {
-      return dateString;
+      console.error('Error parsing date:', e, dateString);
+      return dateString; // Return the original string if parsing fails
     }
   };
 

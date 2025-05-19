@@ -6,17 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Mail, Eye, Settings } from 'lucide-react';
 import { AutopilotRecord } from '@/lib/api/autopilot';
+import { CampaignGoal } from '@/lib/api/goals';
 
 interface ActiveAutopilotsProps {
   autopilotData: AutopilotRecord[];
   onManageAutopilot: (autopilot: AutopilotRecord) => void;
   agentName: string;
+  campaignGoals?: CampaignGoal[];
 }
 
 const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({ 
   autopilotData, 
   onManageAutopilot,
-  agentName 
+  agentName,
+  campaignGoals = [] 
 }) => {
   const navigate = useNavigate();
   
@@ -26,6 +29,13 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
   
   const handleViewEmails = (autopilot: AutopilotRecord) => {
     navigate(`/agents/${agentName}/list-emails/${autopilot.listId}`);
+  };
+
+  const getOfferName = (offerId?: string): string => {
+    if (!offerId || !campaignGoals || campaignGoals.length === 0) return '';
+    
+    const goal = campaignGoals.find(g => g.id === offerId);
+    return goal ? (goal.offer_name || goal.objetivo || '') : '';
   };
   
   if (autopilotData.length === 0) {
@@ -52,9 +62,14 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
                   <h3 className="font-medium text-lg">
                     {autopilot.listName || `List #${autopilot.listId}`}
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 mb-1">
                     {getFrequencyText(autopilot.cronId)}
                   </p>
+                  {autopilot.offerId && (
+                    <p className="text-xs text-blue-600">
+                      <span className="font-medium">Campaign:</span> {getOfferName(autopilot.offerId)}
+                    </p>
+                  )}
                 </div>
                 <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
                   Active

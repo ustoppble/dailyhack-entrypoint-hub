@@ -16,7 +16,7 @@ import {
   CampaignGoal
 } from '@/lib/api-service';
 
-// Import our new components
+// Import our components
 import PageHeader from '@/components/autopilot/PageHeader';
 import ActiveAutopilots from '@/components/autopilot/ActiveAutopilots';
 import EmailPlannerForm from '@/components/autopilot/EmailPlannerForm';
@@ -218,6 +218,7 @@ const EmailPlannerPage = () => {
                 autopilotData={autopilotData}
                 onManageAutopilot={handleManageAutopilot}
                 agentName={agentName || ''}
+                campaignGoals={campaignGoals}
               />
             )}
 
