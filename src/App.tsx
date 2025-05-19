@@ -41,6 +41,7 @@ function App() {
             <Route path="agents/:agentName/planner" element={<EmailPlannerPage />} />
             <Route path="agents/:agentName/list/:listId/emails" element={<ListEmailsPage />} />
             <Route path="agents/:agentName/email/:emailId" element={<EmailViewPage />} />
+            <Route path="email/:emailId" element={<EmailViewPage />} />
             <Route path="agents/:agentName/kb" element={<KnowledgeBasePage />} />
             
             {/* New routes for offers management */}

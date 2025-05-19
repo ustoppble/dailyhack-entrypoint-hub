@@ -104,7 +104,11 @@ const ListEmailsPage = () => {
   };
 
   const handleViewEmail = (emailId: string) => {
-    navigate(`/email/${emailId}`);
+    if (agentName) {
+      navigate(`/agents/${agentName}/email/${emailId}`);
+    } else {
+      navigate(`/email/${emailId}`);
+    }
   };
 
   const handleGoBack = () => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -16,7 +15,7 @@ import { fetchEmailById, EmailRecord } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 
 const EmailViewPage = () => {
-  const { emailId } = useParams<{ emailId: string }>();
+  const { emailId, agentName } = useParams<{ emailId: string, agentName?: string }>();
   const navigate = useNavigate();
   const [email, setEmail] = useState<EmailRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +86,18 @@ const EmailViewPage = () => {
   };
 
   const goBack = () => {
-    navigate(-1);
+    if (agentName) {
+      // If we have an agent name in the URL, go back to that agent's emails list
+      const listId = email?.list_id;
+      if (listId) {
+        navigate(`/agents/${agentName}/list/${listId}/emails`);
+      } else {
+        navigate(`/agents/${agentName}/planner`);
+      }
+    } else {
+      // Otherwise just go back in history
+      navigate(-1);
+    }
   };
 
   if (isLoading) {
