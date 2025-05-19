@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
 import { Loader2 } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
 
 // Define the form schema
 const offerFormSchema = z.object({
@@ -60,6 +61,7 @@ const OfferForm = ({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [urlTyping, setUrlTyping] = useState(false);
 
   // Configure the form
   const form = useForm<OfferFormValues>({
@@ -72,9 +74,16 @@ const OfferForm = ({
     },
   });
 
+  // Get the current values from the form
+  const link = form.watch('link');
+  const style = form.watch('style');
+  
+  // Use debounce to wait for typing to finish
+  const debouncedLink = useDebounce(link, 1500);
+
   // Function to fetch data from the Firecrawl webhook
   const fetchFirecrawlData = async (link: string, style: string) => {
-    if (!link) return;
+    if (!link || !z.string().url().safeParse(link).success) return;
     
     setIsLoading(true);
     
@@ -106,22 +115,22 @@ const OfferForm = ({
       onError(`Failed to fetch website data: ${(error as Error).message}`);
     } finally {
       setIsLoading(false);
+      setUrlTyping(false);
     }
   };
 
-  // Watch for link and style changes
-  const link = form.watch('link');
-  const style = form.watch('style');
-  
-  // Fetch data when link changes and is valid
+  // Handle link input change and set the typing state
+  const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    form.setValue('link', e.target.value);
+    setUrlTyping(true);
+  };
+
+  // Use the debounced link to fetch data
   useEffect(() => {
-    const linkValue = form.getValues('link');
-    const styleValue = form.getValues('style');
-    
-    if (linkValue && z.string().url().safeParse(linkValue).success) {
-      fetchFirecrawlData(linkValue, styleValue);
+    if (debouncedLink && urlTyping) {
+      fetchFirecrawlData(debouncedLink, style);
     }
-  }, [link]);
+  }, [debouncedLink]);
 
   const onSubmit = async (data: OfferFormValues) => {
     if (!user) {
@@ -215,6 +224,7 @@ const OfferForm = ({
                 <Input
                   placeholder="https://example.com"
                   {...field}
+                  onChange={handleLinkChange}
                 />
               </FormControl>
               <FormMessage />
