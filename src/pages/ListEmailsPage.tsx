@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -38,8 +37,12 @@ const ListEmailsPage = () => {
         // Fetch emails for the specified list
         const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
         
-        // Add logging to check what date values we're getting
-        console.log('Fetched emails with dates:', fetchedEmails.map(e => ({ date: e.date, date_set: e.date_set })));
+        // Log emails with their date_set values
+        console.log('Fetched emails with dates:', fetchedEmails.map(e => ({ 
+          id: e.id,
+          date: e.date, 
+          date_set: e.date_set 
+        })));
         
         setEmails(fetchedEmails);
         
@@ -57,41 +60,60 @@ const ListEmailsPage = () => {
   }, [listId, agentName]);
 
   const formatDate = (email: EmailRecord) => {
-    // Try date_set first, then fallback to date
+    // Try using date_set as our primary date source
     const dateString = email.date_set || email.date;
     
-    if (!dateString) return 'No date available';
+    // Log the current date string we're trying to format
+    console.log(`Formatting date for email ${email.id}:`, dateString);
     
+    if (!dateString || dateString === 'No date available') {
+      return 'No date available';
+    }
+    
+    // Try multiple date parsing approaches
+    
+    // First approach: direct parseISO
     try {
-      // First try to parse as ISO string
       const parsedDate = parseISO(dateString);
-      
-      // Check if the parsed date is valid
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error('Invalid date from parseISO');
+      if (!isNaN(parsedDate.getTime())) {
+        const formattedDate = format(parsedDate, 'PPpp');
+        console.log(`Successfully formatted with parseISO: ${formattedDate}`);
+        return formattedDate;
       }
-      
-      return format(parsedDate, 'PPpp'); // Format: "Apr 29, 2021, 1:30 PM"
     } catch (e) {
-      console.error('Error parsing ISO date:', e);
-      
-      // Try regular Date constructor as fallback
+      console.error('Error with parseISO:', e);
+    }
+    
+    // Second approach: try Date constructor
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        const formattedDate = format(date, 'PPpp');
+        console.log(`Successfully formatted with Date constructor: ${formattedDate}`);
+        return formattedDate;
+      }
+    } catch (e) {
+      console.error('Error with Date constructor:', e);
+    }
+    
+    // If we have a number, it might be a timestamp
+    if (!isNaN(Number(dateString))) {
       try {
-        const date = new Date(dateString);
-        
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-          throw new Error('Invalid date from Date constructor');
+        const timestamp = Number(dateString);
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) {
+          const formattedDate = format(date, 'PPpp');
+          console.log(`Successfully formatted timestamp: ${formattedDate}`);
+          return formattedDate;
         }
-        
-        return format(date, 'PPpp');
-      } catch (e2) {
-        console.error('Error creating date with constructor:', e2, 'Raw date string:', dateString);
-        
-        // Just return the original string if all parsing fails
-        return dateString;
+      } catch (e) {
+        console.error('Error parsing timestamp:', e);
       }
     }
+    
+    // Last resort: return the original string
+    console.log(`Could not format date, returning original: ${dateString}`);
+    return dateString;
   };
 
   const getStatusBadge = (status: number) => {

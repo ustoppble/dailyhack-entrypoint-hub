@@ -1,3 +1,4 @@
+
 import { airtableApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
@@ -264,25 +265,55 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
     
     // Map the Airtable response to our EmailRecord interface
     const emails = data.records.map((record: any) => {
-      // Log each date field to help with debugging
-      console.log(`Email ID ${record.id} has date:`, record.fields.date);
-      console.log(`Email ID ${record.id} has date_set:`, record.fields.date_set);
+      // Debug the entire record fields to see ALL available data
+      console.log(`Complete record fields for email ${record.id}:`, record.fields);
       
-      // Extract actual date from date_set field if available
+      // Extract date from the date_set field - trying multiple possible formats
       let dateValue = '';
+      
+      // First try the date_set field directly
       if (record.fields.date_set) {
+        console.log(`Type of date_set for ${record.id}:`, typeof record.fields.date_set);
+        
+        // If it's a string, use it directly
         if (typeof record.fields.date_set === 'string') {
           dateValue = record.fields.date_set;
-        } else if (record.fields.date_set && typeof record.fields.date_set === 'object') {
-          // If it's an object, try to get the value property
+          console.log(`Using string date_set: ${dateValue}`);
+        } 
+        // If it's an array (Airtable sometimes returns dates as arrays)
+        else if (Array.isArray(record.fields.date_set)) {
+          dateValue = record.fields.date_set[0];
+          console.log(`Using array date_set[0]: ${dateValue}`);
+        }
+        // If it's an object with value property
+        else if (typeof record.fields.date_set === 'object') {
           dateValue = record.fields.date_set.value || '';
+          console.log(`Using object date_set.value: ${dateValue}`);
         }
       }
       
+      // If date_set didn't yield a result, try the regular date field
+      if (!dateValue && record.fields.date) {
+        if (typeof record.fields.date === 'string') {
+          dateValue = record.fields.date;
+        } else if (Array.isArray(record.fields.date)) {
+          dateValue = record.fields.date[0];
+        } else if (record.fields.date && typeof record.fields.date === 'object') {
+          dateValue = record.fields.date.value || '';
+        }
+      }
+      
+      // Last resort: set a placeholder
+      if (!dateValue) {
+        dateValue = 'No date available';
+      }
+      
+      console.log(`Final dateValue for ${record.id}:`, dateValue);
+      
       return {
         id: record.id,
-        date: dateValue,
-        date_set: dateValue, // Use date_set as our primary date field
+        date: record.fields.date || '',
+        date_set: dateValue, // Use our extracted date value
         title: record.fields.title || '',
         campaign_name: record.fields.campaign_name || '',
         id_email: record.fields.id_email,
