@@ -167,7 +167,7 @@ const ListEmailsPage = () => {
           activehosted: agentName,
           userId: user.id,
           emailId: emailId,
-          id_email: emailId // Adding id_email as requested
+          id_email: emailRecord.id_email // Use the actual id_email from the email record
         };
 
         console.log('Sending approval request to webhook:', payload);
