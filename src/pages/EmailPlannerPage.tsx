@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2, Link } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2, Link, Eye, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { Badge } from '@/components/ui/badge';
@@ -327,6 +326,14 @@ const EmailPlannerPage = () => {
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
                             Active
                           </Badge>
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                          <Button variant="outline" size="sm" className="gap-1">
+                            <Eye className="h-4 w-4" /> View Emails
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            <Settings className="h-4 w-4" /> Manage
+                          </Button>
                         </div>
                       </div>
                     ))}
