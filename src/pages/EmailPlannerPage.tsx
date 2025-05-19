@@ -160,7 +160,7 @@ const EmailPlannerPage = () => {
           agentName,
           lists: [listId], // Only send one list ID per request
           userId: user.id, // Add user ID that is logged in
-          mainGoal: selectedGoalData.objetivo || '', // Goal objective
+          mainGoal: selectedGoalData.goal || '', // Use goal field instead
           goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo
           offer_name: selectedGoalData.offer_name || '', // Offer name
           emailFrequency: values.emailFrequency,
@@ -186,7 +186,7 @@ const EmailPlannerPage = () => {
       }
       
       const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
-      const successMessage = `Your email campaign "${selectedGoalData.offer_name || selectedGoalData.objetivo}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
+      const successMessage = `Your email campaign "${selectedGoalData.offer_name || selectedGoalData.goal}" is now in production! ${emailFrequencyText} will be sent to ${selectedListNames.join(", ")}.`;
       
       setSuccess(successMessage);
       

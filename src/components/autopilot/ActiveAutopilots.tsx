@@ -35,7 +35,7 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
     if (!offerId || !campaignGoals || campaignGoals.length === 0) return '';
     
     const goal = campaignGoals.find(g => g.id === offerId);
-    return goal ? (goal.offer_name || goal.objetivo || '') : '';
+    return goal ? goal.offer_name || '' : '';
   };
   
   if (autopilotData.length === 0) {

@@ -281,7 +281,7 @@ const ManageAutopilotForm = ({
                     {campaignGoals.map((goal) => (
                       <SelectItem key={goal.id} value={goal.id}>
                         <div className="flex items-center justify-between w-full">
-                          <span>{goal.offer_name || goal.objetivo}</span>
+                          <span>{goal.offer_name || goal.goal}</span>
                           <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-100 capitalize">
                             {goal.style}
                           </span>
@@ -293,7 +293,7 @@ const ManageAutopilotForm = ({
                 {selectedGoal && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-700 mb-2">
-                      {selectedGoal.description || selectedGoal.objetivo}
+                      {selectedGoal.description || selectedGoal.goal}
                     </p>
                     {selectedGoal.link && (
                       <p className="text-sm text-blue-600 flex items-center">
