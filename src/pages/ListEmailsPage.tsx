@@ -38,11 +38,11 @@ const ListEmailsPage = () => {
         // Fetch emails for the specified list
         const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
         
-        // Log emails with their date_set values
-        console.log('Fetched emails with dates:', fetchedEmails.map(e => ({ 
+        // Log emails with their date_set values and status
+        console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
           id: e.id,
-          date: e.date, 
-          date_set: e.date_set 
+          date: e.date_set,
+          status: e.status
         })));
         
         setEmails(fetchedEmails);
@@ -64,11 +64,6 @@ const ListEmailsPage = () => {
     // Try using date_set as our primary date source
     const dateString = email.date_set || email.date;
     
-    // Debug the date string we're trying to format
-    console.log(`Formatting date for email ${email.id}:`, dateString);
-    
-    // If the dateString is in ISO format (like "2025-05-20T20:06:00.000Z")
-    // it should be directly parseable
     try {
       if (dateString && dateString !== 'No date available') {
         const date = new Date(dateString);
@@ -83,8 +78,11 @@ const ListEmailsPage = () => {
     return 'No date available';
   };
 
-  const getStatusBadge = (status: number) => {
-    if (status === 1) {
+  const getStatusBadge = (status: number | string) => {
+    // Convert status to number if it's a string
+    const statusNum = typeof status === 'string' ? parseInt(status) : status;
+    
+    if (statusNum === 1) {
       return <Badge variant="default" className="bg-green-500">Approved</Badge>;
     }
     return <Badge variant="secondary">Draft</Badge>;
@@ -106,8 +104,16 @@ const ListEmailsPage = () => {
   });
 
   // Separate emails by status
-  const approvedEmails = sortedEmails.filter(email => email.status === 1);
-  const draftEmails = sortedEmails.filter(email => email.status !== 1);
+  // Convert status to number if it's a string before comparison
+  const approvedEmails = sortedEmails.filter(email => {
+    const status = typeof email.status === 'string' ? parseInt(email.status) : email.status;
+    return status === 1;
+  });
+  
+  const draftEmails = sortedEmails.filter(email => {
+    const status = typeof email.status === 'string' ? parseInt(email.status) : email.status;
+    return status !== 1;
+  });
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -151,7 +157,7 @@ const ListEmailsPage = () => {
               </div>
             ) : (
               <div>
-                {/* Draft Emails Section */}
+                {/* Scheduled Emails Section (Draft) */}
                 <div className="mb-6">
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Draft Emails</h3>
                   <Table>
@@ -197,7 +203,7 @@ const ListEmailsPage = () => {
                   </Table>
                 </div>
 
-                {/* Approved Emails Section */}
+                {/* Sent Emails Section (Approved) */}
                 <div>
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Approved Emails</h3>
                   <Table>
