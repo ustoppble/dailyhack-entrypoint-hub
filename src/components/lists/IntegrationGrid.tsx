@@ -48,7 +48,7 @@ const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null }: Integra
           agentName={agentFilter || undefined}
         />
       ))}
-      <Card className="flex flex-col items-center justify-center border-dashed h-full min-h-[240px]">
+      <Card className="flex flex-col items-center justify-center border-dashed h-full min-h-[240px] p-6">
         <Button
           variant="outline"
           size="lg"

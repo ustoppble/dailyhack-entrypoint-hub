@@ -10,6 +10,7 @@ import EmailListCard from '@/components/lists/EmailListCard';
 import { Button } from '@/components/ui/button';
 import { ListPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import PageHeader from '@/components/autopilot/PageHeader';
 
 interface ConnectedList {
   id: string;
@@ -62,6 +63,11 @@ const AgentListsPage = () => {
       
       // Update the local state to remove the deleted list
       setConnectedLists(prev => prev.filter(list => list.airtableId !== airtableRecordId));
+      
+      toast({
+        title: "Success",
+        description: "List successfully removed",
+      });
     } catch (err) {
       console.error('Error deleting list:', err);
       toast({
@@ -75,54 +81,58 @@ const AgentListsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Connected Lists for {agentName}</span>
+      {agentName && <PageHeader agentName={agentName} />}
+      
+      <div className="max-w-5xl mx-auto">
+        <Card className="shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xl font-bold">
+              Connected Lists for {agentName}
+            </CardTitle>
             <Button asChild variant="outline" className="flex items-center gap-2">
               <Link to={`/lists/fetch/${agentName}`}>
                 <ListPlus className="h-4 w-4" /> Connect More Lists
               </Link>
             </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState 
-              error={error} 
-              onRetry={loadConnectedLists}
-            />
-          ) : connectedLists.length === 0 ? (
-            <EmptyState 
-              message={`You haven't connected any lists for ${agentName} yet.`}
-              actionUrl={`/lists/fetch/${agentName}`}
-              actionLabel="Connect Lists"
-            />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {connectedLists.map((list) => (
-                <EmailListCard
-                  key={list.id}
-                  list={{
-                    id: list.id,
-                    name: list.name,
-                    active_subscribers: list.subscribers || "0",
-                    insight: "",
-                  }}
-                  isConnected={true}
-                  agentName={agentName}
-                  onDelete={list.airtableId ? 
-                    () => handleDeleteList(list.airtableId!) : 
-                    undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <LoadingState />
+            ) : error ? (
+              <ErrorState 
+                error={error} 
+                onRetry={loadConnectedLists}
+              />
+            ) : connectedLists.length === 0 ? (
+              <EmptyState 
+                message={`You haven't connected any lists for ${agentName} yet.`}
+                actionUrl={`/lists/fetch/${agentName}`}
+                actionLabel="Connect Lists"
+              />
+            ) : (
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {connectedLists.map((list) => (
+                  <EmailListCard
+                    key={list.id}
+                    list={{
+                      id: list.id,
+                      name: list.name,
+                      active_subscribers: list.subscribers || "0",
+                      insight: "",
+                    }}
+                    isConnected={true}
+                    agentName={agentName}
+                    onDelete={list.airtableId ? 
+                      () => handleDeleteList(list.airtableId!) : 
+                      undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

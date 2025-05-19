@@ -110,7 +110,7 @@ const EmailListCard = ({
   };
   
   return (
-    <Card className={`relative transition-all ${selected ? 'border-blue-500 border-2 shadow-md' : 'border-gray-200'}`}>
+    <Card className={`relative h-full flex flex-col transition-all ${selected ? 'border-blue-500 border-2 shadow-md' : 'border-gray-200'}`}>
       {(onToggleSelect || onSelect) && (
         <div className="absolute right-3 top-3">
           <Checkbox 
@@ -133,7 +133,7 @@ const EmailListCard = ({
         </Badge>
       </CardHeader>
       
-      <CardContent className="text-sm text-gray-600 pb-3">
+      <CardContent className="text-sm text-gray-600 pb-3 flex-grow">
         {list.sender_reminder && (
           <div className="mb-2">
             <span className="font-medium text-gray-800">Lembrete do remetente:</span>

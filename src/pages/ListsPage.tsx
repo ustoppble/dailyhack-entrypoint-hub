@@ -7,7 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchUserIntegrations } from '@/lib/api/integration';
 import { fetchEmailLists, fetchConnectedLists } from '@/lib/api/lists';
-import { EmailList } from '@/lib/api/types';
 
 // Import our components
 import LoadingState from '@/components/lists/LoadingState';
@@ -91,7 +90,7 @@ const ListsPage = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-5xl mx-auto">
-        <Card>
+        <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center">{pageTitle}</CardTitle>
             <CardDescription className="text-center">
