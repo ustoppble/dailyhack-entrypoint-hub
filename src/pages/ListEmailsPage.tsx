@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -12,10 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
-import { fetchEmailsForList, EmailRecord } from '@/lib/api/autopilot';
+import { fetchEmailsForList, EmailRecord, updateEmailStatus } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from "@/hooks/use-toast";
 
 const ListEmailsPage = () => {
   const navigate = useNavigate();
@@ -24,41 +25,46 @@ const ListEmailsPage = () => {
   const [emails, setEmails] = useState<EmailRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [listName, setListName] = useState<string>('');
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const loadEmails = async () => {
-      if (!agentName || !listId) {
-        setError('Agent name or list ID not found');
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        // Fetch emails for the specified list
-        const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
-        
-        // Log emails with their date_set values and status
-        console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
-          id: e.id,
-          date: e.date_set,
-          status: e.status
-        })));
-        
-        setEmails(fetchedEmails);
-        
-        // Set list name based on the list ID since list_name might not exist on EmailRecord
-        setListName(`List #${listId}`);
-      } catch (err: any) {
-        setError('Failed to load emails: ' + (err.message || 'Unknown error'));
-        console.error('Error fetching emails:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadEmails();
   }, [listId, agentName]);
+
+  const loadEmails = async () => {
+    if (!agentName || !listId) {
+      setError('Agent name or list ID not found');
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      // Fetch emails for the specified list
+      const fetchedEmails = await fetchEmailsForList(Number(listId), agentName);
+      
+      // Log emails with their date_set values and status
+      console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
+        id: e.id,
+        date: e.date_set,
+        status: e.status
+      })));
+      
+      setEmails(fetchedEmails);
+      
+      // Set list name based on the list ID since list_name might not exist on EmailRecord
+      setListName(`List #${listId}`);
+      
+      // Clear selected emails when loading new emails
+      setSelectedEmails([]);
+    } catch (err: any) {
+      setError('Failed to load emails: ' + (err.message || 'Unknown error'));
+      console.error('Error fetching emails:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (email: EmailRecord) => {
     // Try using date_set as our primary date source
@@ -94,6 +100,77 @@ const ListEmailsPage = () => {
 
   const handleGoBack = () => {
     navigate(`/agents/${agentName}/email-planner`);
+  };
+
+  const handleSelectEmail = (emailId: string) => {
+    setSelectedEmails(prev => {
+      if (prev.includes(emailId)) {
+        return prev.filter(id => id !== emailId);
+      } else {
+        return [...prev, emailId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (draftEmails.length === selectedEmails.length) {
+      // If all emails are selected, unselect all
+      setSelectedEmails([]);
+    } else {
+      // Otherwise, select all draft emails
+      setSelectedEmails(draftEmails.map(email => email.id));
+    }
+  };
+
+  const handleApproveSelected = async () => {
+    if (selectedEmails.length === 0) {
+      toast({
+        title: "No emails selected",
+        description: "Please select at least one email to approve.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    // Update each selected email
+    for (const emailId of selectedEmails) {
+      try {
+        const success = await updateEmailStatus(emailId, 1); // 1 for approved status
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        console.error(`Error approving email ${emailId}:`, error);
+        failCount++;
+      }
+    }
+
+    // Show success message and reload emails
+    if (successCount > 0) {
+      toast({
+        title: `${successCount} email(s) approved successfully`,
+        description: failCount > 0 ? `${failCount} email(s) failed to approve.` : "",
+        variant: successCount > 0 ? "default" : "destructive"
+      });
+      
+      // Reload emails to update the UI
+      await loadEmails();
+    } else {
+      toast({
+        title: "Failed to approve emails",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    }
+
+    setIsProcessing(false);
+    setSelectedEmails([]);
   };
 
   // Sort emails by date_set (newest to oldest)
@@ -157,12 +234,38 @@ const ListEmailsPage = () => {
               </div>
             ) : (
               <div>
-                {/* Scheduled Emails Section (Draft) */}
+                {/* Draft Emails Section */}
                 <div className="mb-6">
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Draft Emails</h3>
+                  
+                  {draftEmails.length > 0 && (
+                    <div className="p-4 border-b flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="select-all" 
+                          checked={draftEmails.length > 0 && selectedEmails.length === draftEmails.length}
+                          onCheckedChange={handleSelectAll}
+                        />
+                        <label htmlFor="select-all" className="text-sm font-medium">
+                          Select All ({draftEmails.length})
+                        </label>
+                      </div>
+                      <Button
+                        variant="default"
+                        onClick={handleApproveSelected}
+                        disabled={selectedEmails.length === 0 || isProcessing}
+                        className="flex items-center gap-2"
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                        Approve Selected ({selectedEmails.length})
+                      </Button>
+                    </div>
+                  )}
+                  
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10"></TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Campaign</TableHead>
@@ -173,13 +276,19 @@ const ListEmailsPage = () => {
                     <TableBody>
                       {draftEmails.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-4">
+                          <TableCell colSpan={6} className="text-center py-4">
                             No draft emails found
                           </TableCell>
                         </TableRow>
                       ) : (
                         draftEmails.map((email) => (
                           <TableRow key={email.id}>
+                            <TableCell>
+                              <Checkbox 
+                                checked={selectedEmails.includes(email.id)}
+                                onCheckedChange={() => handleSelectEmail(email.id)}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">
                               {formatDate(email)}
                             </TableCell>
@@ -203,7 +312,7 @@ const ListEmailsPage = () => {
                   </Table>
                 </div>
 
-                {/* Sent Emails Section (Approved) */}
+                {/* Approved Emails Section */}
                 <div>
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Approved Emails</h3>
                   <Table>
