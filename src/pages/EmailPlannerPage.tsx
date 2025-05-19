@@ -159,11 +159,16 @@ const EmailPlannerPage = () => {
         const requestData = {
           agentName,
           lists: [listId], // Only send one list ID per request
-          mainGoal: selectedGoalData.objetivo, // Use the selected goal's objective
+          userId: user.id, // Add user ID that is logged in
+          mainGoal: selectedGoalData.objetivo || '', // Goal
+          offer_name: selectedGoalData.offer_name || '', // Offer name
           emailFrequency: values.emailFrequency,
-          goalLink: selectedGoalData.link, // Include the goal link
-          goalStyle: selectedGoalData.style, // Include the goal style
+          goalLink: selectedGoalData.link || '', // Goal link
+          goalStyle: selectedGoalData.style || 'nutring', // Goal style
         };
+        
+        // Log the webhook data being sent for debugging
+        console.log('Sending webhook data:', requestData);
         
         // Send the form data to the specified webhook for this list
         const response = await axios.post(webhookUrl, requestData);
