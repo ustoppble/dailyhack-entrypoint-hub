@@ -106,23 +106,26 @@ const EmailPlannerPage = () => {
       // Updated webhook URL as specified by the user
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
       
-      // Prepare data to send to webhook
-      const requestData = {
-        agentName,
-        lists: values.selectedLists, // this now contains list IDs instead of names
-        mainGoal: values.mainGoal,
-        emailCount: values.emailCount,
-      };
-      
-      // Send the form data to the specified webhook
-      const response = await axios.post(webhookUrl, requestData);
-      console.log('Webhook response:', response.data);
-      
       // Get list names for the success message
       const selectedListNames = values.selectedLists.map(listId => {
         const list = lists.find(list => list.id === listId);
         return list ? list.name : listId;
       });
+      
+      // Process each list individually
+      for (const listId of values.selectedLists) {
+        // Prepare data to send to webhook - one list per request
+        const requestData = {
+          agentName,
+          lists: [listId], // Only send one list ID per request
+          mainGoal: values.mainGoal,
+          emailCount: values.emailCount,
+        };
+        
+        // Send the form data to the specified webhook for this list
+        const response = await axios.post(webhookUrl, requestData);
+        console.log(`Webhook response for list ${listId}:`, response.data);
+      }
       
       const emailCountText = values.emailCount === "autopilot" ? "Autopilot" : `${values.emailCount} email(s)`;
       const successMessage = `Your email campaign is now in production! ${emailCountText} will be sent to ${selectedListNames.join(", ")}.`;
