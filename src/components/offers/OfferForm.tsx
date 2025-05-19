@@ -78,14 +78,19 @@ const OfferForm = ({
     setIsSubmitting(true);
 
     try {
-      // Prepare data for Airtable
-      const airtableData = {
-        fields: {
-          ...data,
-          activehosted: agentName,
-          id_user: user.id.toString(),
-        }
+      // Prepare data for Airtable - remove empty fields to prevent validation errors
+      const fields = { 
+        ...data,
+        activehosted: agentName,
+        id_user: user.id.toString(),
       };
+      
+      // If link is empty, remove it
+      if (!fields.link) {
+        delete fields.link;
+      }
+      
+      const airtableData = { fields };
 
       console.log('Submitting offer data:', airtableData);
 
@@ -118,7 +123,7 @@ const OfferForm = ({
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Airtable API error:', errorData);
-        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} offer: ${response.status}`);
+        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} offer: ${response.status} - ${JSON.stringify(errorData)}`);
       }
 
       const responseData = await response.json();
