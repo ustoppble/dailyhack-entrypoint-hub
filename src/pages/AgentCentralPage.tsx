@@ -1,81 +1,83 @@
 
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { List, BookOpen, Mail, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Mail, List, PenTool, Brain, Target } from 'lucide-react';
 
 const AgentCentralPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
+  const { user } = useAuth();
+
+  if (!agentName) {
+    return <div className="p-8 text-center">Agent name not found</div>;
+  }
+
+  const agentFeatures = [
+    {
+      title: "Lists",
+      description: "View and manage subscriber lists",
+      icon: <List className="h-6 w-6" />,
+      link: `/agents/${agentName}/lists`,
+      color: "bg-blue-100 text-blue-700",
+    },
+    {
+      title: "Email Autopilot",
+      description: "Configure automated email sequences",
+      icon: <Mail className="h-6 w-6" />,
+      link: `/agents/${agentName}/planner`,
+      color: "bg-green-100 text-green-700",
+    },
+    {
+      title: "Campaign Goals",
+      description: "Create and manage campaign goals",
+      icon: <Target className="h-6 w-6" />,
+      link: `/agents/${agentName}/offers`,
+      color: "bg-purple-100 text-purple-700",
+    },
+    {
+      title: "Knowledge Base",
+      description: "Explore resources and documentation",
+      icon: <Brain className="h-6 w-6" />,
+      link: `/agents/${agentName}/kb`,
+      color: "bg-amber-100 text-amber-700",
+    }
+  ];
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center">{agentName} Central</h1>
-          <p className="text-center text-gray-500 mt-2">Manage your ActiveCampaign agent</p>
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold">{agentName}</h1>
+          <p className="mt-2 text-gray-500">
+            Control center for your ActiveCampaign agent
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <List className="mr-2" />
-                Lists
-              </CardTitle>
-              <CardDescription>
-                Manage your email lists
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">
-                View and manage your ActiveCampaign email lists.
-              </p>
-              <Button asChild className="w-full">
-                <Link to={`/agents/${agentName}/lists`}>Manage Lists</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BookOpen className="mr-2" />
-                Knowledge Base
-              </CardTitle>
-              <CardDescription>
-                Manage your agent's knowledge
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">
-                Add and manage knowledge for your ActiveCampaign agent.
-              </p>
-              <Button asChild className="w-full">
-                <Link to={`/agents/${agentName}/knowledge`}>Manage Knowledge</Link>
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Zap className="mr-2" />
-                Email Autopilot
-              </CardTitle>
-              <CardDescription>
-                Automate your email campaigns
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">
-                Activate automated email production and delivery with AI assistance.
-              </p>
-              <Button asChild className="w-full">
-                <Link to={`/agents/${agentName}/email-planner`}>Activate Autopilot</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {agentFeatures.map((feature) => (
+            <Card key={feature.title} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className={`${feature.color} p-4`}>
+                <div className="flex items-center">
+                  <div className="bg-white p-2 rounded-full mr-3">
+                    {feature.icon}
+                  </div>
+                  <CardTitle>{feature.title}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <CardDescription className="text-gray-600">{feature.description}</CardDescription>
+              </CardContent>
+              <CardFooter className="border-t pt-4 pb-5">
+                <Button asChild className="w-full">
+                  <Link to={feature.link}>
+                    Go to {feature.title}
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
