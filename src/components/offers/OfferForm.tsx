@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,14 +22,16 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
+import { Loader2 } from 'lucide-react';
 
 // Define the form schema
 const offerFormSchema = z.object({
-  offer_name: z.string().min(1, 'Offer name is required'),
-  goal: z.string().min(1, 'Goal is required'),
   link: z.string().url('Must be a valid URL').or(z.string().length(0)),
   style: z.enum(['softsell', 'hardsell', 'nutring', 'event']),
+  offer_name: z.string().min(1, 'Offer name is required'),
+  goal: z.string().min(1, 'Goal is required'),
 });
 
 type OfferFormValues = z.infer<typeof offerFormSchema>;
@@ -42,6 +44,11 @@ interface OfferFormProps {
   offerId?: string;
 }
 
+interface FirecrawlResponse {
+  offer_name?: string;
+  goal?: string;
+}
+
 const OfferForm = ({
   onSuccess,
   onError,
@@ -51,18 +58,70 @@ const OfferForm = ({
 }: OfferFormProps) => {
   const { agentName } = useParams<{ agentName: string }>();
   const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Configure the form
   const form = useForm<OfferFormValues>({
     resolver: zodResolver(offerFormSchema),
     defaultValues: initialData || {
-      offer_name: '',
-      goal: '',
       link: '',
       style: 'nutring',
+      offer_name: '',
+      goal: '',
     },
   });
+
+  // Function to fetch data from the Firecrawl webhook
+  const fetchFirecrawlData = async (link: string, style: string) => {
+    if (!link) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ link, style })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching data: ${response.status}`);
+      }
+      
+      const data: FirecrawlResponse = await response.json();
+      
+      if (data.offer_name) {
+        form.setValue('offer_name', data.offer_name);
+      }
+      
+      if (data.goal) {
+        form.setValue('goal', data.goal);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching Firecrawl data:', error);
+      onError(`Failed to fetch website data: ${(error as Error).message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Watch for link and style changes
+  const link = form.watch('link');
+  const style = form.watch('style');
+  
+  // Fetch data when link changes and is valid
+  useEffect(() => {
+    const linkValue = form.getValues('link');
+    const styleValue = form.getValues('style');
+    
+    if (linkValue && z.string().url().safeParse(linkValue).success) {
+      fetchFirecrawlData(linkValue, styleValue);
+    }
+  }, [link]);
 
   const onSubmit = async (data: OfferFormValues) => {
     if (!user) {
@@ -148,44 +207,10 @@ const OfferForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="offer_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Offer Name</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter offer name"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="goal"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Goal</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter goal"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="link"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Link (Optional)</FormLabel>
+              <FormLabel>Link</FormLabel>
               <FormControl>
                 <Input
                   placeholder="https://example.com"
@@ -224,8 +249,52 @@ const OfferForm = ({
           )}
         />
 
+        {isLoading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="ml-2">Loading website data...</span>
+          </div>
+        )}
+
+        <FormField
+          control={form.control}
+          name="offer_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Offer Name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Enter offer name"
+                  {...field}
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="goal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Goal</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Enter goal"
+                  className="min-h-[100px]"
+                  {...field}
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || isLoading}>
             {isSubmitting ? 'Saving...' : isEditing ? 'Update Offer' : 'Create Offer'}
           </Button>
         </div>
