@@ -160,7 +160,8 @@ const EmailPlannerPage = () => {
           agentName,
           lists: [listId], // Only send one list ID per request
           userId: user.id, // Add user ID that is logged in
-          mainGoal: selectedGoalData.objetivo || '', // Goal
+          mainGoal: selectedGoalData.objetivo || '', // Goal objective
+          goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo
           offer_name: selectedGoalData.offer_name || '', // Offer name
           emailFrequency: values.emailFrequency,
           goalLink: selectedGoalData.link || '', // Goal link
