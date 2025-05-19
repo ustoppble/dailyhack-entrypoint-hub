@@ -8,7 +8,7 @@ export interface CampaignGoal {
   style: 'softsell' | 'hardsell' | 'nutring' | 'event';
   activehosted: string;
   offer_name: string;
-  id_user?: string;
+  id_user?: number;
 }
 
 export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: string): Promise<CampaignGoal[]> => {
@@ -18,7 +18,7 @@ export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: str
     
     let filterFormula = `{activehosted} = "${activeHostedAgent}"`;
     if (userId) {
-      filterFormula = `AND(${filterFormula}, {id_user} = "${userId}")`;
+      filterFormula = `AND(${filterFormula}, {id_user} = ${userId})`;
     }
     
     const encodedFilter = encodeURIComponent(filterFormula);
@@ -50,7 +50,7 @@ export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: str
       style: record.fields.style || 'nutring',
       activehosted: record.fields.activehosted || '',
       offer_name: record.fields.offer_name || '',
-      id_user: record.fields.id_user || ''
+      id_user: Number(record.fields.id_user) || undefined
     }));
     
     return goals;

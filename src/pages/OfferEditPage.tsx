@@ -55,7 +55,11 @@ const OfferEditPage = () => {
         const data = await response.json();
         
         // Verify that this offer belongs to the current user
-        if (data.fields.id_user && data.fields.id_user !== user.id.toString()) {
+        // Convert both to numbers for proper comparison
+        const recordUserId = Number(data.fields.id_user);
+        const currentUserId = Number(user.id);
+
+        if (data.fields.id_user && recordUserId !== currentUserId) {
           throw new Error('You do not have permission to edit this offer');
         }
         

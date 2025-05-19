@@ -29,7 +29,7 @@ const OffersPage = () => {
       setIsLoading(true);
       setError(null);
       
-      // Pass user ID to filter offers
+      // Pass user ID as a number
       const campaignGoals = await fetchCampaignGoals(agentName, user.id.toString());
       setOffers(campaignGoals);
     } catch (err) {

@@ -82,7 +82,8 @@ const OfferForm = ({
       const fields = { 
         ...data,
         activehosted: agentName,
-        id_user: user.id.toString(),
+        // Convert user.id to a number instead of a string
+        id_user: Number(user.id),
       };
       
       // If link is empty, remove it
