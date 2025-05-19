@@ -337,3 +337,40 @@ export const fetchEmailById = async (emailId: string): Promise<EmailRecord | nul
     return null;
   }
 };
+
+// Update email status (new function)
+export const updateEmailStatus = async (emailId: string, status: number): Promise<boolean> => {
+  try {
+    const emailApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_EMAILS_TABLE_ID}/${emailId}`;
+    
+    // Prepare the update data
+    const updateData = {
+      fields: {
+        "status": status
+      }
+    };
+    
+    console.log(`Updating email ${emailId} status to ${status}`);
+    
+    const response = await fetch(emailApiUrl, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateData)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Airtable API error when updating email status:', errorData);
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    console.log('Email status updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating email status:', error);
+    return false;
+  }
+};
