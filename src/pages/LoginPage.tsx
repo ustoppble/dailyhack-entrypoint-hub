@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import AuthForm from '@/components/integration/AuthForm';
@@ -15,7 +14,7 @@ const LoginPage = () => {
   
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate('/dashboard');
+    navigate('/integrate');
     return null;
   }
 
@@ -24,7 +23,7 @@ const LoginPage = () => {
       title: 'Login successful!',
       description: 'Welcome back to DailyHack.',
     });
-    navigate('/dashboard');
+    navigate('/integrate');
   };
 
   return (

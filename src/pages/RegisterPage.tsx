@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -194,8 +193,8 @@ const RegisterPage = () => {
           <CardFooter className="flex justify-center">
             <p className="text-sm text-gray-500">
               Already have an account?{' '}
-              <Button variant="link" className="p-0" onClick={() => navigate('/integrate')}>
-                Connect ActiveCampaign
+              <Button variant="link" className="p-0" onClick={() => navigate('/login')}>
+                Login here
               </Button>
             </p>
           </CardFooter>

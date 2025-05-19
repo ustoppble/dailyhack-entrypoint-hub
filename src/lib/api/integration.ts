@@ -94,7 +94,7 @@ export const verifyActiveCampaignCredentials = async (
       } else {
         return {
           success: false,
-          message: 'Credenciais inválidas ou problema de conexão com o ActiveCampaign',
+          message: 'Invalid credentials or connection issue with ActiveCampaign',
           attemptedUrl: formattedApiUrl
         };
       }
@@ -108,7 +108,7 @@ export const verifyActiveCampaignCredentials = async (
         
         return { 
           success: false, 
-          message: `Erro ao contatar o webhook n8n: ${axiosError.response.status} - ${axiosError.response.data || 'Erro desconhecido'}`,
+          message: `Error contacting the n8n webhook: ${axiosError.response.status} - ${axiosError.response.data || 'Unknown error'}`,
           attemptedUrl: formattedApiUrl
         };
       } else if (axiosError.request) {
@@ -117,7 +117,7 @@ export const verifyActiveCampaignCredentials = async (
         return { 
           success: false,
           isNetworkError: true,
-          message: `Nenhuma resposta recebida do webhook n8n. Verifique sua conexão com a internet.`,
+          message: `No response received from n8n webhook. Please check your internet connection.`,
           attemptedUrl: formattedApiUrl
         };
       } else {
@@ -125,7 +125,7 @@ export const verifyActiveCampaignCredentials = async (
         return { 
           success: false, 
           isNetworkError: axiosError.message.includes('network'),
-          message: `Erro: ${axiosError.message}`,
+          message: `Error: ${axiosError.message}`,
           attemptedUrl: formattedApiUrl
         };
       }
@@ -135,7 +135,7 @@ export const verifyActiveCampaignCredentials = async (
     return { 
       success: false,
       isNetworkError: error.message?.includes('network'),
-      message: error.message || 'Ocorreu um erro inesperado durante a verificação.'
+      message: error.message || 'An unexpected error occurred during verification.'
     };
   }
 };

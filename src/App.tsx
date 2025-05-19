@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/Layout';
@@ -33,6 +33,7 @@ function App() {
           <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<HomePage />} />
             <Route path="integrate" element={<IntegratePage />} />
+            {/* Consolidate "agents" to use the same IntegratePage */}
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:agentName/central" element={<AgentCentralPage />} />
             <Route path="agents/:agentName/lists" element={<AgentListsPage />} />
@@ -44,13 +45,16 @@ function App() {
             <Route path="email/:emailId" element={<EmailViewPage />} />
             <Route path="agents/:agentName/kb" element={<KnowledgeBasePage />} />
             
-            {/* New routes for offers management */}
+            {/* Offers management routes */}
             <Route path="agents/:agentName/offers" element={<OffersPage />} />
             <Route path="agents/:agentName/offers/edit/:offerId" element={<OfferEditPage />} />
             
+            {/* Authentication routes */}
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="confirmation" element={<ConfirmationPage />} />
+            
+            {/* Handle 404 */}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
