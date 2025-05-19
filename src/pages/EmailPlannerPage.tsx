@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -120,10 +119,9 @@ const EmailPlannerPage = () => {
     setManageDialogOpen(true);
   };
   
-  // Handle clicking view emails button for an autopilot
+  // Update this function to navigate instead of opening a dialog
   const handleViewEmails = (autopilot: AutopilotRecord) => {
-    setSelectedAutopilot(autopilot);
-    setViewEmailsDialogOpen(true);
+    navigate(`/agents/${agentName}/list-emails/${autopilot.listId}`);
   };
   
   // Refresh data after changes
@@ -616,19 +614,6 @@ const EmailPlannerPage = () => {
                 refreshData();
               }}
               onCancel={() => setManageDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* View Emails Dialog */}
-      <Dialog open={viewEmailsDialogOpen} onOpenChange={setViewEmailsDialogOpen}>
-        <DialogContent className="sm:max-w-4xl">
-          {selectedAutopilot && (
-            <EmailsList 
-              listId={selectedAutopilot.listId}
-              listName={selectedAutopilot.listName || `List #${selectedAutopilot.listId}`}
-              onClose={() => setViewEmailsDialogOpen(false)}
             />
           )}
         </DialogContent>

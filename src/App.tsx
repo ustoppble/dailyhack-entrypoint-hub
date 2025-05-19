@@ -19,6 +19,7 @@ import AgentListsPage from "./pages/AgentListsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import EmailPlannerPage from "./pages/EmailPlannerPage";
 import EmailViewPage from "./pages/EmailViewPage";
+import ListEmailsPage from "./pages/ListEmailsPage";
 import FetchListsPage from "./pages/FetchListsPage";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/agents/:agentName/lists" element={<AgentListsPage />} />
               <Route path="/agents/:agentName/knowledge" element={<KnowledgeBasePage />} />
               <Route path="/agents/:agentName/email-planner" element={<EmailPlannerPage />} />
+              <Route path="/agents/:agentName/list-emails/:listId" element={<ListEmailsPage />} />
               <Route path="/email/:emailId" element={<EmailViewPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
