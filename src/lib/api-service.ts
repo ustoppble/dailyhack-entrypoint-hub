@@ -11,3 +11,5 @@ export { fetchEmailLists, saveSelectedLists, fetchConnectedLists, deleteConnecte
 export * from './api/autopilot';
 // Export campaign goals functionality
 export * from './api/goals';
+// Export firecrawl functionality
+export * from './api/firecrawl';

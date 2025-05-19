@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 
 // Define the form schema
@@ -48,6 +48,7 @@ interface OfferFormProps {
 interface FirecrawlResponse {
   offer_name?: string;
   goal?: string;
+  message?: string;
 }
 
 const OfferForm = ({
@@ -62,6 +63,7 @@ const OfferForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [urlTyping, setUrlTyping] = useState(false);
+  const [firecrawlError, setFirecrawlError] = useState<string | null>(null);
 
   // Configure the form
   const form = useForm<OfferFormValues>({
@@ -86,8 +88,11 @@ const OfferForm = ({
     if (!link || !z.string().url().safeParse(link).success) return;
     
     setIsLoading(true);
+    setFirecrawlError(null); // Clear previous errors
     
     try {
+      console.log('Sending request to Firecrawl with:', { link, style });
+      
       const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
         method: 'POST',
         headers: {
@@ -96,11 +101,18 @@ const OfferForm = ({
         body: JSON.stringify({ link, style })
       });
       
-      if (!response.ok) {
-        throw new Error(`Error fetching data: ${response.status}`);
-      }
+      const data = await response.json();
       
-      const data: FirecrawlResponse = await response.json();
+      if (!response.ok) {
+        console.error('Firecrawl API error:', data);
+        
+        // Handle specific error messages from the server
+        if (data.message) {
+          throw new Error(`Server error: ${data.message}`);
+        } else {
+          throw new Error(`Error ${response.status}: The server could not process your request`);
+        }
+      }
       
       if (data.offer_name) {
         form.setValue('offer_name', data.offer_name);
@@ -112,7 +124,9 @@ const OfferForm = ({
       
     } catch (error) {
       console.error('Error fetching Firecrawl data:', error);
-      onError(`Failed to fetch website data: ${(error as Error).message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch website data';
+      setFirecrawlError(errorMessage);
+      onError(errorMessage);
     } finally {
       setIsLoading(false);
       setUrlTyping(false);
@@ -123,6 +137,8 @@ const OfferForm = ({
   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     form.setValue('link', e.target.value);
     setUrlTyping(true);
+    // Clear the error when the user starts typing again
+    if (firecrawlError) setFirecrawlError(null);
   };
 
   // Use the debounced link to fetch data
@@ -131,6 +147,13 @@ const OfferForm = ({
       fetchFirecrawlData(debouncedLink, style);
     }
   }, [debouncedLink]);
+
+  // Reset Firecrawl error when style changes
+  useEffect(() => {
+    if (firecrawlError && debouncedLink) {
+      setFirecrawlError(null);
+    }
+  }, [style]);
 
   const onSubmit = async (data: OfferFormValues) => {
     if (!user) {
@@ -239,7 +262,14 @@ const OfferForm = ({
             <FormItem>
               <FormLabel>Style</FormLabel>
               <Select
-                onValueChange={field.onChange}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  // If we have a valid link, try fetching with the new style
+                  if (debouncedLink && z.string().url().safeParse(debouncedLink).success) {
+                    setUrlTyping(true);
+                    fetchFirecrawlData(debouncedLink, value);
+                  }
+                }}
                 defaultValue={field.value}
               >
                 <FormControl>
@@ -263,6 +293,15 @@ const OfferForm = ({
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="ml-2">Loading website data...</span>
+          </div>
+        )}
+        
+        {firecrawlError && (
+          <div className="flex items-center justify-start py-2 px-3 bg-red-50 rounded-md border border-red-200">
+            <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+            <span className="text-sm text-red-600">
+              {firecrawlError}. Please try again or fill in manually.
+            </span>
           </div>
         )}
 
