@@ -15,14 +15,15 @@ export const createAutopilotRecord = async (
     // Create a direct API instance for the autopilot table
     const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
     
-    // Prepare the record data
+    // Prepare the record data - converting string values to match Airtable's expected format
     const recordData = {
       records: [
         {
           fields: {
-            id_list: listId,
-            url: url,
-            id_cron: cronId
+            // Convert all fields to proper types as required by Airtable
+            "id_list": Number(listId), // Convert to number since Airtable expects a number
+            "url": url,
+            "id_cron": cronId
           }
         }
       ]
@@ -31,7 +32,6 @@ export const createAutopilotRecord = async (
     console.log('Creating autopilot record:', recordData);
     
     // Make the API call with the correct Authorization header
-    // Using the API key directly instead of getting it from airtableApi.defaults.headers
     const response = await fetch(autopilotApiUrl, {
       method: 'POST',
       headers: {
