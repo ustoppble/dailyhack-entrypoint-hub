@@ -50,7 +50,8 @@ export const createAutopilotRecord = async (
             "id_list": Number(listId), // Convert to number since Airtable expects a number
             "url": url,
             "id_cron": cronId,
-            ...(offerId ? { "id_offer": offerId } : {}) // Add id_offer only if provided
+            // Use the numeric value from the offer instead of the Airtable record ID
+            ...(offerId ? { "id_offer": getNumericOfferId(offerId) } : {}) 
           }
         }
       ]
@@ -82,6 +83,21 @@ export const createAutopilotRecord = async (
     console.error('Error creating autopilot record:', error);
     return false;
   }
+};
+
+// Extract the numeric ID from the campaign goal ID
+// This is needed because Airtable expects a number for id_offer, not a record ID
+const getNumericOfferId = (recordId: string): number => {
+  // Try to find a number at the end of the string (like "recTaU2whfyY0rLSC" -> extract 4 from campaign goal fields)
+  const goal = {
+    "recQG4f2htaV2ZKQ5": 1,
+    "recTaU2whfyY0rLSC": 4,
+    "recn1xsQEZcFfUWh3": 5,
+    "recg5uXLPbNfVU441": 6,
+  };
+  
+  // Return the numeric value or 0 if not found
+  return goal[recordId as keyof typeof goal] || 0;
 };
 
 // Fetch existing autopilot records for a specific agent/URL
@@ -118,7 +134,7 @@ export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecor
       listId: record.fields.id_list,
       cronId: record.fields.id_cron,
       url: record.fields.url,
-      offerId: record.fields.id_offer,
+      offerId: getRecordIdForOfferId(record.fields.id_offer),
       createdTime: record.createdTime
     }));
     
@@ -127,6 +143,20 @@ export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecor
     console.error('Error fetching autopilot records:', error);
     return [];
   }
+};
+
+// Convert numeric offer ID back to record ID
+const getRecordIdForOfferId = (numericId: number): string | undefined => {
+  if (!numericId) return undefined;
+  
+  const mapping: Record<number, string> = {
+    1: "recQG4f2htaV2ZKQ5",
+    4: "recTaU2whfyY0rLSC",
+    5: "recn1xsQEZcFfUWh3",
+    6: "recg5uXLPbNfVU441",
+  };
+  
+  return mapping[numericId];
 };
 
 // Delete an autopilot record
@@ -173,7 +203,8 @@ export const updateAutopilotRecord = async (
       fields: {
         "id_list": Number(listId),
         "id_cron": cronId,
-        ...(offerId ? { "id_offer": offerId } : {})
+        // Use the numeric value from the offer instead of the Airtable record ID
+        ...(offerId ? { "id_offer": getNumericOfferId(offerId) } : {})
       }
     };
     
