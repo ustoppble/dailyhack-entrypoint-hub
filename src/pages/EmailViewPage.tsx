@@ -39,6 +39,7 @@ const EmailViewPage = () => {
           return;
         }
         
+        console.log("Loaded email data:", emailData);
         setEmail(emailData);
       } catch (err: any) {
         console.error('Error loading email:', err);
@@ -144,66 +145,52 @@ const EmailViewPage = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         
-        {isLoading ? (
-          <LoadingState text="Loading email..." />
-        ) : error || !email ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <p className="text-red-500 mb-4">{error || 'Email not found'}</p>
-                <Button variant="default" onClick={goBack}>Go Back</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="mb-6">
-            <CardHeader className="border-b">
-              <CardTitle className="text-2xl">{email.title}</CardTitle>
-              <CardDescription>
-                <div className="flex flex-col space-y-2 mt-2">
-                  <div className="flex items-center text-sm">
-                    <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-                    <span>{formatDate(email.date_set || email.date)}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Tag className="mr-2 h-4 w-4 text-gray-500" />
-                    <span>Campaign: {email.campaign_name}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <FileText className="mr-2 h-4 w-4 text-gray-500" />
-                    <span>Email ID: {email.id_email}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <span className="mr-2">Status:</span>
-                    {getStatusBadge(email.status)}
-                  </div>
+        <Card className="mb-6">
+          <CardHeader className="border-b">
+            <CardTitle className="text-2xl">{email.title}</CardTitle>
+            <CardDescription>
+              <div className="flex flex-col space-y-2 mt-2">
+                <div className="flex items-center text-sm">
+                  <Calendar className="mr-2 h-4 w-4 text-gray-500" />
+                  <span>{formatDate(email.date_set || email.date || '')}</span>
                 </div>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="border rounded-md overflow-hidden bg-white">
-                <div className="p-4 h-[600px] overflow-auto">
-                  {email.content ? (
-                    <iframe
-                      title="Email Content"
-                      srcDoc={email.content}
-                      className="w-full h-full border-0"
-                    />
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      No content available for this email
-                    </div>
-                  )}
+                <div className="flex items-center text-sm">
+                  <Tag className="mr-2 h-4 w-4 text-gray-500" />
+                  <span>Campaign: {email.campaign_name || 'Unknown'}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <FileText className="mr-2 h-4 w-4 text-gray-500" />
+                  <span>Email ID: {email.id_email || email.id}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <span className="mr-2">Status:</span>
+                  {getStatusBadge(email.status || 0)}
                 </div>
               </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4 flex justify-between">
-              <Button variant="outline" onClick={goBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to List
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="border rounded-md overflow-hidden bg-white">
+              <div className="p-4 h-[600px] overflow-auto">
+                {email.content ? (
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: email.content }} 
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No content available for this email
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t pt-4 flex justify-between">
+            <Button variant="outline" onClick={goBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to List
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

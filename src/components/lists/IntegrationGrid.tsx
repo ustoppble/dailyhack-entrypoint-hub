@@ -56,7 +56,7 @@ const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null }: Integra
           onClick={onAddNew}
         >
           <Plus className="h-4 w-4" />
-          Add New Agent
+          Add New Integration
         </Button>
       </Card>
     </div>

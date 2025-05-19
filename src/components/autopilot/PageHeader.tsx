@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, List, BookOpen } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface PageHeaderProps {
   agentName: string;
@@ -23,22 +23,6 @@ const PageHeader: React.FC<PageHeaderProps> = ({ agentName }) => {
           <ArrowLeft className="h-4 w-4" /> Back to Central
         </Button>
         <h1 className="text-xl md:text-3xl font-bold">{agentName}</h1>
-      </div>
-      <div className="flex gap-2 w-full md:w-auto">
-        <Button 
-          variant="outline" 
-          className="gap-2 flex-1 md:flex-auto"
-          onClick={() => navigate(`/agents/${agentName}/lists`)}
-        >
-          <List className="h-4 w-4" /> Lists
-        </Button>
-        <Button 
-          variant="outline" 
-          className="gap-2 flex-1 md:flex-auto"
-          onClick={() => navigate(`/agents/${agentName}/knowledge`)}
-        >
-          <BookOpen className="h-4 w-4" /> Knowledge
-        </Button>
       </div>
     </div>
   );

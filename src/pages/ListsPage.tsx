@@ -36,10 +36,10 @@ const ListsPage = () => {
         setIntegrations(userIntegrations);
       } catch (error: any) {
         console.error('Error loading integrations:', error);
-        setError(error.message || 'Failed to load ActiveCampaign agents');
+        setError(error.message || 'Failed to load ActiveCampaign integrations');
         toast({
-          title: 'Error loading agents',
-          description: error.message || 'Could not load your ActiveCampaign agents.',
+          title: 'Error loading integrations',
+          description: error.message || 'Could not load your ActiveCampaign integrations.',
           variant: 'destructive',
         });
       } finally {
@@ -81,11 +81,11 @@ const ListsPage = () => {
 
   const pageTitle = showingForAgent 
     ? `Available Lists for ${showingForAgent}` 
-    : "Your ActiveCampaign Agents";
+    : "Your ActiveCampaign Integrations";
   
   const pageDescription = showingForAgent
-    ? "Select lists to connect to your agent"
-    : "Select an agent to work with or add a new one";
+    ? "Select lists to connect to your integration"
+    : "Select an integration to work with or add a new one";
 
   return (
     <div className="container mx-auto px-4 py-12">
