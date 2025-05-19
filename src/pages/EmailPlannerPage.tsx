@@ -12,11 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import axios from 'axios';
-import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Send, List, BookOpen, CheckCircle, Zap, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { fetchConnectedLists, createAutopilotRecord, fetchAutopilotRecords } from '@/lib/api-service';
 import { Checkbox } from '@/components/ui/checkbox';
+import LoadingState from '@/components/lists/LoadingState';
 
 // Updated schema with emailFrequency instead of emailCount
 const emailFormSchema = z.object({
@@ -51,6 +52,7 @@ const EmailPlannerPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [autopilotData, setAutopilotData] = useState<{listId: number, cronId: number}[]>([]);
+  const [dataReady, setDataReady] = useState(false);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -67,14 +69,16 @@ const EmailPlannerPage = () => {
       
       try {
         setIsLoading(true);
+        setDataReady(false);
         
-        // Fetch existing autopilot records for this agent
-        const autopilotRecords = await fetchAutopilotRecords(agentName);
+        // Fetch all data before displaying anything
+        const [autopilotRecords, connectedLists] = await Promise.all([
+          fetchAutopilotRecords(agentName),
+          fetchConnectedLists(agentName)
+        ]);
+        
         setAutopilotData(autopilotRecords);
         console.log('Autopilot records:', autopilotRecords);
-        
-        // Fetch the lists that are already connected to this agent
-        const connectedLists = await fetchConnectedLists(agentName);
         
         // Mark lists that already have autopilot
         const listsWithAutopilotStatus = connectedLists.map(list => ({
@@ -83,6 +87,9 @@ const EmailPlannerPage = () => {
         }));
         
         setLists(listsWithAutopilotStatus);
+        
+        // Only now we mark data as ready
+        setDataReady(true);
       } catch (error) {
         console.error("Error loading data:", error);
         setError("Failed to load lists or autopilot data");
@@ -233,6 +240,8 @@ const EmailPlannerPage = () => {
               </div>
             </CardContent>
           </Card>
+        ) : isLoading || !dataReady ? (
+          <LoadingState text="Loading and validating lists..." />
         ) : (
           <Card className="shadow-md mb-6">
             <CardHeader className="border-b">
@@ -261,9 +270,7 @@ const EmailPlannerPage = () => {
                       <FormItem>
                         <FormLabel>Select Lists to Send To</FormLabel>
                         <div className="border rounded-md p-4 space-y-3">
-                          {isLoading ? (
-                            <p className="text-center py-2">Loading lists...</p>
-                          ) : lists.length > 0 ? (
+                          {lists.length > 0 ? (
                             lists.map((list) => (
                               <FormField
                                 key={list.id}
@@ -385,7 +392,10 @@ const EmailPlannerPage = () => {
                       className="px-8"
                     >
                       {isSubmitting ? (
-                        'Processing...'
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Processing...
+                        </div>
                       ) : (
                         <>
                           <Zap className="mr-2 h-4 w-4" /> Activate Email Autopilot
