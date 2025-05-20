@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, PlayCircle } from 'lucide-react'; // Add missing icon imports
+import { Calendar as CalendarIcon, PlayCircle } from 'lucide-react'; // Fixed icon import
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button'; // Import Button from shadcn UI
 import StatusMessage from '@/components/integration/StatusMessage';
@@ -149,7 +149,7 @@ const EmailPlannerPage = () => {
               {
                 fields: {
                   id_autopilot: autopilotId,
-                  status: "0", // Status 0 = In Progress
+                  status: 0, // Status 0 = In Progress (as number, not string)
                   id_user: userId
                 }
               }
@@ -459,9 +459,11 @@ const EmailPlannerPage = () => {
               <div className="mb-6">
                 <div className="bg-white rounded-lg shadow-sm border p-4 flex justify-between items-center">
                   <div className="flex items-center gap-2 text-amber-600">
-                    <Calendar className="h-5 w-5" />
+                    <CalendarIcon className="h-5 w-5" />
                     <p className="font-medium">
-                      Next scheduled update: {new Date(autopilotData[0].next_update || '').toLocaleDateString()}
+                      Next scheduled update: {autopilotData[0].next_update && autopilotData[0].next_update !== 'undefined' ? 
+                        new Date(autopilotData[0].next_update).toLocaleDateString() : 
+                        'Not scheduled yet'}
                     </p>
                   </div>
                   <Button
