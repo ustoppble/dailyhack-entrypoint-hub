@@ -760,8 +760,39 @@ const ListEmailsPage = () => {
       // Get the numeric user ID
       const userId = Number(user.id);
       
-      // Step 1: Create a new task record in tbl9I7wnlb6UBFdT5
+      // Step 1: First fetch the complete autopilot record to get id_cron
       const autopilotIdNum = Number(autopilotId);
+      
+      // Query the autopilot table directly to get the id_cron value
+      const autopilotResponse = await axios.get(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblfN4S5R9BNqT5Zk`, 
+        {
+          params: {
+            filterByFormula: `{id_autopilot} = ${autopilotIdNum}`
+          },
+          headers: {
+            Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Fetched autopilot record:', autopilotResponse.data);
+      
+      // Extract the cron ID and set emailFrequency accordingly
+      const autopilotRecord = autopilotResponse.data.records?.[0];
+      if (!autopilotRecord) {
+        throw new Error("Failed to fetch autopilot record with id_cron");
+      }
+      
+      const cronId = autopilotRecord.fields.id_cron;
+      console.log('Found id_cron in autopilot record:', cronId);
+      
+      // Determine emailFrequency based on cron ID (1 = once, 2 = twice)
+      const emailFrequency = cronId === 1 ? "once" : "twice";
+      console.log(`Using emailFrequency: ${emailFrequency} based on id_cron: ${cronId}`);
+      
+      // Step 2: Create a new task record
       const result = await createAutopilotTask(autopilotIdNum, userId);
       
       if (!result.success) {
@@ -771,9 +802,9 @@ const ListEmailsPage = () => {
       console.log('New task created:', result);
       
       // Get the full autopilot record to include in the webhook
-      const autopilotRecord = await getAutopilotRecordById(autopilotIdNum);
+      const fullAutopilotRecord = await getAutopilotRecordById(autopilotIdNum);
       
-      if (!autopilotRecord) {
+      if (!fullAutopilotRecord) {
         throw new Error("Failed to fetch autopilot record details");
       }
 
@@ -783,18 +814,17 @@ const ListEmailsPage = () => {
       
       // Find the matching campaign goal based on the id_offer from autopilot record
       let matchingGoal: CampaignGoal | undefined;
-      const numericOfferId = autopilotRecord.offerId ? getNumericOfferId(autopilotRecord.offerId) : null;
+      const numericOfferId = fullAutopilotRecord.offerId ? getNumericOfferId(fullAutopilotRecord.offerId) : null;
       
       if (numericOfferId) {
         matchingGoal = campaignGoals.find(goal => goal.id_offer === numericOfferId);
         console.log(`Looking for goal with id_offer=${numericOfferId}, found:`, matchingGoal);
       }
 
-      // Step 2: Send webhook POST request with required data
-      // Updated webhook URL for triggering production
+      // Step 3: Send webhook POST request with required data
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mail-production';
       
-      // Create the payload with all required fields
+      // Create the payload with all required fields including emailFrequency
       const requestData = {
         // Task data from the newly created record
         id_autopilot_task: result.taskId, 
@@ -805,13 +835,16 @@ const ListEmailsPage = () => {
         // Autopilot data
         id_autopilot: autopilotIdNum,
         id_list: Number(listId),
-        url: autopilotRecord.url,
+        url: fullAutopilotRecord.url,
         id_offer: numericOfferId,
-        next_update: autopilotRecord.next_update,
+        next_update: fullAutopilotRecord.next_update,
         
         // Campaign goal data if found
         goal: matchingGoal?.goal || "",
         offer_name: matchingGoal?.offer_name || "",
+        
+        // Include emailFrequency based on id_cron value
+        emailFrequency: emailFrequency, // "once" or "twice" based on id_cron value
         
         // Additional action parameter
         action: "production",
