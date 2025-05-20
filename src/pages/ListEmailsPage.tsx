@@ -11,22 +11,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, Zap } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { fetchEmailsForList, EmailRecord, getAutopilotIdForList, AutopilotIdData } from '@/lib/api/autopilot';
+import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  airtableTasksApi, 
-  airtableUpdatesApi, 
-  airtableAutopilotTasksApi 
-} from '@/lib/api/client';
-import { 
-  AIRTABLE_API_KEY, 
-  AIRTABLE_BASE_ID 
-} from '@/lib/api/constants';
+import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
 import axios from 'axios';
 
 // Define types for our new data
@@ -61,7 +53,6 @@ const ListEmailsPage = () => {
   const [selectedApprovedEmails, setSelectedApprovedEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [autopilotId, setAutopilotId] = useState<string | null>(null);
-  const [autopilotRecordId, setAutopilotRecordId] = useState<string | null>(null); // New state for record ID
   const { user } = useAuth();
   
   // State for task and update information
@@ -181,22 +172,12 @@ const ListEmailsPage = () => {
         throw new Error(`Invalid list ID: ${listId}`);
       }
       
-      // Get the autopilot ID data for this list to display in UI
-      const autopilotData = await getAutopilotIdForList(parsedListId);
-      if (autopilotData.idAutopilot !== null) {
+      // Get the autopilot ID for this list to display in UI
+      const autopilotRecordId = await getAutopilotIdForList(parsedListId);
+      if (autopilotRecordId !== null) {
         // Convert to string before setting to state
-        setAutopilotId(String(autopilotData.idAutopilot));
+        setAutopilotId(String(autopilotRecordId));
       }
-      
-      // Store the Airtable record ID separately
-      if (autopilotData.recordId !== null) {
-        setAutopilotRecordId(autopilotData.recordId);
-      }
-      
-      console.log("Retrieved autopilot data:", {
-        idAutopilot: autopilotData.idAutopilot,
-        recordId: autopilotData.recordId
-      });
       
       // Fetch emails for the specified list
       let fetchedEmails;
@@ -204,7 +185,7 @@ const ListEmailsPage = () => {
         // If a taskId is provided, filter emails by that task
         const response = await airtableTasksApi.get('', {
           params: {
-            filterByFormula: `{id_autopilot_task}='${taskId}'`
+            filterByFormula: `AND({list_id} = ${parsedListId}, {activehosted} = "${agentName}", {id_autopilot_task} = '${taskId}')`
           }
         });
         
@@ -544,7 +525,7 @@ const ListEmailsPage = () => {
           failCount++;
           continue;
         }
-        
+
         // Check if the email send date is in the future
         const emailDate = emailRecord.date_set ? new Date(emailRecord.date_set) : new Date(emailRecord.date || "");
         const now = new Date();
@@ -794,99 +775,22 @@ const ListEmailsPage = () => {
       return;
     }
 
-    if (!autopilotRecordId) {
-      toast({
-        title: "Missing Record ID",
-        description: "Could not find the Airtable record ID for this autopilot",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsInitiatingProduction(true);
 
     try {
       // Get the numeric user ID
       const userId = Number(user.id);
       
-      // 1. Create a new task record in the autopilot tasks table
-      // First, get the latest task for this autopilot
-      const latestTask = tasks.length > 0 
-        ? tasks.sort((a, b) => {
-            const dateA = a.fields.last_email ? new Date(a.fields.last_email).getTime() : 0;
-            const dateB = b.fields.last_email ? new Date(b.fields.last_email).getTime() : 0;
-            return dateB - dateA; // Sort descending
-          })[0] 
-        : null;
-      
-      console.log('Latest task:', latestTask);
-      
-      if (!latestTask) {
-        throw new Error("No tasks found for this autopilot");
+      // Get the first task for this autopilot to use its ID
+      const taskData = tasks.length > 0 ? tasks[0] : null;
+      const taskId = taskData?.fields.id_autopilot_task;
+
+      if (!taskId) {
+        throw new Error("No task ID found for this autopilot");
       }
-      
-      // Calculate the first_email for new task - should be one day after the last_email of the previous task
-      const lastEmailDate = latestTask.fields.last_email ? new Date(latestTask.fields.last_email) : new Date();
-      const firstEmailDate = new Date(lastEmailDate);
-      firstEmailDate.setDate(firstEmailDate.getDate() + 1); // Start day after the last email
-      firstEmailDate.setHours(8, 0, 0, 0); // Set to 8:00 AM
-      
-      // Create a new autopilot task
-      const newTaskResponse = await airtableAutopilotTasksApi.post('', {
-        records: [
-          {
-            fields: {
-              id_autopilot: Number(autopilotId),
-              status: "0", // New task with status 0
-              id_user: userId,
-              first_email: firstEmailDate.toISOString()
-            }
-          }
-        ]
-      });
-      
-      console.log('New autopilot task created:', newTaskResponse.data);
-      
-      // 2. Update the next_update date in the autopilot record
-      // Calculate next update date - 7 days from now at midnight
-      const nextUpdateDate = new Date();
-      nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
-      nextUpdateDate.setHours(0, 0, 0, 0);
-      
-      // Use the autopilotApi to update the record in the autopilot table
-      // Note: We need to use the autopilot table (AIRTABLE_AUTOPILOT_TABLE_ID), not the updates table
-      const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblfN4S5R9BNqT5Zk/${autopilotRecordId}`;
-      
-      console.log('Updating autopilot record with ID:', autopilotRecordId);
-      console.log('New next_update value:', nextUpdateDate.toISOString());
-      
-      // Direct fetch call to update the autopilot record
-      const updateResponse = await fetch(autopilotApiUrl, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fields: {
-            next_update: nextUpdateDate.toISOString()
-          }
-        })
-      });
-      
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json();
-        console.error('Airtable API error when updating autopilot:', errorData);
-        throw new Error(`Airtable API error: ${updateResponse.status}`);
-      }
-      
-      console.log('Autopilot next_update updated to:', nextUpdateDate.toISOString());
-      
+
       // Webhook URL for triggering production
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
-      
-      // Get the new task ID from the response
-      const newTaskId = newTaskResponse.data.records[0].fields.id_autopilot_task;
       
       // Prepare data payload
       const requestData = {
@@ -894,7 +798,7 @@ const ListEmailsPage = () => {
         lists: [Number(listId)], // Use the actual list_id here as a number
         userId: userId,
         id_autopilot: Number(autopilotId),
-        id_autopilot_task: newTaskId,
+        id_autopilot_task: taskId,
         // Include other required fields that might be needed
         forceUpdate: true // Flag to indicate this is a manual production trigger
       };
@@ -906,20 +810,19 @@ const ListEmailsPage = () => {
       console.log('Production webhook response:', response.data);
       
       toast({
-        title: "Production Accelerated",
-        description: "Email production has been fast-tracked successfully",
+        title: "Production Started",
+        description: "New email production has been initiated",
       });
       
       // Refresh data to show any changes
       await loadEmails();
       await loadNextUpdate();
-      await loadTasks(autopilotId);
       
     } catch (err: any) {
       console.error('Error starting email production:', err);
       toast({
         title: "Production Error",
-        description: err.message || "Failed to accelerate email production",
+        description: err.message || "Failed to start email production",
         variant: "destructive"
       });
     } finally {
@@ -959,8 +862,8 @@ const ListEmailsPage = () => {
                 disabled={isInitiatingProduction || !autopilotId}
                 className="flex items-center gap-2"
               >
-                <Zap className="h-4 w-4" />
-                {isInitiatingProduction ? 'Processing...' : 'Fast-Track Production'}
+                <PlayCircle className="h-4 w-4" />
+                {isInitiatingProduction ? 'Starting...' : 'Start Production Now'}
               </Button>
             </CardContent>
           </Card>

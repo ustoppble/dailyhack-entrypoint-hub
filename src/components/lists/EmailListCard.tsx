@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -78,21 +77,23 @@ const EmailListCard = ({
         return;
       }
       
-      // Simply pass the user ID directly
+      // Simply pass the user ID directly - it will be converted to a number in the API
       const userId = user.id;
       console.log('Connecting list with user ID:', userId);
       
-      await saveSelectedLists(userId, [list as EmailList], agentName);
+      const success = await saveSelectedLists(userId, [list as EmailList], agentName);
       
-      toast({
-        title: "List connected successfully",
-        description: `"${name}" has been connected to ${agentName}`,
-      });
-      
-      // Refresh the page after successful connection
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      if (success) {
+        toast({
+          title: "List connected successfully",
+          description: `"${name}" has been connected to ${agentName}`,
+        });
+        
+        // Refresh the page after successful connection
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
     } catch (err) {
       console.error('Error connecting list:', err);
       toast({

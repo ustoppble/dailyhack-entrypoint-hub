@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -75,7 +76,7 @@ const FetchListsPage = () => {
         const connectedLists = await fetchConnectedLists(agentName, user.id);
         
         // Extract IDs from connected lists
-        const connectedIds = connectedLists.map(list => list.list_id);
+        const connectedIds = connectedLists.map(list => list.id);
         console.log('Connected list IDs:', connectedIds);
         setConnectedListIds(connectedIds);
       } catch (err) {
@@ -105,8 +106,8 @@ const FetchListsPage = () => {
     setError(null);
     
     try {
-      console.log(`Fetching lists for agent ${agentName}`);
-      const fetchedLists = await fetchEmailLists(agentName);
+      console.log(`Fetching lists for agent ${agentName} with URL ${apiUrl}`);
+      const fetchedLists = await fetchEmailLists(apiUrl, apiToken);
       
       // Filter out already connected lists
       const filteredLists = fetchedLists.filter(list => !connectedListIds.includes(list.id || ''));

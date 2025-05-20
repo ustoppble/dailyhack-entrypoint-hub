@@ -37,12 +37,6 @@ export interface EmailRecord {
   id_autopilot?: number; // Add id_autopilot to the interface
 }
 
-// New interface to return both the autopilot ID and the record ID
-export interface AutopilotIdData {
-  idAutopilot: number | null;
-  recordId: string | null;
-}
-
 // Create a new autopilot record
 export const createAutopilotRecord = async (
   listId: string, 
@@ -252,8 +246,8 @@ export const updateAutopilotRecord = async (
   }
 };
 
-// Get autopilot ID for a specific list ID - now returns both the ID and record ID
-export const getAutopilotIdForList = async (listId: number): Promise<AutopilotIdData> {
+// Get autopilot ID for a specific list ID
+export const getAutopilotIdForList = async (listId: number): Promise<number | null> => {
   try {
     // Create a direct API instance for the autopilot table
     const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
@@ -278,22 +272,18 @@ export const getAutopilotIdForList = async (listId: number): Promise<AutopilotId
     const data = await response.json();
     
     if (data.records && data.records.length > 0) {
-      // Return both the id_autopilot value and the Airtable record ID
+      // Return the id_autopilot value from the record fields
+      // This is the actual column value, not the Airtable record ID
       const idAutopilot = data.records[0].fields.id_autopilot;
-      const recordId = data.records[0].id;
-      
-      console.log('Found id_autopilot column value:', idAutopilot, 'and record ID:', recordId, 'for list ID:', listId);
-      return { 
-        idAutopilot: idAutopilot || null,
-        recordId: recordId || null
-      };
+      console.log('Found id_autopilot column value:', idAutopilot, 'for list ID:', listId);
+      return idAutopilot || null;
     }
     
     console.log('No autopilot record found for list ID:', listId);
-    return { idAutopilot: null, recordId: null };
+    return null;
   } catch (error) {
     console.error('Error getting autopilot ID for list:', error);
-    return { idAutopilot: null, recordId: null };
+    return null;
   }
 };
 
@@ -303,26 +293,24 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
     console.log('Fetching emails for list ID:', listId, 'and agent:', agentName);
     
     // First, get the autopilot ID for this list
-    const autopilotData = await getAutopilotIdForList(listId);
+    const autopilotId = await getAutopilotIdForList(listId);
     
-    if (!autopilotData.idAutopilot) {
+    if (!autopilotId) {
       console.warn('No autopilot ID found for list ID:', listId);
       return [];
     }
     
-    console.log('Using autopilot ID for filtering emails:', autopilotData.idAutopilot);
+    console.log('Using autopilot ID for filtering emails:', autopilotId);
     
     // Get emails from the emails table with listId, agentName and autopilotId filters
     const emailsApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_EMAILS_TABLE_ID}`;
     
-    // FIXED: Using the actual numeric autopilot ID instead of the object
+    // Add combined filter for listId, agentName and autopilotId
     const filterFormula = encodeURIComponent(
-      `AND({list_id} = ${listId}, {activehosted} = "${agentName}", {id_autopilot} = ${autopilotData.idAutopilot})`
+      `AND({list_id} = ${listId}, {activehosted} = "${agentName}", {id_autopilot} = "${autopilotId}")`
     );
     
     const fullUrl = `${emailsApiUrl}?filterByFormula=${filterFormula}`;
-    
-    console.log('Email API request URL:', fullUrl);
     
     const response = await fetch(fullUrl, {
       headers: {
@@ -362,8 +350,7 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
         content: record.fields.content || '',
         list_id: record.fields.list_id,
         activehosted: record.fields.activehosted,
-        id_autopilot: record.fields.id_autopilot,
-        id_autopilot_task: record.fields.id_autopilot_task
+        id_autopilot: record.fields.id_autopilot
       };
     });
     
