@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { saveSelectedLists } from '@/lib/api/lists';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailListCardProps {
   list: EmailList | Partial<EmailList>;
@@ -33,7 +34,9 @@ const EmailListCard = ({
   airtableRecordId
 }: EmailListCardProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   
   // Generate a color based on the list name for the avatar
   const generateColor = (name: string) => {
@@ -64,7 +67,10 @@ const EmailListCard = ({
     if (!list.id || !agentName) return;
     
     try {
-      const success = await saveSelectedLists('', [list as EmailList], agentName);
+      setIsConnecting(true);
+      // Pass the current user ID when connecting a list
+      const userId = user?.id || '';
+      const success = await saveSelectedLists(userId, [list as EmailList], agentName);
       
       if (success) {
         toast({
@@ -84,6 +90,8 @@ const EmailListCard = ({
         description: "There was an error connecting the list. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -155,8 +163,9 @@ const EmailListCard = ({
             variant="outline" 
             size="sm"
             className="w-full"
+            disabled={isConnecting}
           >
-            Connect to {agentName}
+            {isConnecting ? 'Connecting...' : `Connect to ${agentName}`}
           </Button>
         )}
         {isConnected && onDelete && (

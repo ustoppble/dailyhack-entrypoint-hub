@@ -57,10 +57,13 @@ export const fetchConnectedLists = async (agentName: string, userId?: string): P
   try {
     console.log('Fetching connected lists for agent:', agentName, 'and user:', userId);
     
-    // Query Airtable for lists with matching activehosted field and optionally user ID
+    // Build the filter formula with proper user ID check
     let filterByFormula = `{activehosted}='${agentName}'`;
+    
+    // Only include lists that belong to the current user if userId is provided
     if (userId) {
-      filterByFormula = `AND(${filterByFormula}, {id_users}=${userId})`;
+      // Use the correct field name id_users and ensure it's a string comparison
+      filterByFormula = `AND(${filterByFormula}, {id_users}='${userId}')`;
     }
     
     const encodedFilter = encodeURIComponent(filterByFormula);
@@ -114,7 +117,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          id_users: userId, // Corrigido de id_user para id_users
+          id_users: userId, // Using the correct field name id_users
         }
       };
     });
