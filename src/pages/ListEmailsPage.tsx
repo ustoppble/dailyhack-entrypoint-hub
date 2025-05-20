@@ -525,7 +525,7 @@ const ListEmailsPage = () => {
           failCount++;
           continue;
         }
-
+        
         // Check if the email send date is in the future
         const emailDate = emailRecord.date_set ? new Date(emailRecord.date_set) : new Date(emailRecord.date || "");
         const now = new Date();
@@ -781,16 +781,64 @@ const ListEmailsPage = () => {
       // Get the numeric user ID
       const userId = Number(user.id);
       
-      // Get the first task for this autopilot to use its ID
-      const taskData = tasks.length > 0 ? tasks[0] : null;
-      const taskId = taskData?.fields.id_autopilot_task;
-
-      if (!taskId) {
-        throw new Error("No task ID found for this autopilot");
+      // 1. Create a new task record in the autopilot tasks table
+      // First, get the latest task for this autopilot
+      const latestTask = tasks.length > 0 
+        ? tasks.sort((a, b) => {
+            const dateA = a.fields.last_email ? new Date(a.fields.last_email).getTime() : 0;
+            const dateB = b.fields.last_email ? new Date(b.fields.last_email).getTime() : 0;
+            return dateB - dateA; // Sort descending
+          })[0] 
+        : null;
+      
+      console.log('Latest task:', latestTask);
+      
+      if (!latestTask) {
+        throw new Error("No tasks found for this autopilot");
       }
-
+      
+      // Calculate the first_email for new task - should be one day after the last_email of the previous task
+      const lastEmailDate = latestTask.fields.last_email ? new Date(latestTask.fields.last_email) : new Date();
+      const firstEmailDate = new Date(lastEmailDate);
+      firstEmailDate.setDate(firstEmailDate.getDate() + 1); // Start day after the last email
+      firstEmailDate.setHours(8, 0, 0, 0); // Set to 8:00 AM
+      
+      // Create a new autopilot task
+      const newTaskResponse = await airtableAutopilotTasksApi.post('', {
+        records: [
+          {
+            fields: {
+              id_autopilot: Number(autopilotId),
+              status: "0", // New task with status 0
+              id_user: userId,
+              first_email: firstEmailDate.toISOString()
+            }
+          }
+        ]
+      });
+      
+      console.log('New autopilot task created:', newTaskResponse.data);
+      
+      // 2. Update the next_update date in the autopilot record
+      // Calculate next update date - 7 days from now at midnight
+      const nextUpdateDate = new Date();
+      nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
+      nextUpdateDate.setHours(0, 0, 0, 0);
+      
+      // Update the autopilot record with the new next_update date
+      await airtableUpdatesApi.patch(`/${autopilotId}`, {
+        fields: {
+          next_update: nextUpdateDate.toISOString()
+        }
+      });
+      
+      console.log('Autopilot next_update updated to:', nextUpdateDate.toISOString());
+      
       // Webhook URL for triggering production
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+      
+      // Get the new task ID from the response
+      const newTaskId = newTaskResponse.data.records[0].fields.id_autopilot_task;
       
       // Prepare data payload
       const requestData = {
@@ -798,7 +846,7 @@ const ListEmailsPage = () => {
         lists: [Number(listId)], // Use the actual list_id here as a number
         userId: userId,
         id_autopilot: Number(autopilotId),
-        id_autopilot_task: taskId,
+        id_autopilot_task: newTaskId,
         // Include other required fields that might be needed
         forceUpdate: true // Flag to indicate this is a manual production trigger
       };
@@ -817,6 +865,7 @@ const ListEmailsPage = () => {
       // Refresh data to show any changes
       await loadEmails();
       await loadNextUpdate();
+      await loadTasks(autopilotId);
       
     } catch (err: any) {
       console.error('Error starting email production:', err);
