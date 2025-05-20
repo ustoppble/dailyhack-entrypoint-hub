@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { airtableIntegrationApi } from './client';
 import { ACIntegration, VerificationResult } from './types';
@@ -142,10 +143,11 @@ export const verifyActiveCampaignCredentials = async (
 /**
  * Update ActiveCampaign integration details
  * Now properly updates existing records instead of creating new ones
+ * Returns the record ID from the response
  */
 export const updateActiveCampaignIntegration = async (
   integration: ACIntegration
-): Promise<boolean> => {
+): Promise<{success: boolean, recordId?: number}> => {
   try {
     console.log('Updating integration with:', {
       userId: integration.userId,
@@ -180,7 +182,10 @@ export const updateActiveCampaignIntegration = async (
         });
         
         console.log('Integration update response:', response.data);
-        return !!response.data.id;
+        return {
+          success: !!response.data.id,
+          recordId: response.data.fields?.ID
+        };
       } catch (airtableError: any) {
         console.error('Airtable update error:', airtableError);
         
@@ -218,7 +223,10 @@ export const updateActiveCampaignIntegration = async (
         });
         
         console.log('Integration update response:', updateResponse.data);
-        return !!updateResponse.data.id;
+        return {
+          success: !!updateResponse.data.id,
+          recordId: updateResponse.data.fields?.ID
+        };
       } else {
         // No existing integration found, create new record
         console.log('No existing integration found, creating new record');
@@ -241,7 +249,15 @@ export const updateActiveCampaignIntegration = async (
           });
           
           console.log('Integration create response:', response.data);
-          return response.data.records && response.data.records.length > 0;
+          // Extract the ID field from the response
+          const recordId = response.data.records && 
+                          response.data.records.length > 0 && 
+                          response.data.records[0].fields?.ID;
+                          
+          return {
+            success: response.data.records && response.data.records.length > 0,
+            recordId: recordId
+          };
         } catch (airtableError: any) {
           console.error('Airtable integration error:', airtableError);
           

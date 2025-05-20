@@ -51,6 +51,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
     userId: string;
     apiName: string;
     apiToken: string;
+    recordId: number;
   }) => {
     try {
       console.log('Disparando webhook de criação...');
@@ -61,7 +62,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ID: Date.now(), // Pseudo ID temporário
+          ID: integrationData.recordId, // Use the actual ID from the record
           api: integrationData.apiName,
           token: integrationData.apiToken,
           id_users: integrationData.userId
@@ -148,7 +149,7 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       
       // Update integration details - will update existing record if found
       console.log('Updating integration details...');
-      const success = await updateActiveCampaignIntegration({
+      const integrationResponse = await updateActiveCampaignIntegration({
         userId: userId,
         apiUrl: formattedApiUrl,
         apiToken: data.apiToken,
@@ -156,20 +157,25 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
         // but the function will check for existing records with the same userId and account name
       });
       
-      if (success) {
+      if (integrationResponse && integrationResponse.success) {
         console.log('Integration successful');
         
-        // Disparar o webhook de criação
-        const webhookSuccess = await triggerCreateWebhook({
-          userId: userId,
-          apiName: accountName,
-          apiToken: data.apiToken
-        });
-        
-        if (webhookSuccess) {
-          console.log('Webhook de criação processado com sucesso');
+        // Disparar o webhook de criação com o ID correto
+        if (integrationResponse.recordId) {
+          const webhookSuccess = await triggerCreateWebhook({
+            userId: userId,
+            apiName: accountName,
+            apiToken: data.apiToken,
+            recordId: integrationResponse.recordId
+          });
+          
+          if (webhookSuccess) {
+            console.log('Webhook de criação processado com sucesso');
+          } else {
+            console.warn('Webhook de criação falhou, mas a integração foi bem-sucedida');
+          }
         } else {
-          console.warn('Webhook de criação falhou, mas a integração foi bem-sucedida');
+          console.warn('ID não encontrado na resposta da integração, não foi possível disparar o webhook');
         }
         
         toast({
