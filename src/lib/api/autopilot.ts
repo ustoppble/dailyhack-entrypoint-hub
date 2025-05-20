@@ -31,6 +31,7 @@ export interface EmailRecord {
   list_id: number;
   activehosted?: string;
   date_set?: string; // Added date_set field
+  id_autopilot?: number; // Add id_autopilot to the interface
 }
 
 // Create a new autopilot record
@@ -236,17 +237,70 @@ export const updateAutopilotRecord = async (
   }
 };
 
+// Get autopilot ID for a specific list ID
+export const getAutopilotIdForList = async (listId: number): Promise<number | null> => {
+  try {
+    // Create a direct API instance for the autopilot table
+    const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
+    
+    // Filter by list ID
+    const filterFormula = encodeURIComponent(`{id_list} = ${listId}`);
+    const fullUrl = `${autopilotApiUrl}?filterByFormula=${filterFormula}`;
+    
+    console.log('Fetching autopilot record for list ID:', listId);
+    
+    const response = await fetch(fullUrl, {
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.records && data.records.length > 0) {
+      // Return the autopilot record ID (which is what we need)
+      const autopilotId = data.records[0].id;
+      console.log('Found autopilot ID:', autopilotId, 'for list ID:', listId);
+      return autopilotId;
+    }
+    
+    console.log('No autopilot record found for list ID:', listId);
+    return null;
+  } catch (error) {
+    console.error('Error getting autopilot ID for list:', error);
+    return null;
+  }
+};
+
 // Fetch emails for a specific list and activehosted
 export const fetchEmailsForList = async (listId: number, agentName: string): Promise<EmailRecord[]> => {
   try {
-    // Get emails from the emails table with both list_id and activehosted filters
+    console.log('Fetching emails for list ID:', listId, 'and agent:', agentName);
+    
+    // First, get the autopilot ID for this list
+    const autopilotId = await getAutopilotIdForList(listId);
+    
+    if (!autopilotId) {
+      console.warn('No autopilot ID found for list ID:', listId);
+      return [];
+    }
+    
+    console.log('Using autopilot ID for filtering emails:', autopilotId);
+    
+    // Get emails from the emails table with listId, agentName and autopilotId filters
     const emailsApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_EMAILS_TABLE_ID}`;
     
-    // Add combined filter for both list_id and activehosted
-    const filterFormula = encodeURIComponent(`AND({list_id} = ${listId}, {activehosted} = "${agentName}")`);
-    const fullUrl = `${emailsApiUrl}?filterByFormula=${filterFormula}`;
+    // Add combined filter for listId, agentName and autopilotId
+    const filterFormula = encodeURIComponent(
+      `AND({list_id} = ${listId}, {activehosted} = "${agentName}", {id_autopilot} = "${autopilotId}")`
+    );
     
-    console.log('Fetching emails for list ID:', listId, 'and agent:', agentName);
+    const fullUrl = `${emailsApiUrl}?filterByFormula=${filterFormula}`;
     
     const response = await fetch(fullUrl, {
       headers: {
@@ -285,7 +339,8 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
         status: record.fields.status || 0,
         content: record.fields.content || '',
         list_id: record.fields.list_id,
-        activehosted: record.fields.activehosted
+        activehosted: record.fields.activehosted,
+        id_autopilot: record.fields.id_autopilot
       };
     });
     

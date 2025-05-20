@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -13,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
-import { fetchEmailsForList, EmailRecord } from '@/lib/api/autopilot';
+import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
@@ -29,6 +30,7 @@ const ListEmailsPage = () => {
   const [listName, setListName] = useState<string>('');
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [autopilotId, setAutopilotId] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -51,13 +53,20 @@ const ListEmailsPage = () => {
         throw new Error(`Invalid list ID: ${listId}`);
       }
       
-      // Fetch emails for the specified list
+      // Get the autopilot ID for this list to display in UI
+      const autopilotRecordId = await getAutopilotIdForList(parsedListId);
+      if (autopilotRecordId) {
+        setAutopilotId(autopilotRecordId);
+      }
+      
+      // Fetch emails for the specified list, now filtered by autopilot ID
       const fetchedEmails = await fetchEmailsForList(parsedListId, agentName);
       
       console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
         id: e.id,
         date: e.date_set,
-        status: e.status
+        status: e.status,
+        autopilotId: e.id_autopilot
       })));
       
       setEmails(fetchedEmails);
@@ -265,6 +274,11 @@ const ListEmailsPage = () => {
           <CardHeader className="bg-gray-50 border-b">
             <CardTitle className="text-xl">
               Emails for list: {listName}
+              {autopilotId && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  Autopilot ID: {autopilotId}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
