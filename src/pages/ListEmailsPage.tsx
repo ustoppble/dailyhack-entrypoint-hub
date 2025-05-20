@@ -777,11 +777,11 @@ const ListEmailsPage = () => {
         throw new Error("Failed to fetch autopilot record details");
       }
 
-      // NEW CODE: Fetch campaign goals for the current agent and user ID
+      // Fetch campaign goals for the current agent and user ID
       const campaignGoals = await fetchCampaignGoals(agentName, String(userId));
       console.log('Fetched campaign goals:', campaignGoals);
       
-      // NEW CODE: Find the matching campaign goal based on the id_offer from autopilot record
+      // Find the matching campaign goal based on the id_offer from autopilot record
       let matchingGoal: CampaignGoal | undefined;
       const numericOfferId = autopilotRecord.offerId ? getNumericOfferId(autopilotRecord.offerId) : null;
       
@@ -791,8 +791,8 @@ const ListEmailsPage = () => {
       }
 
       // Step 2: Send webhook POST request with required data
-      // Webhook URL for triggering production
-      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+      // Updated webhook URL for triggering production
+      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mail-production';
       
       // Create the payload with all required fields
       const requestData = {
@@ -809,7 +809,7 @@ const ListEmailsPage = () => {
         id_offer: numericOfferId,
         next_update: autopilotRecord.next_update,
         
-        // NEW CODE: Include campaign goal data if found
+        // Campaign goal data if found
         goal: matchingGoal?.goal || "",
         offer_name: matchingGoal?.offer_name || "",
         
