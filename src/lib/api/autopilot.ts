@@ -68,13 +68,13 @@ export const createAutopilotTask = async (
 ): Promise<{success: boolean, taskId?: number, record?: any}> => {
   try {
     // Create the record data with the required fields
-    // Convert status number to string since Airtable expects a string for this field
+    // Send status as a number instead of a string
     const recordData = {
       records: [
         {
           fields: {
             "id_autopilot": autopilotId,
-            "status": "0", // Change to string "0" since Airtable expects a string
+            "status": 0, // Changed from string "0" to number 0
             "id_user": userId
           }
         }
