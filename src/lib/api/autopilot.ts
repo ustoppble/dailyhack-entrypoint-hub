@@ -263,10 +263,11 @@ export const getAutopilotIdForList = async (listId: number): Promise<number | nu
     const data = await response.json();
     
     if (data.records && data.records.length > 0) {
-      // Return the autopilot record ID (which is what we need)
-      const autopilotId = data.records[0].id;
-      console.log('Found autopilot ID:', autopilotId, 'for list ID:', listId);
-      return autopilotId;
+      // Return the id_autopilot value from the record fields
+      // This is the actual column value, not the Airtable record ID
+      const idAutopilot = data.records[0].fields.id_autopilot;
+      console.log('Found id_autopilot column value:', idAutopilot, 'for list ID:', listId);
+      return idAutopilot || null;
     }
     
     console.log('No autopilot record found for list ID:', listId);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -55,8 +54,9 @@ const ListEmailsPage = () => {
       
       // Get the autopilot ID for this list to display in UI
       const autopilotRecordId = await getAutopilotIdForList(parsedListId);
-      if (autopilotRecordId) {
-        setAutopilotId(autopilotRecordId);
+      if (autopilotRecordId !== null) {
+        // Convert to string before setting to state
+        setAutopilotId(String(autopilotRecordId));
       }
       
       // Fetch emails for the specified list, now filtered by autopilot ID
