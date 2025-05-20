@@ -1056,13 +1056,15 @@ const ListEmailsPage = () => {
           </Button>
         </div>
 
-        {/* Production Button - Restored */}
+        {/* Production Button - Updated text to show next update */}
         <Card className="mb-6">
           <CardContent className="pt-6 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-blue-500" />
               <p className="font-medium">
-                Need more emails for this list?
+                {nextUpdate 
+                  ? `New email creation sprint on ${formatTaskDate(nextUpdate)}` 
+                  : "New email creation sprint"}
               </p>
             </div>
             <Button
