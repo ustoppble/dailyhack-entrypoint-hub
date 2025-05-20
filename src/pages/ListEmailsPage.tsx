@@ -274,6 +274,9 @@ const ListEmailsPage = () => {
       const updateRecord = response.data.records && response.data.records[0];
       if (updateRecord && updateRecord.fields && updateRecord.fields.next_update) {
         setNextUpdate(updateRecord.fields.next_update);
+        console.log('Setting next update to:', updateRecord.fields.next_update);
+      } else {
+        console.log('No next_update found in response:', updateRecord);
       }
     } catch (err) {
       console.error('Error fetching next update:', err);
@@ -387,7 +390,7 @@ const ListEmailsPage = () => {
       const date = parseISO(dateStr);
       return format(date, 'PPP');
     } catch (e) {
-      console.error('Error parsing date:', e);
+      console.error('Error parsing date:', e, dateStr);
       return 'Invalid date';
     }
   };
