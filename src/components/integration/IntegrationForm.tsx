@@ -111,12 +111,14 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       const userId = String(user.id);
       console.log('Using user ID for integration:', userId);
       
-      // Update integration details
+      // Update integration details - will update existing record if found
       console.log('Updating integration details...');
       const success = await updateActiveCampaignIntegration({
         userId: userId,
         apiUrl: formattedApiUrl,
         apiToken: data.apiToken,
+        // Note: No integrationId here as it's a new integration, 
+        // but the function will check for existing records with the same userId and account name
       });
       
       if (success) {
@@ -172,4 +174,3 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
 };
 
 export default IntegrationForm;
-

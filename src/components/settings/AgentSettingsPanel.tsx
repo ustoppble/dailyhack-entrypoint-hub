@@ -19,7 +19,7 @@ const integrationSchema = z.object({
   timezone: z.string().optional(),
   approver: z.boolean().default(false),
   remetente: z.string().optional(),
-  email: z.string().email('Must be a valid email').optional(),
+  email: z.string().email('Must be a valid email').optional().or(z.literal('')),
 });
 
 type IntegrationFormValues = z.infer<typeof integrationSchema>;
@@ -80,6 +80,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
       
       if (integration) {
         console.log('Loaded integration:', integration);
+        // Store the integration ID to use for updates
         setIntegrationId(integration.id);
         
         // Format the API URL for display
@@ -137,11 +138,12 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
       }
       
       // If verification successful, update the integration record
-      // Ensure we always pass a string for the userId
+      // Pass the integrationId to ensure we update the existing record
       const success = await updateActiveCampaignIntegration({
         userId: String(userId),
         apiUrl: data.apiUrl,
         apiToken: data.apiToken,
+        integrationId: integrationId || undefined, // Pass the integration ID for update
         timezone: data.timezone,
         approver: data.approver ? 1 : 0,
         remetente: data.remetente,

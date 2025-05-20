@@ -142,6 +142,7 @@ export const verifyActiveCampaignCredentials = async (
 
 /**
  * Update ActiveCampaign integration details
+ * Now properly updates existing records instead of creating new ones
  */
 export const updateActiveCampaignIntegration = async (
   integration: ACIntegration
@@ -151,6 +152,7 @@ export const updateActiveCampaignIntegration = async (
       userId: integration.userId,
       apiUrl: integration.apiUrl,
       apiToken: integration.apiToken.substring(0, 5) + '***',
+      integrationId: integration.integrationId || 'new record',
       timezone: integration.timezone,
       approver: integration.approver,
       remetente: integration.remetente,
@@ -161,49 +163,103 @@ export const updateActiveCampaignIntegration = async (
     const accountName = extractAccountName(integration.apiUrl);
     console.log('Extracted account name:', accountName);
     
-    // Create new record in the integration table with correct field names
     const now = new Date().toISOString();
     
-    try {
-      // Make sure the user ID is always treated as a string
-      // The userId is received as a string from the component
-      const response = await airtableIntegrationApi.post('', {
-        records: [
-          {
-            fields: {
-              // Provide user ID as a string value as expected by Airtable
-              id_users: String(integration.userId), 
-              api: accountName,
-              token: integration.apiToken,
-              timezone: integration.timezone || 'America/New_York',
-              approver: integration.approver !== undefined ? Number(integration.approver) : 0,
-              remetente: integration.remetente || '',
-              email: integration.email || '',
-              DateCreated: now
-            },
-          },
-        ],
-      });
+    // If integrationId is provided, update the existing record
+    if (integration.integrationId) {
+      console.log('Updating existing record with ID:', integration.integrationId);
       
-      console.log('Integration update response:', response.data);
-      return response.data.records && response.data.records.length > 0;
-    } catch (airtableError: any) {
-      console.error('Airtable integration error:', airtableError);
-      
-      if (airtableError.response) {
-        console.error('Airtable error response:', airtableError.response.data);
+      try {
+        const response = await airtableIntegrationApi.patch(`/${integration.integrationId}`, {
+          fields: {
+            id_users: String(integration.userId),
+            api: accountName,
+            token: integration.apiToken,
+            timezone: integration.timezone || 'America/New_York',
+            approver: integration.approver !== undefined ? Number(integration.approver) : 0,
+            remetente: integration.remetente || '',
+            email: integration.email || '',
+            DateUpdated: now
+          }
+        });
         
-        // More detailed error for field formatting issues
-        if (airtableError.response.status === 422) {
-          console.error('Airtable field format error details:', airtableError.response.data?.error);
-          throw new Error(`Airtable field format error: ${airtableError.response.data?.error?.message}`);
+        console.log('Integration update response:', response.data);
+        return !!response.data.id;
+      } catch (airtableError: any) {
+        console.error('Airtable update error:', airtableError);
+        
+        if (airtableError.response) {
+          console.error('Airtable error response:', airtableError.response.data);
+          throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
+        } else if (airtableError.request) {
+          throw new Error('Network error: Could not connect to our database. Please check your internet connection.');
+        } else {
+          throw airtableError;
         }
+      }
+    } else {
+      console.log('No integration ID provided, fetching existing integration for user and agent...');
+      
+      // Try to find an existing integration by userId and account name
+      const filterByFormula = encodeURIComponent(`AND({id_users}='${integration.userId}', {api}='${accountName}')`);
+      const existingIntegrations = await airtableIntegrationApi.get(`?filterByFormula=${filterByFormula}`);
+      
+      if (existingIntegrations.data && existingIntegrations.data.records && existingIntegrations.data.records.length > 0) {
+        // Found existing integration, update it
+        const existingIntegration = existingIntegrations.data.records[0];
+        console.log('Found existing integration:', existingIntegration.id);
         
-        throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
-      } else if (airtableError.request) {
-        throw new Error('Network error: Could not connect to our database. Please check your internet connection.');
+        const updateResponse = await airtableIntegrationApi.patch(`/${existingIntegration.id}`, {
+          fields: {
+            id_users: String(integration.userId),
+            api: accountName,
+            token: integration.apiToken,
+            timezone: integration.timezone || 'America/New_York',
+            approver: integration.approver !== undefined ? Number(integration.approver) : 0,
+            remetente: integration.remetente || '',
+            email: integration.email || '',
+            DateUpdated: now
+          }
+        });
+        
+        console.log('Integration update response:', updateResponse.data);
+        return !!updateResponse.data.id;
       } else {
-        throw airtableError;
+        // No existing integration found, create new record
+        console.log('No existing integration found, creating new record');
+        
+        try {
+          const response = await airtableIntegrationApi.post('', {
+            records: [
+              {
+                fields: {
+                  id_users: String(integration.userId),
+                  api: accountName,
+                  token: integration.apiToken,
+                  timezone: integration.timezone || 'America/New_York',
+                  approver: integration.approver !== undefined ? Number(integration.approver) : 0,
+                  remetente: integration.remetente || '',
+                  email: integration.email || '',
+                  DateCreated: now
+                },
+              },
+            ],
+          });
+          
+          console.log('Integration create response:', response.data);
+          return response.data.records && response.data.records.length > 0;
+        } catch (airtableError: any) {
+          console.error('Airtable integration error:', airtableError);
+          
+          if (airtableError.response) {
+            console.error('Airtable error response:', airtableError.response.data);
+            throw new Error(`Airtable error: ${airtableError.response.data?.error?.message || 'Unknown database error'}`);
+          } else if (airtableError.request) {
+            throw new Error('Network error: Could not connect to our database. Please check your internet connection.');
+          } else {
+            throw airtableError;
+          }
+        }
       }
     }
   } catch (error: any) {

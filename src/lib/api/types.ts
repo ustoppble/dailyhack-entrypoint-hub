@@ -14,6 +14,7 @@ export interface ACIntegration {
   userId: string;
   apiUrl: string;
   apiToken: string;
+  integrationId?: string;  // Added integrationId field to track existing records
   timezone?: string;
   approver?: number;
   remetente?: string;  // Campo para o nome do remetente
