@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
@@ -407,6 +407,119 @@ const ListEmailsPage = () => {
     }
   };
 
+  // New handler for deleting selected draft emails
+  const handleDeleteSelected = async () => {
+    if (selectedEmails.length === 0) {
+      toast({
+        title: "No emails selected",
+        description: "Please select at least one email to delete.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to delete emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+    let allPromises = [];
+
+    // The webhook URL for email deletion
+    const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mail-delete';
+
+    // Create an array of promises for each email deletion
+    for (const emailId of selectedEmails) {
+      try {
+        // Find the email record to include its data in the payload
+        const emailRecord = emails.find(email => email.id === emailId);
+        
+        if (!emailRecord) {
+          console.error(`Email with ID ${emailId} not found in the current list`);
+          failCount++;
+          continue;
+        }
+        
+        // Prepare the payload for the webhook
+        const payload = {
+          activehosted: agentName,
+          userId: user.id,
+          emailId: emailId,
+          id_email: emailRecord.id_email // Use the actual id_email from the email record
+        };
+
+        console.log('Sending delete request to webhook:', payload);
+        
+        // Create a promise for each webhook request and add to our array
+        const requestPromise = fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).then(response => {
+          if (!response.ok) {
+            return response.json().catch(() => ({})).then(errorData => {
+              console.error('Webhook error:', errorData);
+              throw new Error(`Webhook error: ${response.status}`);
+            });
+          }
+          successCount++;
+          return response.json();
+        }).catch(error => {
+          console.error(`Error deleting email ${emailId}:`, error);
+          failCount++;
+          throw error;
+        });
+        
+        allPromises.push(requestPromise);
+      } catch (error) {
+        console.error(`Error creating delete request for email ${emailId}:`, error);
+        failCount++;
+      }
+    }
+
+    try {
+      // Wait for all webhook requests to complete
+      await Promise.allSettled(allPromises);
+      
+      // Show success message
+      if (successCount > 0) {
+        toast({
+          title: `${successCount} email(s) deleted successfully`,
+          description: failCount > 0 ? `${failCount} email(s) failed to delete.` : "",
+          variant: successCount > 0 ? "default" : "destructive"
+        });
+        
+        // Only reload emails AFTER all webhook responses have been received
+        await loadEmails();
+      } else {
+        toast({
+          title: "Failed to delete emails",
+          description: "Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error in Promise.allSettled:", error);
+      toast({
+        title: "Error processing deletions",
+        description: "Some emails may not have been deleted correctly.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setSelectedEmails([]);
+    }
+  };
+
   // Sort emails by date_set (newest to oldest)
   const sortedEmails = [...emails].sort((a, b) => {
     const dateA = a.date_set ? new Date(a.date_set).getTime() : 0;
@@ -503,15 +616,27 @@ const ListEmailsPage = () => {
                           Select All ({draftEmails.length})
                         </label>
                       </div>
-                      <Button
-                        variant="default"
-                        onClick={handleApproveSelected}
-                        disabled={selectedEmails.length === 0 || isProcessing}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckSquare className="h-4 w-4" />
-                        Approve Selected ({selectedEmails.length})
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          onClick={handleApproveSelected}
+                          disabled={selectedEmails.length === 0 || isProcessing}
+                          className="flex items-center gap-2"
+                        >
+                          <CheckSquare className="h-4 w-4" />
+                          Approve Selected ({selectedEmails.length})
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={handleDeleteSelected}
+                          disabled={selectedEmails.length === 0 || isProcessing}
+                          className="flex items-center gap-2 border-red-500 text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Selected ({selectedEmails.length})
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
