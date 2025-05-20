@@ -1,16 +1,14 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, List, PenTool, Brain, Target, Settings } from 'lucide-react';
-import AgentSettingsPanel from '@/components/settings/AgentSettingsPanel';
+import { Mail, List, Target, Brain, Settings } from 'lucide-react';
 
 const AgentCentralPage = () => {
   const { agentName } = useParams<{ agentName: string }>();
   const { user } = useAuth();
-  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
 
   if (!agentName) {
     return <div className="p-8 text-center">Agent name not found</div>;
@@ -49,7 +47,7 @@ const AgentCentralPage = () => {
       title: "Settings",
       description: "Configure agent settings",
       icon: <Settings className="h-6 w-6" />,
-      action: () => setIsSettingsPanelOpen(true),
+      link: `/agents/${agentName}/settings`,
       color: "bg-slate-100 text-slate-700",
     }
   ];
@@ -79,31 +77,16 @@ const AgentCentralPage = () => {
                 <CardDescription className="text-gray-600">{feature.description}</CardDescription>
               </CardContent>
               <CardFooter className="border-t pt-4 pb-5">
-                {feature.link ? (
-                  <Button asChild className="w-full">
-                    <Link to={feature.link}>
-                      Go to {feature.title}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button className="w-full" onClick={feature.action}>
-                    Open {feature.title}
-                  </Button>
-                )}
+                <Button asChild className="w-full">
+                  <Link to={feature.link}>
+                    Go to {feature.title}
+                  </Link>
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       </div>
-
-      {user && agentName && (
-        <AgentSettingsPanel 
-          open={isSettingsPanelOpen}
-          onClose={() => setIsSettingsPanelOpen(false)}
-          userId={user.id}
-          agentName={agentName}
-        />
-      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 // User model interface
 export interface User {
   id?: string;
@@ -9,11 +8,13 @@ export interface User {
   date_created?: string;
 }
 
-// ActiveCampaign integration interface
+// Integration types
 export interface ACIntegration {
   userId: string;
   apiUrl: string;
   apiToken: string;
+  timezone?: string;
+  approver?: number;
 }
 
 export interface VerificationResult {
@@ -35,4 +36,13 @@ export interface EmailList {
   id?: string;
   active_subscribers: string;
   selected?: boolean;
+}
+
+// Integration response with extended fields
+export interface IntegrationResponse {
+  id: string;
+  api: string;
+  token: string;
+  timezone?: string;
+  approver?: number;
 }
