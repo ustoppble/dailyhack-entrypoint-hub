@@ -71,11 +71,12 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
   isSubmitting,
   agentName 
 }) => {
-  const [selectedGoal, setSelectedGoal] = React.useState<CampaignGoal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<CampaignGoal | null>(null);
   const [selectedLists, setSelectedLists] = useState<string[]>([]);
   const [emailFrequency, setEmailFrequency] = useState<string>('once');
   const [buttonDisabled, setButtonDisabled] = useState<boolean>(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [isValidating, setIsValidating] = useState<boolean>(false);
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -96,6 +97,7 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
   const validateSelectedLists = async () => {
     if (!selectedLists.length) return;
     
+    setIsValidating(true);
     setButtonDisabled(true);
     setValidationMessage('');
     
@@ -117,6 +119,7 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
         if (exists) {
           setValidationMessage(`An email autopilot already exists for "${list.name}" with the same schedule (${emailFrequency === 'once' ? '1 email per day' : '2 emails per day'}). Please choose a different list or schedule.`);
           setButtonDisabled(true);
+          setIsValidating(false);
           return;
         }
       }
@@ -128,6 +131,8 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
       console.error('Error validating selected lists:', error);
       setValidationMessage('An error occurred while validating selected lists');
       setButtonDisabled(false);
+    } finally {
+      setIsValidating(false);
     }
   };
   
@@ -337,13 +342,18 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
             <div className="flex justify-end">
               <Button 
                 type="submit" 
-                disabled={isSubmitting || buttonDisabled || !!validationMessage}
+                disabled={isSubmitting || buttonDisabled || isValidating || !!validationMessage}
                 className="px-8"
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Processing...
+                  </div>
+                ) : isValidating ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Validating...
                   </div>
                 ) : (
                   <>

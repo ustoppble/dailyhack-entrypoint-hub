@@ -76,7 +76,7 @@ const EmailPlannerPage = () => {
       // Enhance autopilot records with list names
       const enhancedAutopilotRecords = autopilotRecords.map(record => ({
         ...record,
-        listName: connectedLists.find(l => Number(l.id) === record.listId)?.name
+        listName: connectedLists.find(l => l.list_id === record.listId.toString())?.name
       }));
       
       setAutopilotData(enhancedAutopilotRecords);
@@ -85,7 +85,8 @@ const EmailPlannerPage = () => {
       // Mark lists that already have autopilot
       const listsWithAutopilotStatus = connectedLists.map(list => ({
         ...list,
-        hasAutopilot: autopilotRecords.some(record => record.listId === Number(list.id))
+        hasAutopilot: autopilotRecords.some(record => 
+          record.listId === Number(list.list_id))
       }));
       
       setLists(listsWithAutopilotStatus);
@@ -158,15 +159,14 @@ const EmailPlannerPage = () => {
           continue;
         }
         
-        // Get the list_id from the list object (which is the actual list_id from ActiveCampaign)
+        // Get the list from the lists object
         const selectedList = lists.find(list => list.id === listId);
         if (!selectedList) {
           console.error(`List with ID ${listId} not found`);
           continue;
         }
         
-        // Use the list_id from the selected list - this is the important change
-        // The list_id should be the actual list_id from ActiveCampaign stored in the list object
+        // Use the list_id from the selected list
         const activeListId = selectedList.list_id || listId;
         console.log(`Using list_id ${activeListId} for list ${selectedList.name}`);
         
@@ -199,11 +199,12 @@ const EmailPlannerPage = () => {
             records: [
               {
                 fields: {
-                  id_list: Number(activeListId), // Use the actual list_id here, converted to number
+                  id_list: Number(activeListId), // Use the list_id as a number
                   url: agentName,
                   id_cron: cronId,
-                  id_offer: 0,
-                  next_update: nextUpdateString
+                  id_offer: selectedGoalData.id_offer || 0,
+                  next_update: nextUpdateString,
+                  status: 1 // Set status to active (1)
                 }
               }
             ]
@@ -236,14 +237,14 @@ const EmailPlannerPage = () => {
             agentName,
             lists: [activeListId], // Use the actual list_id here
             userId: user.id, // Add user ID that is logged in
-            mainGoal: selectedGoalData.goal || '', // Use goal field instead
-            goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo
-            offer_name: selectedGoalData.offer_name || '', // Offer name
+            id_autopilot: autopilotId,
+            id_autopilot_task: taskId,
+            mainGoal: selectedGoalData.goal || '', // Use goal field
+            goal: selectedGoalData.goal || '',
+            offer_name: selectedGoalData.offer_name || '',
             emailFrequency: values.emailFrequency,
-            goalLink: selectedGoalData.link || '', // Goal link
-            goalStyle: selectedGoalData.style || 'nutring', // Goal style
-            autopilotId: autopilotId,
-            taskId: taskId // Include the new task ID
+            goalLink: selectedGoalData.link || '',
+            goalStyle: selectedGoalData.style || 'nutring'
           };
           
           // Log the webhook data being sent for debugging

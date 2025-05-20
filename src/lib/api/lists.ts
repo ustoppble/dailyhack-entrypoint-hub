@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { EmailList } from './types';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
@@ -195,6 +196,7 @@ export const deleteConnectedList = async (airtableRecordId: string): Promise<boo
 
 /**
  * Check if an autopilot already exists for a specific list and schedule
+ * This is now updated to validate early in the form process
  */
 export const checkExistingAutopilot = async (
   listId: string | number,
