@@ -167,11 +167,12 @@ const ListEmailsPage = () => {
     setIsProcessing(true);
     let successCount = 0;
     let failCount = 0;
+    let allPromises = [];
 
     // The webhook URL for email approval
     const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mailapprove';
 
-    // Process each selected email
+    // Create an array of promises for each email approval
     for (const emailId of selectedEmails) {
       try {
         // Find the email record to include its data in the payload
@@ -193,48 +194,67 @@ const ListEmailsPage = () => {
 
         console.log('Sending approval request to webhook:', payload);
         
-        // Send the POST request to the webhook
-        const response = await fetch(webhookUrl, {
+        // Create a promise for each webhook request and add to our array
+        const requestPromise = fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
+        }).then(response => {
+          if (!response.ok) {
+            return response.json().catch(() => ({})).then(errorData => {
+              console.error('Webhook error:', errorData);
+              throw new Error(`Webhook error: ${response.status}`);
+            });
+          }
+          successCount++;
+          return response.json();
+        }).catch(error => {
+          console.error(`Error approving email ${emailId}:`, error);
+          failCount++;
+          throw error;
         });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Webhook error:', errorData);
-          throw new Error(`Webhook error: ${response.status}`);
-        }
-
-        successCount++;
+        
+        allPromises.push(requestPromise);
       } catch (error) {
-        console.error(`Error approving email ${emailId}:`, error);
+        console.error(`Error creating request for email ${emailId}:`, error);
         failCount++;
       }
     }
 
-    // Show success message and reload emails
-    if (successCount > 0) {
-      toast({
-        title: `${successCount} email(s) approved successfully`,
-        description: failCount > 0 ? `${failCount} email(s) failed to approve.` : "",
-        variant: successCount > 0 ? "default" : "destructive"
-      });
+    try {
+      // Wait for all webhook requests to complete
+      await Promise.allSettled(allPromises);
       
-      // Reload emails to update the UI
-      await loadEmails();
-    } else {
+      // Show success message
+      if (successCount > 0) {
+        toast({
+          title: `${successCount} email(s) approved successfully`,
+          description: failCount > 0 ? `${failCount} email(s) failed to approve.` : "",
+          variant: successCount > 0 ? "default" : "destructive"
+        });
+        
+        // Only reload emails AFTER all webhook responses have been received
+        await loadEmails();
+      } else {
+        toast({
+          title: "Failed to approve emails",
+          description: "Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error in Promise.allSettled:", error);
       toast({
-        title: "Failed to approve emails",
-        description: "Please try again later.",
+        title: "Error processing approvals",
+        description: "Some emails may not have been approved correctly.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
+      setSelectedEmails([]);
     }
-
-    setIsProcessing(false);
-    setSelectedEmails([]);
   };
 
   // Sort emails by date_set (newest to oldest)
