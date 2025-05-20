@@ -104,6 +104,11 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
   try {
     console.log('Saving selected lists for user:', userId, selectedLists);
     
+    // Ensure userId is a string - Airtable won't accept numbers for the id_users field
+    const userIdString = String(userId).trim();
+    
+    console.log('Using formatted user ID:', userIdString);
+    
     // Create records for Airtable with the correct column names
     const records = selectedLists.map(list => {
       // Make sure all values are strings
@@ -117,7 +122,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          id_users: userId, // Using the correct field name id_users
+          id_users: userIdString, // Ensuring we're using a string for the user ID
         }
       };
     });
