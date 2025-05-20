@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { PlayCircle } from 'lucide-react'; // Removed CalendarIcon import
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button'; // Import Button from shadcn UI
 import StatusMessage from '@/components/integration/StatusMessage';
@@ -429,23 +428,6 @@ const EmailPlannerPage = () => {
                 agentName={agentName || ''}
                 campaignGoals={campaignGoals}
               />
-            )}
-
-            {/* Production Button - Removed calendar info about next update */}
-            {autopilotData.length > 0 && (
-              <div className="mb-6">
-                <div className="bg-white rounded-lg shadow-sm border p-4 flex justify-end">
-                  <Button
-                    variant="default"
-                    onClick={handleStartProduction}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                    {isSubmitting ? 'Starting...' : 'Start Production Now'}
-                  </Button>
-                </div>
-              </div>
             )}
 
             {/* Create New Autopilot Section */}
