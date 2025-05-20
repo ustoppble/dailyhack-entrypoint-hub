@@ -17,6 +17,7 @@ export interface AutopilotRecord {
   createdTime?: string;
   campaignGoalId?: string; // Added for compatibility with ManageAutopilotForm
   active?: boolean; // Added for compatibility with ManageAutopilotForm
+  status?: number; // Add status property
 }
 
 // Interface for email records
@@ -139,7 +140,8 @@ export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecor
       cronId: record.fields.id_cron,
       url: record.fields.url,
       offerId: getRecordIdForOfferId(record.fields.id_offer),
-      createdTime: record.createdTime
+      createdTime: record.createdTime,
+      status: record.fields.status || 0 // Include status from the record
     }));
     
     return records;

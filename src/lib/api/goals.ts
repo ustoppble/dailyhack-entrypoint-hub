@@ -9,6 +9,7 @@ export interface CampaignGoal {
   activehosted: string;
   offer_name: string;
   id_user?: number;
+  id_offer?: number; // Add id_offer property
 }
 
 export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: string): Promise<CampaignGoal[]> => {
@@ -50,7 +51,8 @@ export const fetchCampaignGoals = async (activeHostedAgent: string, userId?: str
       style: record.fields.style || 'nutring',
       activehosted: record.fields.activehosted || '',
       offer_name: record.fields.offer_name || '',
-      id_user: Number(record.fields.id_user) || undefined
+      id_user: Number(record.fields.id_user) || undefined,
+      id_offer: Number(record.fields.id_offer) || undefined // Add id_offer from Airtable
     }));
     
     return goals;

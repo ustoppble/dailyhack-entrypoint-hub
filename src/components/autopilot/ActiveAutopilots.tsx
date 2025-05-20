@@ -38,7 +38,13 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
       return { name: '', link: '', style: 'nutring' };
     }
     
-    const goal = campaignGoals.find(g => g.id === offerId || g.id_offer === Number(offerId));
+    // First try to find by offerId string (Airtable record ID)
+    let goal = campaignGoals.find(g => g.id === offerId);
+    
+    // If not found, try to find by numeric id_offer
+    if (!goal) {
+      goal = campaignGoals.find(g => g.id_offer === Number(offerId));
+    }
     
     if (goal) {
       return {

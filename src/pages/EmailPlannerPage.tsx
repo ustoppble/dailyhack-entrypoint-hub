@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -193,6 +192,11 @@ const EmailPlannerPage = () => {
         
         console.log("Creating autopilot record with next_update:", nextUpdateString);
         
+        // Use the id_offer field from the campaign goal
+        // Make sure it's a number as expected by the Airtable schema
+        const offerId = selectedGoalData.id_offer || 0;
+        console.log(`Using offer ID ${offerId} from selected campaign goal:`, selectedGoalData);
+        
         // First, create the autopilot record with next_update field
         try {
           const autopilotResponse = await airtableUpdatesApi.post('', {
@@ -202,7 +206,7 @@ const EmailPlannerPage = () => {
                   id_list: Number(activeListId), // Use the list_id as a number
                   url: agentName,
                   id_cron: cronId,
-                  id_offer: selectedGoalData.id_offer || 0,
+                  id_offer: offerId, // Use the numeric ID from the campaign goal
                   next_update: nextUpdateString,
                   status: 1 // Set status to active (1)
                 }
@@ -215,13 +219,13 @@ const EmailPlannerPage = () => {
           // Get the autopilot ID from the response
           const autopilotId = autopilotResponse.data.records[0].fields.id_autopilot;
           
-          // Create task in the autopilot tasks table
+          // Create task in the autopilot tasks table - with status as a string "0" instead of number 0
           const autopilotTaskResponse = await airtableAutopilotTasksApi.post('', {
             records: [
               {
                 fields: {
                   id_autopilot: autopilotId,
-                  status: 0
+                  status: "0" // Use string "0" instead of number 0
                 }
               }
             ]
