@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -12,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle, Zap } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { 
   fetchEmailsForList, 
@@ -606,6 +605,119 @@ const ListEmailsPage = () => {
       toast({
         title: "Error processing approvals",
         description: "Some emails may not have been approved correctly.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setSelectedEmails([]);
+    }
+  };
+
+  // New handler for dispatching emails immediately
+  const handleDispatchNow = async () => {
+    if (selectedEmails.length === 0) {
+      toast({
+        title: "No emails selected",
+        description: "Please select at least one email to dispatch.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to dispatch emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+    let allPromises = [];
+
+    // The webhook URL for immediate dispatch
+    const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mail-shot';
+
+    // Create an array of promises for each email dispatch
+    for (const emailId of selectedEmails) {
+      try {
+        // Find the email record to include its data in the payload
+        const emailRecord = emails.find(email => email.id === emailId);
+        
+        if (!emailRecord) {
+          console.error(`Email with ID ${emailId} not found in the current list`);
+          failCount++;
+          continue;
+        }
+        
+        // Prepare the payload for the webhook
+        const payload = {
+          activehosted: agentName,
+          userId: user.id,
+          emailId: emailId,
+          id_email: emailRecord.id_email // Use the actual id_email from the email record
+        };
+
+        console.log('Sending immediate dispatch request to webhook:', payload);
+        
+        // Create a promise for each webhook request and add to our array
+        const requestPromise = fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).then(response => {
+          if (!response.ok) {
+            return response.json().catch(() => ({})).then(errorData => {
+              console.error('Webhook error:', errorData);
+              throw new Error(`Webhook error: ${response.status}`);
+            });
+          }
+          successCount++;
+          return response.json();
+        }).catch(error => {
+          console.error(`Error dispatching email ${emailId}:`, error);
+          failCount++;
+          throw error;
+        });
+        
+        allPromises.push(requestPromise);
+      } catch (error) {
+        console.error(`Error creating request for email ${emailId}:`, error);
+        failCount++;
+      }
+    }
+
+    try {
+      // Wait for all webhook requests to complete
+      await Promise.allSettled(allPromises);
+      
+      // Show success message
+      if (successCount > 0) {
+        toast({
+          title: `${successCount} email(s) dispatched successfully`,
+          description: failCount > 0 ? `${failCount} email(s) failed to dispatch.` : "",
+          variant: successCount > 0 ? "default" : "destructive"
+        });
+        
+        // Only reload emails AFTER all webhook responses have been received
+        await loadEmails();
+      } else {
+        toast({
+          title: "Failed to dispatch emails",
+          description: "Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error in Promise.allSettled:", error);
+      toast({
+        title: "Error processing dispatches",
+        description: "Some emails may not have been dispatched correctly.",
         variant: "destructive"
       });
     } finally {
@@ -1236,6 +1348,17 @@ const ListEmailsPage = () => {
                         >
                           <CheckSquare className="h-4 w-4" />
                           Approve Selected ({selectedEmails.length})
+                        </Button>
+                        
+                        {/* New Dispatch Now button */}
+                        <Button
+                          variant="default"
+                          onClick={handleDispatchNow}
+                          disabled={selectedEmails.length === 0 || isProcessing}
+                          className="flex items-center gap-2 bg-green-500 hover:bg-green-600"
+                        >
+                          <Zap className="h-4 w-4" />
+                          Dispatch Now ({selectedEmails.length})
                         </Button>
                         
                         <Button
