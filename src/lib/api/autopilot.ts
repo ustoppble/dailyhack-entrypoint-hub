@@ -1,4 +1,3 @@
-
 import { airtableApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 

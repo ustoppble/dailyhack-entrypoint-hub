@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
+import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from '@/lib/api/constants';
 import axios from 'axios';
 
 // Define types for our new data
@@ -62,6 +63,7 @@ const ListEmailsPage = () => {
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [isInitiatingProduction, setIsInitiatingProduction] = useState(false);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   useEffect(() => {
     loadEmails();
@@ -74,6 +76,94 @@ const ListEmailsPage = () => {
       loadTasks(autopilotId);
     }
   }, [autopilotId]);
+
+  // New function to handle task deletion
+  const handleDeleteTask = async (taskId?: number) => {
+    if (!taskId) {
+      toast({
+        title: "Invalid task",
+        description: "Cannot delete this task.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to delete tasks.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsDeletingTask(true);
+
+    try {
+      // First, find the task record in the autopilot tasks table
+      const taskResponse = await airtableAutopilotTasksApi.get('', {
+        params: {
+          filterByFormula: `{id_autopilot_task}='${taskId}'`
+        }
+      });
+
+      const taskRecords = taskResponse.data.records;
+      
+      if (!taskRecords || taskRecords.length === 0) {
+        toast({
+          title: "Task not found",
+          description: "Could not find the task to delete.",
+          variant: "destructive"
+        });
+        setIsDeletingTask(false);
+        return;
+      }
+
+      // Get the task record ID
+      const taskRecordId = taskRecords[0].id;
+      
+      // Find and delete all emails associated with this task
+      const emailsResponse = await airtableTasksApi.get('', {
+        params: {
+          filterByFormula: `{id_autopilot_task}='${taskId}'`
+        }
+      });
+      
+      const emailRecords = emailsResponse.data.records;
+      
+      // Delete each email
+      let deletedEmails = 0;
+      for (const email of emailRecords) {
+        await airtableTasksApi.delete(`/${email.id}`);
+        deletedEmails++;
+      }
+      
+      // Delete the task
+      await airtableAutopilotTasksApi.delete(`/${taskRecordId}`);
+      
+      toast({
+        title: "Task deleted",
+        description: `Successfully deleted the task and ${deletedEmails} associated emails.`,
+      });
+      
+      // If we're in the task view, go back to the main list view
+      if (selectedTaskId === taskId) {
+        loadEmails();
+      } else {
+        // Otherwise just refresh the tasks list
+        loadTasks(autopilotId || '');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error deleting task",
+        description: "An error occurred while deleting the task and its emails.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingTask(false);
+    }
+  };
 
   const loadTasks = async (autopilotId: string) => {
     if (!listId || !autopilotId) return;
@@ -266,16 +356,6 @@ const ListEmailsPage = () => {
       console.error('Error parsing date:', e);
       return 'Invalid date';
     }
-  };
-
-  const getStatusBadge = (status: number | string) => {
-    // Convert status to number if it's a string
-    const statusNum = typeof status === 'string' ? parseInt(status) : status;
-    
-    if (statusNum === 1) {
-      return <Badge variant="default" className="bg-green-500">Approved</Badge>;
-    }
-    return <Badge variant="secondary">Draft</Badge>;
   };
 
   // Get task status badge with correct coloring based on status
@@ -914,7 +994,7 @@ const ListEmailsPage = () => {
                         <TableCell>
                           {getTaskStatusBadge(task.fields.status)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -922,7 +1002,16 @@ const ListEmailsPage = () => {
                             className="flex items-center gap-1"
                             disabled={!task.emailCount}
                           >
-                            <Eye className="h-4 w-4" /> View Emails
+                            <Eye className="h-4 w-4" /> View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteTask(task.fields.id_autopilot_task)}
+                            className="flex items-center gap-1 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            disabled={isDeletingTask}
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -932,6 +1021,25 @@ const ListEmailsPage = () => {
               )}
             </CardContent>
           </Card>
+        )}
+        
+        {/* Add delete button for selected task view */}
+        {selectedTaskId && (
+          <div className="mb-4 flex justify-between">
+            <h2 className="text-xl font-semibold">
+              Emails for Task #{selectedTaskId}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeleteTask(selectedTaskId)}
+              disabled={isDeletingTask}
+              className="flex items-center gap-2 border-red-500 text-red-500 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" /> 
+              {isDeletingTask ? "Deleting..." : "Delete This Task"}
+            </Button>
+          </div>
         )}
         
         {/* Emails List Card */}

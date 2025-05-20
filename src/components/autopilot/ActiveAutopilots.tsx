@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Eye, Settings, Tag, Link as LinkIcon } from 'lucide-react';
+import { Mail, Eye, Settings, Tag, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { AutopilotRecord } from '@/lib/api/autopilot';
 import { CampaignGoal } from '@/lib/api/goals';
+import { toast } from '@/hooks/use-toast';
+import { airtableAutopilotTasksApi, airtableTasksApi } from '@/lib/api/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ActiveAutopilotsProps {
   autopilotData: AutopilotRecord[];
@@ -22,6 +25,7 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
   campaignGoals = [] 
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const getFrequencyText = (cronId: number): string => {
     return cronId === 1 ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
@@ -31,6 +35,77 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
     console.log(`Navigating to list emails for agent ${agentName} and list ID ${autopilot.listId}`);
     // Updated to match the route pattern in App.tsx
     navigate(`/agents/${agentName}/list/${autopilot.listId}/emails`);
+  };
+
+  const handleDeleteTask = async (autopilot: AutopilotRecord) => {
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to delete tasks.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // First, get all tasks for this autopilot
+      const tasksResponse = await airtableAutopilotTasksApi.get('', {
+        params: {
+          filterByFormula: `{id_autopilot}='${autopilot.id_autopilot}'`
+        }
+      });
+      
+      const tasks = tasksResponse.data.records;
+      if (!tasks || tasks.length === 0) {
+        toast({
+          title: "No tasks found",
+          description: "No tasks found for this autopilot.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // For each task, find and delete its emails first
+      for (const task of tasks) {
+        const taskId = task.fields.id_autopilot_task;
+        if (taskId) {
+          // Get all emails with this task ID
+          const emailsResponse = await airtableTasksApi.get('', {
+            params: {
+              filterByFormula: `{id_autopilot_task}='${taskId}'`
+            }
+          });
+          
+          const emails = emailsResponse.data.records;
+          
+          // Delete each email
+          for (const email of emails) {
+            await airtableTasksApi.delete(`/${email.id}`);
+          }
+          
+          console.log(`Deleted ${emails.length} emails for task ID ${taskId}`);
+        }
+        
+        // Delete the task itself
+        await airtableAutopilotTasksApi.delete(`/${task.id}`);
+      }
+      
+      toast({
+        title: "Tasks deleted",
+        description: `Successfully deleted ${tasks.length} tasks and their associated emails.`,
+      });
+      
+      // Refresh the page to show updated data
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error deleting tasks:', error);
+      toast({
+        title: "Error deleting tasks",
+        description: "An error occurred while deleting tasks.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getOfferInfo = (offerId?: string | number) => {
@@ -138,6 +213,14 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
                     onClick={() => onManageAutopilot(autopilot)}
                   >
                     <Settings className="h-4 w-4" /> Manage
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1 border-red-500 text-red-500 hover:bg-red-50"
+                    onClick={() => handleDeleteTask(autopilot)}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Tasks
                   </Button>
                 </div>
               </div>
