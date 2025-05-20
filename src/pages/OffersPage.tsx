@@ -104,29 +104,31 @@ const OffersPage = () => {
 
         <StatusMessage error={error} success={success} />
 
-        {/* Campaign Goals List Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">All Campaign Goals</h2>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={loadOffers}
-            >
-              Refresh
-            </Button>
+        {/* Only show Campaign Goals List Section if there are offers or if it's loading */}
+        {(isLoading || offers.length > 0) && (
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">All Campaign Goals</h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={loadOffers}
+              >
+                Refresh
+              </Button>
+            </div>
+            
+            {isLoading ? (
+              <LoadingState text="Loading campaign goals..." />
+            ) : (
+              <OffersList 
+                offers={offers}
+                onDelete={handleDeleteOffer}
+                onRefresh={loadOffers}
+              />
+            )}
           </div>
-          
-          {isLoading ? (
-            <LoadingState text="Loading campaign goals..." />
-          ) : (
-            <OffersList 
-              offers={offers}
-              onDelete={handleDeleteOffer}
-              onRefresh={loadOffers}
-            />
-          )}
-        </div>
+        )}
         
         {/* Create New Campaign Goal Section */}
         <Card>

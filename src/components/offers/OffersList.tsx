@@ -71,15 +71,6 @@ const OffersList = ({ offers, onDelete, onRefresh }: OffersListProps) => {
     }
   };
 
-  if (offers.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-gray-500">No offers found for this agent.</p>
-        <p className="text-gray-500 text-sm">Create your first offer to get started.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 gap-4">
       {offers.map((offer) => (
