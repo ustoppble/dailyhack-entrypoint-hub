@@ -13,7 +13,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
+import { 
+  fetchEmailsForList, 
+  EmailRecord, 
+  getAutopilotIdForList, 
+  createAutopilotTask,
+  getAutopilotRecordById,
+  AutopilotRecord
+} from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
@@ -725,6 +732,117 @@ const ListEmailsPage = () => {
     }
   };
 
+  // New function to handle starting a new email production
+  const handleStartProduction = async () => {
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to start production",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!agentName || !listId || !autopilotId) {
+      toast({
+        title: "Missing Information",
+        description: "Agent name, list ID, or autopilot ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsInitiatingProduction(true);
+
+    try {
+      // Get the numeric user ID
+      const userId = Number(user.id);
+      
+      // Step 1: Create a new task record in tbl9I7wnlb6UBFdT5
+      const autopilotIdNum = Number(autopilotId);
+      const result = await createAutopilotTask(autopilotIdNum, userId);
+      
+      if (!result.success) {
+        throw new Error("Failed to create task record");
+      }
+      
+      console.log('New task created:', result);
+      
+      // Get the full autopilot record to include in the webhook
+      const autopilotRecord = await getAutopilotRecordById(autopilotIdNum);
+      
+      if (!autopilotRecord) {
+        throw new Error("Failed to fetch autopilot record details");
+      }
+
+      // Step 2: Send webhook POST request with required data
+      // Webhook URL for triggering production
+      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+      
+      // Create the payload with all required fields
+      const requestData = {
+        // Task data from the newly created record
+        id_autopilot_task: result.taskId, 
+        first_email: result.record?.fields.first_email,
+        last_email: result.record?.fields.last_email,
+        id_user: userId,
+        
+        // Autopilot data
+        id_autopilot: autopilotIdNum,
+        id_list: Number(listId),
+        url: autopilotRecord.url,
+        id_offer: autopilotRecord.offerId ? getNumericOfferId(autopilotRecord.offerId) : null,
+        next_update: autopilotRecord.next_update,
+        
+        // Additional action parameter
+        action: "production",
+        
+        // Include other data as needed
+        agentName: agentName,
+        lists: [Number(listId)],
+        forceUpdate: true
+      };
+      
+      console.log('Starting new email production with data:', requestData);
+      
+      // Send request to webhook
+      const response = await axios.post(webhookUrl, requestData);
+      console.log('Production webhook response:', response.data);
+      
+      toast({
+        title: "Production Started",
+        description: "New email production has been initiated",
+      });
+      
+      // Refresh data to show any changes
+      await loadTasks(autopilotId);
+      await loadNextUpdate();
+      await loadEmails();
+      
+    } catch (err: any) {
+      console.error('Error starting email production:', err);
+      toast({
+        title: "Production Error",
+        description: err.message || "Failed to start email production",
+        variant: "destructive"
+      });
+    } finally {
+      setIsInitiatingProduction(false);
+    }
+  };
+
+  // Helper function to convert offer ID to numeric value
+  const getNumericOfferId = (recordId: string): number => {
+    const mapping: Record<string, number> = {
+      "recQG4f2htaV2ZKQ5": 1,
+      "recTaU2whfyY0rLSC": 4,
+      "recn1xsQEZcFfUWh3": 5,
+      "recg5uXLPbNfVU441": 6,
+    };
+    
+    return mapping[recordId] || 0;
+  };
+
   // New handler for deleting selected draft emails
   const handleDeleteSelected = async () => {
     if (selectedEmails.length === 0) {
@@ -869,81 +987,6 @@ const ListEmailsPage = () => {
     const emailDate = email.date_set ? new Date(email.date_set) : new Date(email.date || "");
     const now = new Date();
     return !isNaN(emailDate.getTime()) && emailDate > now;
-  };
-
-  // New function to handle starting a new email production
-  const handleStartProduction = async () => {
-    if (!user || !user.id) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to start production",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!agentName || !listId || !autopilotId) {
-      toast({
-        title: "Missing Information",
-        description: "Agent name, list ID, or autopilot ID not found",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsInitiatingProduction(true);
-
-    try {
-      // Get the numeric user ID
-      const userId = Number(user.id);
-      
-      // Get the first task for this autopilot to use its ID
-      const taskData = tasks.length > 0 ? tasks[0] : null;
-      const taskId = taskData?.fields.id_autopilot_task;
-
-      if (!taskId) {
-        throw new Error("No task ID found for this autopilot");
-      }
-
-      // Webhook URL for triggering production
-      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
-      
-      // Prepare data payload
-      const requestData = {
-        agentName,
-        lists: [Number(listId)], // Use the actual list_id here as a number
-        userId: userId,
-        id_autopilot: Number(autopilotId),
-        id_autopilot_task: taskId,
-        // Include other required fields that might be needed
-        forceUpdate: true // Flag to indicate this is a manual production trigger
-      };
-      
-      console.log('Starting new email production with data:', requestData);
-      
-      // Send request to webhook
-      const response = await axios.post(webhookUrl, requestData);
-      console.log('Production webhook response:', response.data);
-      
-      toast({
-        title: "Production Started",
-        description: "New email production has been initiated",
-      });
-      
-      // Refresh data to show any changes
-      await loadEmails();
-      await loadNextUpdate();
-      
-    } catch (err: any) {
-      console.error('Error starting email production:', err);
-      toast({
-        title: "Production Error",
-        description: err.message || "Failed to start email production",
-        variant: "destructive"
-      });
-    } finally {
-      setIsInitiatingProduction(false);
-    }
   };
 
   return (

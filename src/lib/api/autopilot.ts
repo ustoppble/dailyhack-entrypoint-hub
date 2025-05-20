@@ -1,12 +1,14 @@
-import { airtableApi } from './client';
+import { airtableApi, airtableAutopilotTasksApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
 // Airtable table ID for the autopilot data
 const AIRTABLE_AUTOPILOT_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
 // Airtable table ID for the emails data
 const AIRTABLE_EMAILS_TABLE_ID = 'tblWeAwzXeMhK7P6z';
+// Airtable table ID for the autopilot tasks data
+const AIRTABLE_AUTOPILOT_TASKS_ID = 'tbl9I7wnlb6UBFdT5';
 
-// Enhanced interface for autopilot records
+// Enhanced interface for autopilot record
 export interface AutopilotRecord {
   id: string;
   listId: number;
@@ -20,6 +22,18 @@ export interface AutopilotRecord {
   status?: number; // Add status property
   id_user?: number; // Add user ID property
   id_autopilot?: number; // Add id_autopilot property
+  next_update?: string; // Add next_update property
+}
+
+// Interface for autopilot task record
+export interface AutopilotTaskRecord {
+  id: string;
+  id_autopilot_task?: number;
+  id_autopilot?: number;
+  status?: string | number;
+  id_user?: number;
+  first_email?: string;
+  last_email?: string;
 }
 
 // Interface for email records
@@ -35,7 +49,51 @@ export interface EmailRecord {
   activehosted?: string;
   date_set?: string; // Added date_set field
   id_autopilot?: number; // Add id_autopilot to the interface
+  id_autopilot_task?: number; // Add id_autopilot_task to the interface
 }
+
+// Create a new autopilot task
+export const createAutopilotTask = async (
+  autopilotId: number,
+  userId: number
+): Promise<{success: boolean, taskId?: number, record?: any}> => {
+  try {
+    // Create the record data with the required fields
+    const recordData = {
+      records: [
+        {
+          fields: {
+            "id_autopilot": autopilotId,
+            "status": 0,
+            "id_user": userId
+          }
+        }
+      ]
+    };
+    
+    console.log('Creating autopilot task record:', recordData);
+    
+    // Make the API call to create the task
+    const response = await airtableAutopilotTasksApi.post('', recordData);
+    
+    console.log('Autopilot task record created:', response.data);
+    
+    if (response.data && response.data.records && response.data.records.length > 0) {
+      // Return the created record information and the id_autopilot_task if available
+      const createdRecord = response.data.records[0];
+      return {
+        success: true,
+        taskId: createdRecord.fields.id_autopilot_task,
+        record: createdRecord
+      };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating autopilot task record:', error);
+    return { success: false };
+  }
+};
 
 // Create a new autopilot record
 export const createAutopilotRecord = async (
@@ -350,7 +408,8 @@ export const fetchEmailsForList = async (listId: number, agentName: string): Pro
         content: record.fields.content || '',
         list_id: record.fields.list_id,
         activehosted: record.fields.activehosted,
-        id_autopilot: record.fields.id_autopilot
+        id_autopilot: record.fields.id_autopilot,
+        id_autopilot_task: record.fields.id_autopilot_task
       };
     });
     
@@ -439,5 +498,52 @@ export const updateEmailStatus = async (emailId: string, status: number): Promis
   } catch (error) {
     console.error('Error updating email status:', error);
     return false;
+  }
+};
+
+// Get autopilot record by ID
+export const getAutopilotRecordById = async (autopilotId: number): Promise<AutopilotRecord | null> => {
+  try {
+    // Filter by autopilot ID
+    const filterFormula = encodeURIComponent(`{id_autopilot} = ${autopilotId}`);
+    const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}?filterByFormula=${filterFormula}`;
+    
+    console.log('Fetching autopilot record for ID:', autopilotId);
+    
+    const response = await fetch(autopilotApiUrl, {
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.records && data.records.length > 0) {
+      // Map the record to our AutopilotRecord interface
+      const record = data.records[0];
+      return {
+        id: record.id,
+        listId: record.fields.id_list,
+        cronId: record.fields.id_cron,
+        url: record.fields.url,
+        offerId: getRecordIdForOfferId(record.fields.id_offer),
+        createdTime: record.createdTime,
+        status: record.fields.status || 0,
+        id_user: record.fields.id_user,
+        id_autopilot: record.fields.id_autopilot,
+        next_update: record.fields.next_update
+      };
+    }
+    
+    console.log('No autopilot record found for ID:', autopilotId);
+    return null;
+  } catch (error) {
+    console.error('Error getting autopilot record by ID:', error);
+    return null;
   }
 };
