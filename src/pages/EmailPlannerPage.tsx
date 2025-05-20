@@ -83,6 +83,7 @@ const EmailPlannerPage = () => {
       
       setAutopilotData(enhancedAutopilotRecords);
       console.log('Autopilot records:', enhancedAutopilotRecords);
+      console.log('Campaign goals for offer display:', goals);
       
       // Mark lists that already have autopilot
       const listsWithAutopilotStatus = connectedLists.map(list => ({
