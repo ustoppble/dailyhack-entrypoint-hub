@@ -1,4 +1,3 @@
-
 import { airtableApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
@@ -35,6 +34,12 @@ export interface EmailRecord {
   activehosted?: string;
   date_set?: string; // Added date_set field
   id_autopilot?: number; // Add id_autopilot to the interface
+}
+
+// New interface to return both the autopilot ID and the record ID
+export interface AutopilotIdData {
+  idAutopilot: number | null;
+  recordId: string | null;
 }
 
 // Create a new autopilot record
@@ -246,8 +251,8 @@ export const updateAutopilotRecord = async (
   }
 };
 
-// Get autopilot ID for a specific list ID
-export const getAutopilotIdForList = async (listId: number): Promise<number | null> => {
+// Get autopilot ID for a specific list ID - now returns both the ID and record ID
+export const getAutopilotIdForList = async (listId: number): Promise<AutopilotIdData> => {
   try {
     // Create a direct API instance for the autopilot table
     const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
@@ -272,18 +277,22 @@ export const getAutopilotIdForList = async (listId: number): Promise<number | nu
     const data = await response.json();
     
     if (data.records && data.records.length > 0) {
-      // Return the id_autopilot value from the record fields
-      // This is the actual column value, not the Airtable record ID
+      // Return both the id_autopilot value and the Airtable record ID
       const idAutopilot = data.records[0].fields.id_autopilot;
-      console.log('Found id_autopilot column value:', idAutopilot, 'for list ID:', listId);
-      return idAutopilot || null;
+      const recordId = data.records[0].id;
+      
+      console.log('Found id_autopilot column value:', idAutopilot, 'and record ID:', recordId, 'for list ID:', listId);
+      return { 
+        idAutopilot: idAutopilot || null,
+        recordId: recordId || null
+      };
     }
     
     console.log('No autopilot record found for list ID:', listId);
-    return null;
+    return { idAutopilot: null, recordId: null };
   } catch (error) {
     console.error('Error getting autopilot ID for list:', error);
-    return null;
+    return { idAutopilot: null, recordId: null };
   }
 };
 

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, Zap } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
+import { fetchEmailsForList, EmailRecord, getAutopilotIdForList, AutopilotIdData } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
@@ -53,6 +53,7 @@ const ListEmailsPage = () => {
   const [selectedApprovedEmails, setSelectedApprovedEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [autopilotId, setAutopilotId] = useState<string | null>(null);
+  const [autopilotRecordId, setAutopilotRecordId] = useState<string | null>(null); // New state for record ID
   const { user } = useAuth();
   
   // State for task and update information
@@ -172,12 +173,22 @@ const ListEmailsPage = () => {
         throw new Error(`Invalid list ID: ${listId}`);
       }
       
-      // Get the autopilot ID for this list to display in UI
-      const autopilotRecordId = await getAutopilotIdForList(parsedListId);
-      if (autopilotRecordId !== null) {
+      // Get the autopilot ID data for this list to display in UI
+      const autopilotData = await getAutopilotIdForList(parsedListId);
+      if (autopilotData.idAutopilot !== null) {
         // Convert to string before setting to state
-        setAutopilotId(String(autopilotRecordId));
+        setAutopilotId(String(autopilotData.idAutopilot));
       }
+      
+      // Store the Airtable record ID separately
+      if (autopilotData.recordId !== null) {
+        setAutopilotRecordId(autopilotData.recordId);
+      }
+      
+      console.log("Retrieved autopilot data:", {
+        idAutopilot: autopilotData.idAutopilot,
+        recordId: autopilotData.recordId
+      });
       
       // Fetch emails for the specified list
       let fetchedEmails;
@@ -775,6 +786,15 @@ const ListEmailsPage = () => {
       return;
     }
 
+    if (!autopilotRecordId) {
+      toast({
+        title: "Missing Record ID",
+        description: "Could not find the Airtable record ID for this autopilot",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsInitiatingProduction(true);
 
     try {
@@ -826,7 +846,8 @@ const ListEmailsPage = () => {
       nextUpdateDate.setHours(0, 0, 0, 0);
       
       // Update the autopilot record with the new next_update date
-      await airtableUpdatesApi.patch(`/${autopilotId}`, {
+      console.log('Updating autopilot record with ID:', autopilotRecordId);
+      await airtableUpdatesApi.patch(`/${autopilotRecordId}`, {
         fields: {
           next_update: nextUpdateDate.toISOString()
         }
