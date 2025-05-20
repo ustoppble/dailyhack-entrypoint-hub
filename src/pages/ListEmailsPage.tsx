@@ -122,7 +122,7 @@ const ListEmailsPage = () => {
       // Get the task record ID
       const taskRecordId = taskRecords[0].id;
       
-      // Find and delete all emails associated with this task
+      // Find all emails associated with this task
       const emailsResponse = await airtableTasksApi.get('', {
         params: {
           filterByFormula: `{id_autopilot_task}='${taskId}'`
@@ -131,7 +131,32 @@ const ListEmailsPage = () => {
       
       const emailRecords = emailsResponse.data.records;
       
-      // Delete each email
+      // Check if any of the emails have a date in the past
+      const now = new Date();
+      let hasPastEmails = false;
+      
+      for (const email of emailRecords) {
+        // Check both date and date_set fields
+        const emailDate = email.fields.date_set ? new Date(email.fields.date_set) : 
+                         (email.fields.date ? new Date(email.fields.date) : null);
+        
+        if (emailDate && emailDate < now) {
+          hasPastEmails = true;
+          break;
+        }
+      }
+      
+      if (hasPastEmails) {
+        toast({
+          title: "Cannot delete task",
+          description: "This task contains emails with past scheduled dates and cannot be deleted.",
+          variant: "destructive"
+        });
+        setIsDeletingTask(false);
+        return;
+      }
+      
+      // Delete each email since no past dates were found
       let deletedEmails = 0;
       for (const email of emailRecords) {
         await airtableTasksApi.delete(`/${email.id}`);
