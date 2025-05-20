@@ -68,8 +68,19 @@ const EmailListCard = ({
     
     try {
       setIsConnecting(true);
-      // Pass the current user ID when connecting a list
-      const userId = user?.id || '';
+      // Make sure we have a user ID and it's properly formatted as a string
+      if (!user?.id) {
+        toast({
+          title: "Authentication Required",
+          description: "You need to be logged in to connect lists.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const userId = String(user.id).trim();
+      console.log('Connecting list with user ID:', userId);
+      
       const success = await saveSelectedLists(userId, [list as EmailList], agentName);
       
       if (success) {

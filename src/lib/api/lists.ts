@@ -104,10 +104,12 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
   try {
     console.log('Saving selected lists for user:', userId, selectedLists);
     
-    // Ensure userId is a string - Airtable won't accept numbers for the id_users field
+    // Ensure userId is a string and is valid for Airtable
+    // Airtable may require specific formatting for ID fields
     const userIdString = String(userId).trim();
     
-    console.log('Using formatted user ID:', userIdString);
+    // Additional log to see the exact value being sent
+    console.log('Using formatted user ID for Airtable:', userIdString);
     
     // Create records for Airtable with the correct column names
     const records = selectedLists.map(list => {
@@ -118,16 +120,18 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
         fields: {
           list_name: list.name,
           list_description: list.sender_reminder || '',
-          list_insight: list.insight || '', // Using lowercase 'insight' to match our interface
+          list_insight: list.insight || '',
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          id_users: userIdString, // Ensuring we're using a string for the user ID
+          // Add numeric attribute to ensure Airtable accepts the ID
+          // Some Airtable tables expect IDs to be numeric even when passed as strings
+          id_users: isNaN(Number(userIdString)) ? userIdString : String(Number(userIdString))
         }
       };
     });
     
-    console.log('Sending records to Airtable:', records);
+    console.log('Sending records to Airtable:', JSON.stringify(records));
     
     // Save to Airtable
     const response = await axios.post(
