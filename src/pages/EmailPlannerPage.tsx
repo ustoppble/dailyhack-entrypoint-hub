@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,8 @@ import {
   fetchAutopilotRecords,
   AutopilotRecord,
   fetchCampaignGoals,
-  CampaignGoal
+  CampaignGoal,
+  checkExistingAutopilot
 } from '@/lib/api-service';
 import { airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
 
@@ -177,6 +179,18 @@ const EmailPlannerPage = () => {
         // Create record in Airtable autopilot table
         const cronId = values.emailFrequency === "once" ? 1 : 2;
         
+        // Check if an autopilot already exists for this list and schedule
+        const existingAutopilot = await checkExistingAutopilot(activeListId, cronId, agentName || '');
+        if (existingAutopilot) {
+          console.error(`Autopilot already exists for list ${activeListId} with cron ${cronId}`);
+          toast({
+            title: "Autopilot already exists",
+            description: `An email autopilot already exists for "${selectedList.name}" with the same schedule`,
+            variant: "destructive",
+          });
+          continue;
+        }
+        
         console.log("Creating autopilot record with next_update:", nextUpdateString);
         
         // First, create the autopilot record with next_update field
@@ -295,6 +309,7 @@ const EmailPlannerPage = () => {
               lists={lists}
               onSubmit={onSubmit}
               isSubmitting={isSubmitting}
+              agentName={agentName || ''}
             />
           </>
         )}

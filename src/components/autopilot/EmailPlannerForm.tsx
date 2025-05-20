@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,11 +32,13 @@ import {
 } from '@/components/ui/select';
 import { Zap, Link, Loader2, AlertCircle } from 'lucide-react';
 import { CampaignGoal } from '@/lib/api/goals';
+import { checkExistingAutopilot } from '@/lib/api/lists';
 
 interface ListItem {
   id: string;
   name: string;
   hasAutopilot?: boolean;
+  list_id?: string;
 }
 
 // Form schema
@@ -59,15 +61,21 @@ interface EmailPlannerFormProps {
   lists: ListItem[];
   onSubmit: (values: EmailPlannerFormValues) => Promise<void>;
   isSubmitting: boolean;
+  agentName: string;
 }
 
 const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({ 
   campaignGoals, 
   lists, 
   onSubmit, 
-  isSubmitting 
+  isSubmitting,
+  agentName 
 }) => {
   const [selectedGoal, setSelectedGoal] = React.useState<CampaignGoal | null>(null);
+  const [selectedLists, setSelectedLists] = useState<string[]>([]);
+  const [emailFrequency, setEmailFrequency] = useState<string>('once');
+  const [buttonDisabled, setButtonDisabled] = useState<boolean>(false);
+  const [validationMessage, setValidationMessage] = useState<string>('');
   
   const form = useForm<EmailPlannerFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -83,6 +91,64 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
     const goal = campaignGoals.find(g => g.id === goalId);
     setSelectedGoal(goal || null);
   };
+  
+  // Check if the selected lists already have an autopilot with the same schedule
+  const validateSelectedLists = async () => {
+    if (!selectedLists.length) return;
+    
+    setButtonDisabled(true);
+    setValidationMessage('');
+    
+    try {
+      // Convert email frequency to cronId (1 for once, 2 for twice)
+      const cronId = emailFrequency === 'once' ? 1 : 2;
+      
+      for (const listId of selectedLists) {
+        // Skip lists that already have autopilot (as marked by the parent component)
+        const list = lists.find(l => l.id === listId);
+        if (!list || list.hasAutopilot) continue;
+        
+        // Use the list_id from the list object for checking
+        const activeListId = list.list_id || listId;
+        
+        // Check if an autopilot already exists for this list and schedule
+        const exists = await checkExistingAutopilot(activeListId, cronId, agentName);
+        
+        if (exists) {
+          setValidationMessage(`An email autopilot already exists for "${list.name}" with the same schedule (${emailFrequency === 'once' ? '1 email per day' : '2 emails per day'}). Please choose a different list or schedule.`);
+          setButtonDisabled(true);
+          return;
+        }
+      }
+      
+      // If we got here, all lists are valid
+      setButtonDisabled(false);
+      
+    } catch (error) {
+      console.error('Error validating selected lists:', error);
+      setValidationMessage('An error occurred while validating selected lists');
+      setButtonDisabled(false);
+    }
+  };
+  
+  // When selected lists or email frequency changes, validate again
+  useEffect(() => {
+    // Track the current lists selection from form state
+    const formSelectedLists = form.watch('selectedLists') || [];
+    setSelectedLists(formSelectedLists);
+    
+    // Track the current email frequency from form state
+    const formEmailFrequency = form.watch('emailFrequency') || 'once';
+    setEmailFrequency(formEmailFrequency);
+    
+    // Only validate if we have selected lists
+    if (formSelectedLists.length > 0) {
+      validateSelectedLists();
+    } else {
+      setButtonDisabled(false);
+      setValidationMessage('');
+    }
+  }, [form.watch('selectedLists'), form.watch('emailFrequency')]);
   
   return (
     <Card className="shadow-md mb-6">
@@ -260,10 +326,18 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
               )}
             />
             
+            {/* Validation message for duplicate autopilots */}
+            {validationMessage && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{validationMessage}</AlertDescription>
+              </Alert>
+            )}
+            
             <div className="flex justify-end">
               <Button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || buttonDisabled || !!validationMessage}
                 className="px-8"
               >
                 {isSubmitting ? (

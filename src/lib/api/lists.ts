@@ -1,10 +1,10 @@
-
 import axios from 'axios';
 import { EmailList } from './types';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
 
 const WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
 const AIRTABLE_LISTS_TABLE_ID = 'tblhqy7BdNwj0SPHD';
+const AIRTABLE_UPDATES_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
 
 /**
  * Fetch email lists from ActiveCampaign via n8n webhook
@@ -190,5 +190,44 @@ export const deleteConnectedList = async (airtableRecordId: string): Promise<boo
       console.error('Response status:', error.response.status);
     }
     throw error;
+  }
+};
+
+/**
+ * Check if an autopilot already exists for a specific list and schedule
+ */
+export const checkExistingAutopilot = async (
+  listId: string | number,
+  cronId: number,
+  agentName: string
+): Promise<boolean> => {
+  try {
+    console.log(`Checking for existing autopilot for list ${listId} with cron ${cronId}`);
+    
+    // Convert listId to number for comparison with database values
+    const numericListId = Number(listId);
+    
+    // Build the filter formula to find matching autopilot records
+    const filterByFormula = `AND({id_list}=${numericListId}, {url}='${agentName}', {id_cron}=${cronId})`;
+    
+    const encodedFilter = encodeURIComponent(filterByFormula);
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_UPDATES_TABLE_ID}?filterByFormula=${encodedFilter}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Check existing autopilot response:', response.data);
+    
+    // If any records are found, an autopilot already exists
+    return response.data && response.data.records && response.data.records.length > 0;
+  } catch (error: any) {
+    console.error('Error checking for existing autopilot:', error);
+    // Default to false if there's an error
+    return false;
   }
 };
