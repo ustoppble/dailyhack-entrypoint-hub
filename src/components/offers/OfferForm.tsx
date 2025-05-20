@@ -89,54 +89,66 @@ const OfferForm = ({
       const response = await fetchWebsiteData(link, style);
       console.log('Raw Firecrawl response:', response);
       
-      // Parse the response based on its structure
+      // Handle the array response format we're getting from the webhook
       if (Array.isArray(response)) {
-        // Handle array response format
         console.log('Processing array response:', response);
-        if (response.length > 0 && response[0].output) {
-          const output = response[0].output;
-          console.log('Found output in array item:', output);
+        
+        // Get the first item in the array
+        if (response.length > 0) {
+          const firstItem = response[0];
+          console.log('Examining first item in array:', firstItem);
           
-          if (output.title) {
-            console.log('Setting title:', output.title);
-            form.setValue('offer_name', output.title);
-          }
-          
-          if (output.goal) {
-            console.log('Setting goal:', output.goal);
-            form.setValue('goal', output.goal);
+          // Check if it has an output object
+          if (firstItem.output) {
+            console.log('Found output object:', firstItem.output);
+            
+            // Extract title and goal from the output object
+            if (firstItem.output.title) {
+              console.log('Setting offer_name from title:', firstItem.output.title);
+              form.setValue('offer_name', firstItem.output.title);
+            }
+            
+            if (firstItem.output.goal) {
+              console.log('Setting goal:', firstItem.output.goal);
+              form.setValue('goal', firstItem.output.goal);
+            }
           }
         }
-      } else if (response && typeof response === 'object') {
-        // Handle object response format
+      } 
+      // Handle single object response
+      else if (response && typeof response === 'object') {
         console.log('Processing object response:', response);
         
-        // Check for error response
+        // Check for error
         if (response.error) {
           throw new Error(response.error);
         }
         
-        // First check if there's an output object
+        // Check if the response has an output object
         if (response.output) {
-          console.log('Found output in response object:', response.output);
+          console.log('Found output in object:', response.output);
           
           if (response.output.title) {
+            console.log('Setting offer_name from title:', response.output.title);
             form.setValue('offer_name', response.output.title);
           }
           
           if (response.output.goal) {
+            console.log('Setting goal:', response.output.goal);
             form.setValue('goal', response.output.goal);
           }
-        } 
-        // Fallback to direct properties
+        }
+        // Direct properties on the response object
         else {
-          console.log('Using direct properties from response');
+          console.log('Checking direct properties');
           
-          if (response.offer_name) {
-            form.setValue('offer_name', response.offer_name);
+          if (response.title) {
+            console.log('Setting offer_name from direct title:', response.title);
+            form.setValue('offer_name', response.title);
           }
           
           if (response.goal) {
+            console.log('Setting goal from direct goal:', response.goal);
             form.setValue('goal', response.goal);
           }
         }
