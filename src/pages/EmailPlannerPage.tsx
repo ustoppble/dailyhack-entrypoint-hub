@@ -248,7 +248,7 @@ const EmailPlannerPage = () => {
             lists: [activeListId], // Use the actual list_id here
             userId: user.id, // Add user ID that is logged in
             id_autopilot: autopilotId,
-            id_autopilot_task: taskId,
+            id_autopilot_task: taskId, // Include the autopilot task ID in the webhook payload
             mainGoal: selectedGoalData.goal || '', // Use goal field
             goal: selectedGoalData.goal || '',
             offer_name: selectedGoalData.offer_name || '',
