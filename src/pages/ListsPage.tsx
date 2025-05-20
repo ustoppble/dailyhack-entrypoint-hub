@@ -73,6 +73,7 @@ const ListsPage = () => {
           integrations={integrations} 
           onAddNew={handleAddNewIntegration} 
           agentFilter={showingForAgent}
+          userId={user?.id} // Pass the user ID to IntegrationGrid
         />
         <Separator className="my-8" />
       </>

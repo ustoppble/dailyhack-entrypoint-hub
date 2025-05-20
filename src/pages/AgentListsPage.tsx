@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ListPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PageHeader from '@/components/autopilot/PageHeader';
+import { useAuth } from '@/contexts/AuthContext'; // Add this import
 
 interface ConnectedList {
   id: string;
@@ -25,10 +26,11 @@ const AgentListsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [connectedLists, setConnectedLists] = useState<ConnectedList[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth(); // Add this to get the user
 
   useEffect(() => {
     loadConnectedLists();
-  }, [agentName]);
+  }, [agentName, user?.id]); // Add user?.id as a dependency
   
   const loadConnectedLists = async () => {
     if (!agentName) return;
@@ -37,7 +39,8 @@ const AgentListsPage = () => {
       setLoading(true);
       setError(null);
       
-      const lists = await fetchConnectedLists(agentName);
+      // Pass user ID when fetching connected lists
+      const lists = await fetchConnectedLists(agentName, user?.id);
       console.log('Fetched lists:', lists);
       setConnectedLists(lists);
     } catch (err) {

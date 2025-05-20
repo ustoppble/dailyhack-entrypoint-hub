@@ -72,7 +72,8 @@ const FetchListsPage = () => {
     const loadConnectedLists = async () => {
       try {
         setConnectedListsLoading(true);
-        const connectedLists = await fetchConnectedLists(agentName);
+        // Pass the user ID when fetching connected lists
+        const connectedLists = await fetchConnectedLists(agentName, user.id);
         
         // Extract IDs from connected lists
         const connectedIds = connectedLists.map(list => list.id);

@@ -10,9 +10,10 @@ interface IntegrationGridProps {
   integrations: {id: string, api: string}[];
   onAddNew: () => void;
   agentFilter?: string | null;
+  userId?: string; // Add userId parameter
 }
 
-const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null }: IntegrationGridProps) => {
+const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null, userId }: IntegrationGridProps) => {
   const [connectedListIds, setConnectedListIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,7 +23,8 @@ const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null }: Integra
       
       try {
         setIsLoading(true);
-        const lists = await fetchConnectedLists(agentFilter);
+        // Pass the userId to fetchConnectedLists
+        const lists = await fetchConnectedLists(agentFilter, userId);
         const listIds = lists.map(list => list.id);
         setConnectedListIds(listIds);
         console.log("Connected list IDs:", listIds);
@@ -34,7 +36,7 @@ const IntegrationGrid = ({ integrations, onAddNew, agentFilter = null }: Integra
     };
     
     loadConnectedLists();
-  }, [agentFilter]);
+  }, [agentFilter, userId]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
