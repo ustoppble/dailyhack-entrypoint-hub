@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -51,7 +50,7 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
       // First, get all tasks for this autopilot
       const tasksResponse = await airtableAutopilotTasksApi.get('', {
         params: {
-          filterByFormula: `{id_autopilot}='${autopilot.id_autopilot}'`
+          filterByFormula: `{id_autopilot}='${autopilot.id}'`
         }
       });
       
@@ -209,18 +208,18 @@ const ActiveAutopilots: React.FC<ActiveAutopilotsProps> = ({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="gap-1"
-                    onClick={() => onManageAutopilot(autopilot)}
-                  >
-                    <Settings className="h-4 w-4" /> Manage
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
                     className="gap-1 border-red-500 text-red-500 hover:bg-red-50"
                     onClick={() => handleDeleteTask(autopilot)}
                   >
                     <Trash2 className="h-4 w-4" /> Delete Tasks
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1"
+                    onClick={() => onManageAutopilot(autopilot)}
+                  >
+                    <Settings className="h-4 w-4" /> Manage
                   </Button>
                 </div>
               </div>

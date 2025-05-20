@@ -19,6 +19,7 @@ export interface AutopilotRecord {
   active?: boolean; // Added for compatibility with ManageAutopilotForm
   status?: number; // Add status property
   id_user?: number; // Add user ID property
+  id_autopilot?: number; // Add id_autopilot property
 }
 
 // Interface for email records

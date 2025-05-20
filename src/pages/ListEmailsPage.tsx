@@ -377,6 +377,17 @@ const ListEmailsPage = () => {
     }
   };
 
+  // Status badge for emails
+  const getStatusBadge = (status: number) => {
+    const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
+    
+    if (statusNum === 1) {
+      return <Badge variant="default" className="bg-green-500">Approved</Badge>;
+    } else {
+      return <Badge variant="secondary">Draft</Badge>;
+    }
+  };
+
   const handleViewEmail = (emailId: string) => {
     if (agentName) {
       navigate(`/agents/${agentName}/email/${emailId}`);
@@ -605,7 +616,7 @@ const ListEmailsPage = () => {
           failCount++;
           continue;
         }
-
+        
         // Check if the email send date is in the future
         const emailDate = emailRecord.date_set ? new Date(emailRecord.date_set) : new Date(emailRecord.date || "");
         const now = new Date();
