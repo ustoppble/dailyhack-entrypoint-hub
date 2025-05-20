@@ -30,6 +30,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from '@/lib/api/constants';
 import axios from 'axios';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 // Define types for our new data
 interface Task {
@@ -73,6 +75,9 @@ const ListEmailsPage = () => {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [isInitiatingProduction, setIsInitiatingProduction] = useState(false);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
+  
+  // Add state for email frequency
+  const [emailFrequency, setEmailFrequency] = useState<number>(1);
 
   useEffect(() => {
     loadEmails();
@@ -819,7 +824,10 @@ const ListEmailsPage = () => {
         // Include other data as needed
         agentName: agentName,
         lists: [Number(listId)],
-        forceUpdate: true
+        forceUpdate: true,
+        
+        // Add the email frequency selection
+        emailFrequency: emailFrequency
       };
       
       console.log('Starting new email production with data:', requestData);
@@ -1026,23 +1034,42 @@ const ListEmailsPage = () => {
         {/* Next Update Information with Production Button */}
         {nextUpdate && !selectedTaskId && (
           <Card className="mb-6">
-            <CardContent className="pt-6 flex justify-between items-center">
+            <CardContent className="pt-6 flex flex-col sm:flex-row justify-between gap-4">
               <div className="flex items-center gap-2 text-amber-600">
-                <Calendar className="h-5 w-5" />
+                <Calendar className="h-5 w-5 flex-shrink-0" />
                 <p className="font-medium">
                   Next scheduled update: {formatTaskDate(nextUpdate)}
                 </p>
               </div>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleStartProduction}
-                disabled={isInitiatingProduction || !autopilotId}
-                className="flex items-center gap-2"
-              >
-                <PlayCircle className="h-4 w-4" />
-                {isInitiatingProduction ? 'Starting...' : 'Start Production Now'}
-              </Button>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                {/* Email Frequency Selector */}
+                <RadioGroup 
+                  value={emailFrequency.toString()} 
+                  onValueChange={(value) => setEmailFrequency(parseInt(value))}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id="r1" />
+                    <Label htmlFor="r1">1x per day</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2" id="r2" />
+                    <Label htmlFor="r2">2x per day</Label>
+                  </div>
+                </RadioGroup>
+                
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleStartProduction}
+                  disabled={isInitiatingProduction || !autopilotId}
+                  className="flex items-center gap-2"
+                >
+                  <PlayCircle className="h-4 w-4" />
+                  {isInitiatingProduction ? 'Starting...' : 'Start Production Now'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
