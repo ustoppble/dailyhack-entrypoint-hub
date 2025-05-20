@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -49,6 +50,10 @@ interface FirecrawlResponse {
   offer_name?: string;
   goal?: string;
   message?: string;
+  output?: {
+    title?: string;
+    goal?: string;
+  };
 }
 
 const OfferForm = ({
@@ -97,12 +102,27 @@ const OfferForm = ({
         throw new Error(data.error || 'Failed to fetch website data');
       }
       
-      if (data.offer_name) {
-        form.setValue('offer_name', data.offer_name);
-      }
-      
-      if (data.goal) {
-        form.setValue('goal', data.goal);
+      // Handle the new response format
+      if (data.output) {
+        // Handle array or single object response
+        const output = Array.isArray(data) && data.length > 0 ? data[0].output : data.output;
+        
+        if (output?.title) {
+          form.setValue('offer_name', output.title);
+        }
+        
+        if (output?.goal) {
+          form.setValue('goal', output.goal);
+        }
+      } else {
+        // Fallback to the old format
+        if (data.offer_name) {
+          form.setValue('offer_name', data.offer_name);
+        }
+        
+        if (data.goal) {
+          form.setValue('goal', data.goal);
+        }
       }
       
     } catch (error) {

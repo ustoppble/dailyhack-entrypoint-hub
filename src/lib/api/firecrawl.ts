@@ -10,6 +10,10 @@ interface FirecrawlResponse {
   goal?: string;
   message?: string;
   error?: string;
+  output?: {
+    title?: string;
+    goal?: string;
+  };
 }
 
 /**
@@ -21,7 +25,7 @@ export async function fetchWebsiteData(link: string, style: string): Promise<Fir
   try {
     console.log('Sending request to Firecrawl with:', { style, link });
     
-    const response = await fetch('https://primary-production-2e546.up.railway.app/webhook-test/firecrawl', {
+    const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
