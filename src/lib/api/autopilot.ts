@@ -1,3 +1,4 @@
+
 import { airtableApi, airtableAutopilotTasksApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
@@ -25,12 +26,15 @@ export interface AutopilotRecord {
   next_update?: string; // Add next_update property
 }
 
-// Interface for autopilot task record
+/**
+ * Interface for autopilot task record
+ * @property {number} status - Task status: 0 = In Progress, 1 = Produced, 2 = Sent
+ */
 export interface AutopilotTaskRecord {
   id: string;
   id_autopilot_task?: number;
   id_autopilot?: number;
-  status?: string | number;
+  status?: number; // Changed from string | number to just number
   id_user?: number;
   first_email?: string;
   last_email?: string;
@@ -52,19 +56,25 @@ export interface EmailRecord {
   id_autopilot_task?: number; // Add id_autopilot_task to the interface
 }
 
-// Create a new autopilot task
+/**
+ * Create a new autopilot task
+ * @param autopilotId - The ID of the autopilot
+ * @param userId - The ID of the user
+ * @returns Promise with success status, task ID and record data
+ */
 export const createAutopilotTask = async (
   autopilotId: number,
   userId: number
 ): Promise<{success: boolean, taskId?: number, record?: any}> => {
   try {
     // Create the record data with the required fields
+    // Convert status number to string since Airtable expects a string for this field
     const recordData = {
       records: [
         {
           fields: {
             "id_autopilot": autopilotId,
-            "status": 0,
+            "status": "0", // Change to string "0" since Airtable expects a string
             "id_user": userId
           }
         }

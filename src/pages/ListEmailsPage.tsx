@@ -391,15 +391,15 @@ const ListEmailsPage = () => {
   };
 
   // Get task status badge with correct coloring based on status
-  const getTaskStatusBadge = (status?: string) => {
-    if (!status) return <Badge variant="secondary">Unknown</Badge>;
+  const getTaskStatusBadge = (status?: string | number) => {
+    if (status === undefined || status === null) return <Badge variant="secondary">Unknown</Badge>;
     
     // Convert status to number if it's a string
-    const statusNum = parseInt(status, 10);
+    const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
     
     switch(statusNum) {
       case 0:
-        return <Badge variant="secondary">In Production</Badge>;
+        return <Badge variant="secondary">In Progress</Badge>;
       case 1:
         return <Badge variant="default" className="bg-blue-500">Produced</Badge>;
       case 2:
