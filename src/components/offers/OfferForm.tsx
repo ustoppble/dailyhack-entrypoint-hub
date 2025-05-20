@@ -86,44 +86,63 @@ const OfferForm = ({
     setFirecrawlError(null); // Clear previous errors
     
     try {
-      const data = await fetchWebsiteData(link, style);
-      console.log('Received Firecrawl data:', data);
+      const response = await fetchWebsiteData(link, style);
+      console.log('Raw Firecrawl response:', response);
       
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch website data');
-      }
-      
-      // Handle array or single object response
-      if (Array.isArray(data) && data.length > 0) {
-        // If data is an array
-        const firstItem = data[0];
-        if (firstItem.output) {
-          console.log('Found output in array response:', firstItem.output);
-          if (firstItem.output.title) {
-            form.setValue('offer_name', firstItem.output.title);
+      // Parse the response based on its structure
+      if (Array.isArray(response)) {
+        // Handle array response format
+        console.log('Processing array response:', response);
+        if (response.length > 0 && response[0].output) {
+          const output = response[0].output;
+          console.log('Found output in array item:', output);
+          
+          if (output.title) {
+            console.log('Setting title:', output.title);
+            form.setValue('offer_name', output.title);
           }
-          if (firstItem.output.goal) {
-            form.setValue('goal', firstItem.output.goal);
+          
+          if (output.goal) {
+            console.log('Setting goal:', output.goal);
+            form.setValue('goal', output.goal);
           }
         }
-      } else if (data.output) {
-        // If data directly contains output
-        console.log('Found output in direct response:', data.output);
-        if (data.output.title) {
-          form.setValue('offer_name', data.output.title);
+      } else if (response && typeof response === 'object') {
+        // Handle object response format
+        console.log('Processing object response:', response);
+        
+        // Check for error response
+        if (response.error) {
+          throw new Error(response.error);
         }
-        if (data.output.goal) {
-          form.setValue('goal', data.output.goal);
+        
+        // First check if there's an output object
+        if (response.output) {
+          console.log('Found output in response object:', response.output);
+          
+          if (response.output.title) {
+            form.setValue('offer_name', response.output.title);
+          }
+          
+          if (response.output.goal) {
+            form.setValue('goal', response.output.goal);
+          }
+        } 
+        // Fallback to direct properties
+        else {
+          console.log('Using direct properties from response');
+          
+          if (response.offer_name) {
+            form.setValue('offer_name', response.offer_name);
+          }
+          
+          if (response.goal) {
+            form.setValue('goal', response.goal);
+          }
         }
       } else {
-        // Fallback to old format
-        console.log('Using fallback format');
-        if (data.offer_name) {
-          form.setValue('offer_name', data.offer_name);
-        }
-        if (data.goal) {
-          form.setValue('goal', data.goal);
-        }
+        console.error('Unexpected response format:', response);
+        throw new Error('Invalid response format from Firecrawl API');
       }
       
     } catch (error) {

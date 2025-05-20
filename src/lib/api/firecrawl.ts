@@ -21,7 +21,7 @@ interface FirecrawlResponse {
  * @param link - Website URL to analyze
  * @param style - Content style to analyze for
  */
-export async function fetchWebsiteData(link: string, style: string): Promise<FirecrawlResponse> {
+export async function fetchWebsiteData(link: string, style: string): Promise<any> {
   try {
     console.log('Sending request to Firecrawl with:', { style, link });
     
@@ -46,10 +46,8 @@ export async function fetchWebsiteData(link: string, style: string): Promise<Fir
       };
     }
     
-    return {
-      success: true,
-      ...data
-    };
+    // Return the raw response - we'll handle parsing in the component
+    return data;
     
   } catch (error) {
     console.error('Error fetching website data:', error);
