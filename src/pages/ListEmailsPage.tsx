@@ -810,8 +810,8 @@ const ListEmailsPage = () => {
       console.log('Production webhook response:', response.data);
       
       toast({
-        title: "Production Started",
-        description: "New email production has been initiated",
+        title: "Produção Iniciada",
+        description: "Nova produção de e-mails foi iniciada",
       });
       
       // Refresh data to show any changes
@@ -821,8 +821,8 @@ const ListEmailsPage = () => {
     } catch (err: any) {
       console.error('Error starting email production:', err);
       toast({
-        title: "Production Error",
-        description: err.message || "Failed to start email production",
+        title: "Erro na Produção",
+        description: err.message || "Falha ao iniciar a produção de e-mails",
         variant: "destructive"
       });
     } finally {
@@ -863,7 +863,7 @@ const ListEmailsPage = () => {
                 className="flex items-center gap-2"
               >
                 <PlayCircle className="h-4 w-4" />
-                {isInitiatingProduction ? 'Starting...' : 'Start Production Now'}
+                {isInitiatingProduction ? 'Iniciando...' : 'Antecipar Produção'}
               </Button>
             </CardContent>
           </Card>
