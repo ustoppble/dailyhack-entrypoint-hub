@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Calendar, PlayCircle } from 'lucide-react'; // Add missing icon imports
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button'; // Import Button from shadcn UI
 import StatusMessage from '@/components/integration/StatusMessage';
 import LoadingState from '@/components/lists/LoadingState';
 import axios from 'axios';
