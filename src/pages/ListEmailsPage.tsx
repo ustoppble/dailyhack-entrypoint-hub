@@ -845,13 +845,32 @@ const ListEmailsPage = () => {
       nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
       nextUpdateDate.setHours(0, 0, 0, 0);
       
-      // Update the autopilot record with the new next_update date
+      // Use the autopilotApi to update the record in the autopilot table
+      // Note: We need to use the autopilot table (AIRTABLE_AUTOPILOT_TABLE_ID), not the updates table
+      const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblfN4S5R9BNqT5Zk/${autopilotRecordId}`;
+      
       console.log('Updating autopilot record with ID:', autopilotRecordId);
-      await airtableUpdatesApi.patch(`/${autopilotRecordId}`, {
-        fields: {
-          next_update: nextUpdateDate.toISOString()
-        }
+      console.log('New next_update value:', nextUpdateDate.toISOString());
+      
+      // Direct fetch call to update the autopilot record
+      const updateResponse = await fetch(autopilotApiUrl, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fields: {
+            next_update: nextUpdateDate.toISOString()
+          }
+        })
       });
+      
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        console.error('Airtable API error when updating autopilot:', errorData);
+        throw new Error(`Airtable API error: ${updateResponse.status}`);
+      }
       
       console.log('Autopilot next_update updated to:', nextUpdateDate.toISOString());
       
