@@ -19,8 +19,10 @@ import {
   getAutopilotIdForList, 
   createAutopilotTask,
   getAutopilotRecordById,
-  AutopilotRecord
-} from '@/lib/api/autopilot';
+  AutopilotRecord,
+  CampaignGoal,
+  fetchCampaignGoals
+} from '@/lib/api-service';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
