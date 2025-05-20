@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/use-toast';
 import { fetchIntegrationByUserAndAgent, updateActiveCampaignIntegration, verifyActiveCampaignCredentials } from '@/lib/api-service';
@@ -15,6 +17,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 const integrationSchema = z.object({
   apiUrl: z.string().url('Must be a valid URL'),
   apiToken: z.string().min(1, 'API Token is required'),
+  timezone: z.string().optional(),
+  approver: z.boolean().default(false),
 });
 
 type IntegrationFormValues = z.infer<typeof integrationSchema>;
@@ -31,12 +35,30 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
   const [isLoading, setIsLoading] = useState(false);
   const [integrationId, setIntegrationId] = useState<string | null>(null);
 
+  // List of common timezones
+  const timezones = [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Sao_Paulo',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Asia/Tokyo',
+    'Asia/Shanghai',
+    'Australia/Sydney',
+    'Pacific/Auckland',
+  ];
+
   // Initialize form with validation
   const form = useForm<IntegrationFormValues>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
       apiUrl: '',
       apiToken: '',
+      timezone: 'America/New_York',
+      approver: false,
     }
   });
 
@@ -67,6 +89,8 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
         form.reset({
           apiUrl: formattedApiUrl,
           apiToken: integration.token || '',
+          timezone: integration.timezone || 'America/New_York',
+          approver: integration.approver === 1 ? true : false,
         });
       } else {
         toast({
@@ -112,6 +136,8 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
         userId: userId,
         apiUrl: data.apiUrl,
         apiToken: data.apiToken,
+        timezone: data.timezone,
+        approver: data.approver ? 1 : 0,
       });
       
       if (updateSuccess) {
@@ -186,6 +212,60 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
                     Your ActiveCampaign API token
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="timezone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Timezone</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {timezones.map((timezone) => (
+                        <SelectItem key={timezone} value={timezone}>
+                          {timezone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Select your local timezone for accurate scheduling
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="approver"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Auto-approve emails</FormLabel>
+                    <FormDescription>
+                      When enabled, emails will be sent without requiring manual approval
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

@@ -150,7 +150,9 @@ export const updateActiveCampaignIntegration = async (
     console.log('Updating integration with:', {
       userId: integration.userId,
       apiUrl: integration.apiUrl,
-      apiToken: integration.apiToken.substring(0, 5) + '***'
+      apiToken: integration.apiToken.substring(0, 5) + '***',
+      timezone: integration.timezone,
+      approver: integration.approver
     });
     
     // Extract account name from API URL
@@ -173,6 +175,8 @@ export const updateActiveCampaignIntegration = async (
               id_users: integration.userId, // Provide as a single string value, not an array
               api: accountName,
               token: integration.apiToken,
+              timezone: integration.timezone || 'America/New_York',
+              approver: integration.approver || 0,
               DateCreated: now
             },
           },
@@ -247,7 +251,7 @@ export const fetchUserIntegrations = async (userId: string, includeTokens: boole
 /**
  * Fetch a specific integration by user ID and agent name
  */
-export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: string): Promise<{id: string, api: string, token: string} | null> => {
+export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: string): Promise<{id: string, api: string, token: string, timezone?: string, approver?: number} | null> => {
   try {
     console.log(`Fetching integration for user ${userId} and agent ${agentName}`);
     
@@ -263,7 +267,9 @@ export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: 
       return {
         id: record.id,
         api: record.fields.api || agentName,
-        token: record.fields.token || ''
+        token: record.fields.token || '',
+        timezone: record.fields.timezone || 'America/New_York',
+        approver: record.fields.approver !== undefined ? Number(record.fields.approver) : 0
       };
     }
     

@@ -14,6 +14,8 @@ export interface ACIntegration {
   userId: string;
   apiUrl: string;
   apiToken: string;
+  timezone?: string;
+  approver?: number;
 }
 
 export interface VerificationResult {
