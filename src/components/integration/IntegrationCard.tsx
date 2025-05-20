@@ -59,8 +59,8 @@ const IntegrationCard = ({ id, name, filterMode = false, connectedIds = [], agen
     try {
       // Create a dummy EmailList object with the required fields
       const listToConnect: EmailList = {
-        id: id,
-        name: name,
+        id,
+        name,
         sender_reminder: '',
         insight: '',
         active_subscribers: '0'
@@ -70,28 +70,20 @@ const IntegrationCard = ({ id, name, filterMode = false, connectedIds = [], agen
       const userId = localStorage.getItem('user_id') || '';
       
       // Save the list as connected to the agent
-      const success = await saveSelectedLists(userId, [listToConnect], agentName);
+      await saveSelectedLists(userId, [listToConnect], agentName);
       
-      if (success) {
-        toast({
-          title: "List Connected",
-          description: `Successfully connected list "${name}" to agent "${agentName}"`,
-        });
-        
-        // Refresh the page to show the updated list
-        window.location.reload();
-      } else {
-        toast({
-          title: "Connection Failed",
-          description: "Failed to connect the list to the agent.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "List Connected",
+        description: `Successfully connected list "${name}" to agent "${agentName}"`,
+      });
+      
+      // Refresh the page to show the updated list
+      window.location.reload();
     } catch (error) {
       console.error('Error connecting list:', error);
       toast({
-        title: "Connection Error",
-        description: "An error occurred while connecting the list.",
+        title: "Connection Failed",
+        description: "Failed to connect the list to the agent.",
         variant: "destructive",
       });
     }
