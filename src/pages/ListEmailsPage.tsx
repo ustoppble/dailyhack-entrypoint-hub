@@ -775,6 +775,19 @@ const ListEmailsPage = () => {
         throw new Error("Failed to fetch autopilot record details");
       }
 
+      // NEW CODE: Fetch campaign goals for the current agent and user ID
+      const campaignGoals = await fetchCampaignGoals(agentName, String(userId));
+      console.log('Fetched campaign goals:', campaignGoals);
+      
+      // NEW CODE: Find the matching campaign goal based on the id_offer from autopilot record
+      let matchingGoal: CampaignGoal | undefined;
+      const numericOfferId = autopilotRecord.offerId ? getNumericOfferId(autopilotRecord.offerId) : null;
+      
+      if (numericOfferId) {
+        matchingGoal = campaignGoals.find(goal => goal.id_offer === numericOfferId);
+        console.log(`Looking for goal with id_offer=${numericOfferId}, found:`, matchingGoal);
+      }
+
       // Step 2: Send webhook POST request with required data
       // Webhook URL for triggering production
       const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
@@ -791,8 +804,12 @@ const ListEmailsPage = () => {
         id_autopilot: autopilotIdNum,
         id_list: Number(listId),
         url: autopilotRecord.url,
-        id_offer: autopilotRecord.offerId ? getNumericOfferId(autopilotRecord.offerId) : null,
+        id_offer: numericOfferId,
         next_update: autopilotRecord.next_update,
+        
+        // NEW CODE: Include campaign goal data if found
+        goal: matchingGoal?.goal || "",
+        offer_name: matchingGoal?.offer_name || "",
         
         // Additional action parameter
         action: "production",
@@ -1106,7 +1123,7 @@ const ListEmailsPage = () => {
         {selectedTaskId && (
           <div className="mb-4 flex justify-between">
             <h2 className="text-xl font-semibold">
-              Emails for Task #{selectedTaskId}
+              Emails for Task #{selectedTaskId} in List {listName}
             </h2>
             <Button
               variant="outline"
