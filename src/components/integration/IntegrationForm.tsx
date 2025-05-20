@@ -45,6 +45,41 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
     await handleSubmit(lastAttemptedData);
     setIsRetrying(false);
   };
+  
+  // Função para disparar o webhook de criação
+  const triggerCreateWebhook = async (integrationData: {
+    userId: string;
+    apiName: string;
+    apiToken: string;
+  }) => {
+    try {
+      console.log('Disparando webhook de criação...');
+      
+      const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/create-webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ID: Date.now(), // Pseudo ID temporário
+          api: integrationData.apiName,
+          token: integrationData.apiToken,
+          id_users: integrationData.userId
+        })
+      });
+      
+      if (response.ok) {
+        console.log('Webhook de criação disparado com sucesso');
+        return true;
+      } else {
+        console.error('Erro ao disparar webhook de criação:', await response.text());
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao disparar webhook de criação:', error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (data: IntegrationFormValues) => {
     setIsLoading(true);
@@ -123,6 +158,20 @@ const IntegrationForm = ({ onError, onSuccess }: IntegrationFormProps) => {
       
       if (success) {
         console.log('Integration successful');
+        
+        // Disparar o webhook de criação
+        const webhookSuccess = await triggerCreateWebhook({
+          userId: userId,
+          apiName: accountName,
+          apiToken: data.apiToken
+        });
+        
+        if (webhookSuccess) {
+          console.log('Webhook de criação processado com sucesso');
+        } else {
+          console.warn('Webhook de criação falhou, mas a integração foi bem-sucedida');
+        }
+        
         toast({
           title: "Integration successful!",
           description: "Your ActiveCampaign account has been connected.",

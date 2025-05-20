@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import './App.css';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/Layout';
@@ -32,8 +32,6 @@ function App() {
         <Routes>
           <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<HomePage />} />
-            {/* Redirect /integrate to /agents */}
-            <Route path="integrate" element={<Navigate to="/agents?mode=add" replace />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:agentName/central" element={<AgentCentralPage />} />
             <Route path="agents/:agentName/lists" element={<AgentListsPage />} />

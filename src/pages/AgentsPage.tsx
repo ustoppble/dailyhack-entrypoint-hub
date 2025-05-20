@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import IntegrationForm from '@/components/integration/IntegrationForm';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { useToast } from '@/hooks/use-toast';
 import IntegrationGrid from '@/components/lists/IntegrationGrid';
-import { fetchUserIntegrations } from '@/lib/api-service';
+import { fetchUserIntegrations } from '@/lib/api/integration';
 
 const AgentsPage = () => {
   const { user } = useAuth();
