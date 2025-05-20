@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { EmailList } from './types';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
@@ -59,7 +60,7 @@ export const fetchConnectedLists = async (agentName: string, userId?: string): P
     // Query Airtable for lists with matching activehosted field and optionally user ID
     let filterByFormula = `{activehosted}='${agentName}'`;
     if (userId) {
-      filterByFormula = `AND(${filterByFormula}, {id_user}=${userId})`;
+      filterByFormula = `AND(${filterByFormula}, {id_users}=${userId})`;
     }
     
     const encodedFilter = encodeURIComponent(filterByFormula);
@@ -113,7 +114,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          id_user: userId, // Add user ID to save with the list
+          id_users: userId, // Corrigido de id_user para id_users
         }
       };
     });
