@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +36,7 @@ const OffersPage = () => {
       setError('Failed to load offers. Please try again later.');
       toast({
         title: "Error",
-        description: "Could not load campaign goals",
+        description: "Could not load offers",
         variant: "destructive",
       });
     } finally {
@@ -82,7 +81,7 @@ const OffersPage = () => {
         <div className="max-w-3xl mx-auto">
           <Card>
             <CardContent className="pt-6">
-              <p className="text-center">Please login to manage campaign goals.</p>
+              <p className="text-center">Please login to manage offers.</p>
             </CardContent>
           </Card>
         </div>
@@ -96,19 +95,19 @@ const OffersPage = () => {
         {agentName && <PageHeader agentName={agentName} />}
 
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Campaign Goals</h1>
+          <h1 className="text-2xl font-bold">Offers</h1>
           <p className="text-gray-500">
-            Create and manage your campaign goals for this agent
+            Create and manage your offers for this agent
           </p>
         </div>
 
         <StatusMessage error={error} success={success} />
 
-        {/* Only show Campaign Goals List Section if there are offers or if it's loading */}
+        {/* Only show Offers List Section if there are offers or if it's loading */}
         {(isLoading || offers.length > 0) && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">All Campaign Goals</h2>
+              <h2 className="text-xl font-semibold">All Offers</h2>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -119,7 +118,7 @@ const OffersPage = () => {
             </div>
             
             {isLoading ? (
-              <LoadingState text="Loading campaign goals..." />
+              <LoadingState text="Loading offers..." />
             ) : (
               <OffersList 
                 offers={offers}
@@ -130,12 +129,12 @@ const OffersPage = () => {
           </div>
         )}
         
-        {/* Create New Campaign Goal Section */}
+        {/* Create New Offer Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Create New Campaign Goal</CardTitle>
+            <CardTitle>Create New Offer</CardTitle>
             <CardDescription>
-              Fill out the form below to create a new campaign goal for your email automation
+              Fill out the form below to create a new offer for your email automation
             </CardDescription>
           </CardHeader>
           <CardContent>
