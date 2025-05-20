@@ -57,13 +57,14 @@ export const fetchConnectedLists = async (agentName: string, userId?: string): P
   try {
     console.log('Fetching connected lists for agent:', agentName, 'and user:', userId);
     
-    // Build the filter formula with proper user ID check
+    // Build the filter formula with user ID as a number
     let filterByFormula = `{activehosted}='${agentName}'`;
     
     // Only include lists that belong to the current user if userId is provided
     if (userId) {
-      // Use the correct field name id_users and ensure it's a string comparison
-      filterByFormula = `AND(${filterByFormula}, {id_users}='${userId}')`;
+      // Convert userId to number and use numeric comparison in formula
+      const userIdNum = Number(userId);
+      filterByFormula = `AND(${filterByFormula}, {id_users}=${userIdNum})`;
     }
     
     const encodedFilter = encodeURIComponent(filterByFormula);
@@ -104,16 +105,20 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
   try {
     console.log('Saving selected lists for user:', userId, selectedLists);
     
-    // Ensure userId is a string and is valid for Airtable
-    // Airtable may require specific formatting for ID fields
-    const userIdString = String(userId).trim();
+    // Convert userId to a number for Airtable
+    const userIdNumber = Number(userId);
     
-    // Additional log to see the exact value being sent
-    console.log('Using formatted user ID for Airtable:', userIdString);
+    // Validate that userIdNumber is actually a valid number
+    if (isNaN(userIdNumber)) {
+      throw new Error('Invalid user ID format. Must be convertible to a number.');
+    }
+    
+    // Log the exact value being sent to Airtable
+    console.log('Using numeric user ID for Airtable:', userIdNumber);
     
     // Create records for Airtable with the correct column names
     const records = selectedLists.map(list => {
-      // Make sure all values are strings
+      // Make sure all values are strings except id_users which is a number
       const subscribersCount = list.active_subscribers ? String(list.active_subscribers).trim() : "0";
       
       return {
@@ -124,9 +129,8 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          // Add numeric attribute to ensure Airtable accepts the ID
-          // Some Airtable tables expect IDs to be numeric even when passed as strings
-          id_users: isNaN(Number(userIdString)) ? userIdString : String(Number(userIdString))
+          // Send id_users as a number to Airtable
+          id_users: userIdNumber
         }
       };
     });

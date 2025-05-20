@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,7 +67,7 @@ const EmailListCard = ({
     
     try {
       setIsConnecting(true);
-      // Make sure we have a user ID and it's properly formatted as a string
+      // Make sure we have a user ID
       if (!user?.id) {
         toast({
           title: "Authentication Required",
@@ -78,7 +77,8 @@ const EmailListCard = ({
         return;
       }
       
-      const userId = String(user.id).trim();
+      // Simply pass the user ID directly - it will be converted to a number in the API
+      const userId = user.id;
       console.log('Connecting list with user ID:', userId);
       
       const success = await saveSelectedLists(userId, [list as EmailList], agentName);
