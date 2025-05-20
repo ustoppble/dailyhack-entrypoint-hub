@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -205,7 +204,7 @@ const ListEmailsPage = () => {
         // If a taskId is provided, filter emails by that task
         const response = await airtableTasksApi.get('', {
           params: {
-            filterByFormula: `AND({list_id} = ${parsedListId}, {activehosted} = "${agentName}", {id_autopilot_task} = '${taskId}')`
+            filterByFormula: `{id_autopilot_task}='${taskId}'`
           }
         });
         
