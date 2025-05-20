@@ -34,6 +34,7 @@ export async function fetchWebsiteData(link: string, style: string): Promise<Fir
     });
     
     const data = await response.json();
+    console.log('Firecrawl API response:', data);
     
     if (!response.ok) {
       console.error('Firecrawl API error:', data);

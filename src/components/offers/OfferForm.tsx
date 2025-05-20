@@ -46,16 +46,6 @@ interface OfferFormProps {
   offerId?: string;
 }
 
-interface FirecrawlResponse {
-  offer_name?: string;
-  goal?: string;
-  message?: string;
-  output?: {
-    title?: string;
-    goal?: string;
-  };
-}
-
 const OfferForm = ({
   onSuccess,
   onError,
@@ -97,29 +87,40 @@ const OfferForm = ({
     
     try {
       const data = await fetchWebsiteData(link, style);
+      console.log('Received Firecrawl data:', data);
       
       if (!data.success) {
         throw new Error(data.error || 'Failed to fetch website data');
       }
       
-      // Handle the new response format
-      if (data.output) {
-        // Handle array or single object response
-        const output = Array.isArray(data) && data.length > 0 ? data[0].output : data.output;
-        
-        if (output?.title) {
-          form.setValue('offer_name', output.title);
+      // Handle array or single object response
+      if (Array.isArray(data) && data.length > 0) {
+        // If data is an array
+        const firstItem = data[0];
+        if (firstItem.output) {
+          console.log('Found output in array response:', firstItem.output);
+          if (firstItem.output.title) {
+            form.setValue('offer_name', firstItem.output.title);
+          }
+          if (firstItem.output.goal) {
+            form.setValue('goal', firstItem.output.goal);
+          }
         }
-        
-        if (output?.goal) {
-          form.setValue('goal', output.goal);
+      } else if (data.output) {
+        // If data directly contains output
+        console.log('Found output in direct response:', data.output);
+        if (data.output.title) {
+          form.setValue('offer_name', data.output.title);
+        }
+        if (data.output.goal) {
+          form.setValue('goal', data.output.goal);
         }
       } else {
-        // Fallback to the old format
+        // Fallback to old format
+        console.log('Using fallback format');
         if (data.offer_name) {
           form.setValue('offer_name', data.offer_name);
         }
-        
         if (data.goal) {
           form.setValue('goal', data.goal);
         }
