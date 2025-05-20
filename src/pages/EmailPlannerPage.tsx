@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,7 +92,7 @@ const EmailPlannerPage = () => {
       setDataReady(true);
     } catch (error) {
       console.error("Error loading data:", error);
-      setError("Failed to load lists or campaign goals data");
+      setError("Failed to load lists or offers data");
     } finally {
       setIsLoading(false);
     }
@@ -120,12 +121,12 @@ const EmailPlannerPage = () => {
       return;
     }
     
-    // Make sure we have a valid goal
+    // Make sure we have a valid offer
     const selectedGoalData = campaignGoals.find(g => g.id === values.campaignGoalId);
     if (!selectedGoalData) {
       toast({
         title: "Error",
-        description: "Please select a valid campaign goal",
+        description: "Please select a valid offer",
         variant: "destructive",
       });
       return;

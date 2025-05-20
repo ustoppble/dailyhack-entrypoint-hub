@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,7 +42,7 @@ interface ListItem {
 // Form schema
 const emailFormSchema = z.object({
   campaignGoalId: z.string({
-    required_error: "Please select a campaign goal",
+    required_error: "Please select an offer",
   }),
   emailFrequency: z.enum(['once', 'twice'], {
     required_error: "Please select how many emails to produce per day",
@@ -97,19 +98,19 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
       <CardContent className="pt-6">
         <Alert className="mb-6">
           <AlertDescription>
-            Activate the autopilot by selecting a campaign goal and how many emails to automatically produce and send. Your agent will handle the content creation.
+            Activate the autopilot by selecting an offer and how many emails to automatically produce and send. Your agent will handle the content creation.
           </AlertDescription>
         </Alert>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Campaign Goal Selection */}
+            {/* Offer Selection */}
             <FormField
               control={form.control}
               name="campaignGoalId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Campaign Goal</FormLabel>
+                  <FormLabel>Offer</FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
@@ -118,7 +119,7 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a campaign offer" />
+                        <SelectValue placeholder="Select an offer" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -134,7 +135,7 @@ const EmailPlannerForm: React.FC<EmailPlannerFormProps> = ({
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="none" disabled>No goals available</SelectItem>
+                        <SelectItem value="none" disabled>No offers available</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
