@@ -28,6 +28,7 @@ interface ListItem {
   id: string;
   name: string;
   hasAutopilot?: boolean;
+  list_id?: string; // Add list_id field to store the actual list_id from ActiveCampaign
 }
 
 const EmailPlannerPage = () => {
@@ -155,6 +156,18 @@ const EmailPlannerPage = () => {
           continue;
         }
         
+        // Get the list_id from the list object (which is the actual list_id from ActiveCampaign)
+        const selectedList = lists.find(list => list.id === listId);
+        if (!selectedList) {
+          console.error(`List with ID ${listId} not found`);
+          continue;
+        }
+        
+        // Use the list_id from the selected list - this is the important change
+        // The list_id should be the actual list_id from ActiveCampaign stored in the list object
+        const activeListId = selectedList.list_id || listId;
+        console.log(`Using list_id ${activeListId} for list ${selectedList.name}`);
+        
         // Calculate next update date - 7 days from now at midnight
         const nextUpdateDate = new Date();
         nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
@@ -172,7 +185,7 @@ const EmailPlannerPage = () => {
             records: [
               {
                 fields: {
-                  id_list: listId,
+                  id_list: Number(activeListId), // Use the actual list_id here, converted to number
                   url: agentName,
                   id_cron: cronId,
                   id_offer: 0,
@@ -207,7 +220,7 @@ const EmailPlannerPage = () => {
           // Prepare data to send to webhook - one list per request
           const requestData = {
             agentName,
-            lists: [listId], // Only send one list ID per request
+            lists: [activeListId], // Use the actual list_id here
             userId: user.id, // Add user ID that is logged in
             mainGoal: selectedGoalData.goal || '', // Use goal field instead
             goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo

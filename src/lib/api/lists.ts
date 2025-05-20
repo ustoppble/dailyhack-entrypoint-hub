@@ -53,7 +53,7 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 /**
  * Fetch connected lists from Airtable
  */
-export const fetchConnectedLists = async (agentName: string, userId?: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string}[]> => {
+export const fetchConnectedLists = async (agentName: string, userId?: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string, list_id?: string}[]> => {
   try {
     console.log('Fetching connected lists for agent:', agentName, 'and user:', userId);
     
@@ -83,10 +83,11 @@ export const fetchConnectedLists = async (agentName: string, userId?: string): P
     // Extract list names and ids from the response
     if (response.data && response.data.records) {
       return response.data.records.map((record: any) => ({
-        id: record.fields.list_id || record.id,
+        id: record.id, // This is the Airtable record ID
         name: record.fields.list_name,
         subscribers: record.fields.list_leads || "0",
-        airtableId: record.id // Adding the Airtable record ID for deletion
+        airtableId: record.id, // Adding the Airtable record ID for deletion
+        list_id: record.fields.list_id // Include the actual list_id from ActiveCampaign
       }));
     }
     
