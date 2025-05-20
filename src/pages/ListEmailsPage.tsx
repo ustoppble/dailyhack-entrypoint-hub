@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
@@ -59,6 +59,7 @@ const ListEmailsPage = () => {
   const [nextUpdate, setNextUpdate] = useState<string | null>(null);
   const [isTasksLoading, setIsTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     loadEmails();
@@ -153,14 +154,14 @@ const ListEmailsPage = () => {
     }
   };
 
-  const loadEmails = async () => {
+  const loadEmails = async (taskId?: number) => {
     if (!agentName || !listId) {
       setError('Agent name or list ID not found');
       setIsLoading(false);
       return;
     }
     
-    console.log(`Loading emails for agent: ${agentName} and list ID: ${listId}`);
+    console.log(`Loading emails for agent: ${agentName} and list ID: ${listId}${taskId ? ` with task ID: ${taskId}` : ''}`);
     setIsLoading(true);
     try {
       // Parse listId as a number since fetchEmailsForList expects a number
@@ -176,14 +177,46 @@ const ListEmailsPage = () => {
         setAutopilotId(String(autopilotRecordId));
       }
       
-      // Fetch emails for the specified list, now filtered by autopilot ID
-      const fetchedEmails = await fetchEmailsForList(parsedListId, agentName);
+      // Fetch emails for the specified list
+      let fetchedEmails;
+      if (taskId) {
+        // If a taskId is provided, filter emails by that task
+        const response = await airtableTasksApi.get('', {
+          params: {
+            filterByFormula: `AND({list_id} = ${parsedListId}, {activehosted} = "${agentName}", {id_autopilot_task} = '${taskId}')`
+          }
+        });
+        
+        console.log('Email data filtered by task:', response.data);
+        
+        // Transform the Airtable records into our EmailRecord format
+        fetchedEmails = response.data.records.map((record: any) => ({
+          id: record.id,
+          id_email: record.fields.id_email,
+          title: record.fields.title || record.fields.campaign_name,
+          content: record.fields.content,
+          campaign_name: record.fields.campaign_name,
+          date: record.fields.date,
+          date_set: record.fields.date_set,
+          status: record.fields.status,
+          id_autopilot: record.fields.id_autopilot,
+          id_autopilot_task: record.fields.id_autopilot_task
+        }));
+        
+        // Update selected task ID for UI
+        setSelectedTaskId(taskId);
+      } else {
+        // Fetch all emails for the list
+        fetchedEmails = await fetchEmailsForList(parsedListId, agentName);
+        setSelectedTaskId(null);
+      }
       
       console.log('Fetched emails with dates and status:', fetchedEmails.map(e => ({ 
         id: e.id,
         date: e.date_set,
         status: e.status,
-        autopilotId: e.id_autopilot
+        autopilotId: e.id_autopilot,
+        taskId: e.id_autopilot_task
       })));
       
       setEmails(fetchedEmails);
@@ -193,6 +226,7 @@ const ListEmailsPage = () => {
       
       // Clear selected emails when loading new emails
       setSelectedEmails([]);
+      setSelectedApprovedEmails([]);
     } catch (err: any) {
       setError('Failed to load emails: ' + (err.message || 'Unknown error'));
       console.error('Error fetching emails:', err);
@@ -242,6 +276,25 @@ const ListEmailsPage = () => {
     return <Badge variant="secondary">Draft</Badge>;
   };
 
+  // Get task status badge with correct coloring based on status
+  const getTaskStatusBadge = (status?: string) => {
+    if (!status) return <Badge variant="secondary">Unknown</Badge>;
+    
+    // Convert status to number if it's a string
+    const statusNum = parseInt(status, 10);
+    
+    switch(statusNum) {
+      case 0:
+        return <Badge variant="secondary">In Production</Badge>;
+      case 1:
+        return <Badge variant="default" className="bg-blue-500">Produced</Badge>;
+      case 2:
+        return <Badge variant="default" className="bg-green-500">Sent</Badge>;
+      default:
+        return <Badge variant="secondary">Unknown</Badge>;
+    }
+  };
+
   const handleViewEmail = (emailId: string) => {
     if (agentName) {
       navigate(`/agents/${agentName}/email/${emailId}`);
@@ -251,8 +304,26 @@ const ListEmailsPage = () => {
   };
 
   const handleGoBack = () => {
-    // Updated to navigate back to the email planner
-    navigate(`/agents/${agentName}/planner`);
+    // If we're viewing task emails, go back to the main list view
+    if (selectedTaskId) {
+      loadEmails();
+    } else {
+      // Otherwise navigate back to the email planner
+      navigate(`/agents/${agentName}/planner`);
+    }
+  };
+
+  const handleViewTaskEmails = (taskId: number | undefined) => {
+    if (!taskId) {
+      toast({
+        title: "Invalid Task",
+        description: "Cannot view emails for this task.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    loadEmails(taskId);
   };
 
   const handleSelectEmail = (emailId: string) => {
@@ -692,12 +763,13 @@ const ListEmailsPage = () => {
             onClick={handleGoBack}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Email Planner
+            <ArrowLeft className="h-4 w-4" /> 
+            {selectedTaskId ? 'Back to All Emails' : 'Back to Email Planner'}
           </Button>
         </div>
 
         {/* Next Update Information */}
-        {nextUpdate && (
+        {nextUpdate && !selectedTaskId && (
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-amber-600">
@@ -711,63 +783,77 @@ const ListEmailsPage = () => {
         )}
         
         {/* Tasks Information */}
-        <Card className="mb-6">
-          <CardHeader className="bg-gray-50 border-b">
-            <CardTitle className="text-xl">Tasks for List {listId}</CardTitle>
-            <CardDescription>
-              Email creation tasks associated with this list
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isTasksLoading ? (
-              <div className="p-6 flex justify-center">
-                <LoadingState text="Loading tasks..." />
-              </div>
-            ) : tasksError ? (
-              <div className="p-6 text-center text-red-500">{tasksError}</div>
-            ) : tasks.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">No tasks found for this list.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task ID</TableHead>
-                    <TableHead>First Email</TableHead>
-                    <TableHead>Last Email</TableHead>
-                    <TableHead>Emails</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">Task #{task.fields.id_autopilot_task || 'Unknown'}</TableCell>
-                      <TableCell>{formatTaskDate(task.fields.first_email)}</TableCell>
-                      <TableCell>{formatTaskDate(task.fields.last_email)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-blue-500" />
-                          <span>{task.emailCount || 0}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={task.fields.status === '1' ? 'default' : 'secondary'}>
-                          {task.fields.status === '1' ? 'Active' : 'Pending'}
-                        </Badge>
-                      </TableCell>
+        {!selectedTaskId && (
+          <Card className="mb-6">
+            <CardHeader className="bg-gray-50 border-b">
+              <CardTitle className="text-xl">Tasks for List {listId}</CardTitle>
+              <CardDescription>
+                Email creation tasks associated with this list
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isTasksLoading ? (
+                <div className="p-6 flex justify-center">
+                  <LoadingState text="Loading tasks..." />
+                </div>
+              ) : tasksError ? (
+                <div className="p-6 text-center text-red-500">{tasksError}</div>
+              ) : tasks.length === 0 ? (
+                <div className="p-6 text-center text-gray-500">No tasks found for this list.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task ID</TableHead>
+                      <TableHead>First Email</TableHead>
+                      <TableHead>Last Email</TableHead>
+                      <TableHead>Emails</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {tasks.map((task) => (
+                      <TableRow key={task.id}>
+                        <TableCell className="font-medium">Task #{task.fields.id_autopilot_task || 'Unknown'}</TableCell>
+                        <TableCell>{formatTaskDate(task.fields.first_email)}</TableCell>
+                        <TableCell>{formatTaskDate(task.fields.last_email)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-blue-500" />
+                            <span>{task.emailCount || 0}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getTaskStatusBadge(task.fields.status)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewTaskEmails(task.fields.id_autopilot_task)}
+                            className="flex items-center gap-1"
+                            disabled={!task.emailCount}
+                          >
+                            <Eye className="h-4 w-4" /> View Emails
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
         
         {/* Emails List Card */}
         <Card className="w-full">
           <CardHeader className="bg-gray-50 border-b">
             <CardTitle className="text-xl">
-              Emails for list: {listName}
+              {selectedTaskId 
+                ? `Emails for Task #${selectedTaskId} in List ${listName}` 
+                : `Emails for list: ${listName}`}
               {autopilotId && (
                 <Badge variant="outline" className="ml-2 text-xs">
                   Autopilot ID: {autopilotId}
@@ -793,7 +879,7 @@ const ListEmailsPage = () => {
               </div>
             ) : emails.length === 0 ? (
               <div className="p-6 text-center">
-                <p className="text-gray-500">No emails found for this list.</p>
+                <p className="text-gray-500">No emails found for {selectedTaskId ? `task #${selectedTaskId}` : 'this list'}.</p>
               </div>
             ) : (
               <div>
@@ -801,7 +887,7 @@ const ListEmailsPage = () => {
                 <div className="mb-6">
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Draft Emails</h3>
                   
-                  {draftEmails.length > 0 && (
+                  {draftEmails.length > 0 && !selectedTaskId && (
                     <div className="p-4 border-b flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <Checkbox 
@@ -840,7 +926,7 @@ const ListEmailsPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10"></TableHead>
+                        {!selectedTaskId && <TableHead className="w-10"></TableHead>}
                         <TableHead>Date</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Campaign</TableHead>
@@ -851,19 +937,21 @@ const ListEmailsPage = () => {
                     <TableBody>
                       {draftEmails.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
+                          <TableCell colSpan={selectedTaskId ? 5 : 6} className="text-center py-4">
                             No draft emails found
                           </TableCell>
                         </TableRow>
                       ) : (
                         draftEmails.map((email) => (
                           <TableRow key={email.id}>
-                            <TableCell>
-                              <Checkbox 
-                                checked={selectedEmails.includes(email.id)}
-                                onCheckedChange={() => handleSelectEmail(email.id)}
-                              />
-                            </TableCell>
+                            {!selectedTaskId && (
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedEmails.includes(email.id)}
+                                  onCheckedChange={() => handleSelectEmail(email.id)}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell className="font-medium">
                               {formatDate(email)}
                             </TableCell>
@@ -891,7 +979,7 @@ const ListEmailsPage = () => {
                 <div>
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Approved Emails</h3>
                   
-                  {futureApprovedEmails.length > 0 && (
+                  {futureApprovedEmails.length > 0 && !selectedTaskId && (
                     <div className="p-4 border-b flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <Checkbox 
@@ -918,7 +1006,7 @@ const ListEmailsPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10"></TableHead>
+                        {!selectedTaskId && <TableHead className="w-10"></TableHead>}
                         <TableHead>Date</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Campaign</TableHead>
@@ -929,7 +1017,7 @@ const ListEmailsPage = () => {
                     <TableBody>
                       {approvedEmails.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
+                          <TableCell colSpan={selectedTaskId ? 5 : 6} className="text-center py-4">
                             No approved emails found
                           </TableCell>
                         </TableRow>
@@ -938,14 +1026,16 @@ const ListEmailsPage = () => {
                           const canRevert = canRevertEmail(email);
                           return (
                             <TableRow key={email.id}>
-                              <TableCell>
-                                {canRevert && (
-                                  <Checkbox 
-                                    checked={selectedApprovedEmails.includes(email.id)}
-                                    onCheckedChange={() => handleSelectApprovedEmail(email.id)}
-                                  />
-                                )}
-                              </TableCell>
+                              {!selectedTaskId && (
+                                <TableCell>
+                                  {canRevert && (
+                                    <Checkbox 
+                                      checked={selectedApprovedEmails.includes(email.id)}
+                                      onCheckedChange={() => handleSelectApprovedEmail(email.id)}
+                                    />
+                                  )}
+                                </TableCell>
+                              )}
                               <TableCell className="font-medium">
                                 {formatDate(email)}
                               </TableCell>
