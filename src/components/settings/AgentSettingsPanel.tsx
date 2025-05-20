@@ -11,9 +11,9 @@ import { fetchIntegrationByUserAndAgent, updateActiveCampaignIntegration, verify
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-// Validation schema for integration settings
+// Validation schema for integration settings (keeping apiUrl in schema but not displaying it)
 const integrationSchema = z.object({
-  apiUrl: z.string().url('Must be a valid URL'),
+  apiUrl: z.string().url('Must be a valid URL'), // Kept in schema but won't be displayed
   apiToken: z.string().min(1, 'API Token is required'),
   timezone: z.string().optional(),
   approver: z.boolean().default(false),
@@ -34,6 +34,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [integrationId, setIntegrationId] = useState<string | null>(null);
+  const [savedApiUrl, setSavedApiUrl] = useState<string>(''); // Store API URL here but don't display input
 
   // List of common timezones
   const timezones = [
@@ -55,7 +56,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
   const form = useForm<IntegrationFormValues>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
-      apiUrl: '',
+      apiUrl: '', // This will be populated but not displayed
       apiToken: '',
       timezone: 'America/New_York',
       approver: false,
@@ -88,9 +89,12 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
           formattedApiUrl = `https://${formattedApiUrl}.api-us1.com`;
         }
         
+        // Save API URL separately but don't display it
+        setSavedApiUrl(formattedApiUrl);
+        
         // Set form values - convert approver from number to boolean
         form.reset({
-          apiUrl: formattedApiUrl,
+          apiUrl: formattedApiUrl, // Set in form but not displayed
           apiToken: integration.token || '',
           timezone: integration.timezone || 'America/New_York',
           // Convert approver from number (0/1) to boolean
@@ -122,9 +126,12 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
     try {
       setIsLoading(true);
       
-      // First verify the credentials are valid
+      // Use the saved API URL instead of form input
+      const apiUrlToUse = savedApiUrl;
+      
+      // Verify only the API token (since URL is not editable)
       const verificationResult = await verifyActiveCampaignCredentials(
-        data.apiUrl,
+        apiUrlToUse,
         data.apiToken
       );
       
@@ -141,7 +148,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
       // Pass the integrationId to ensure we update the existing record
       const success = await updateActiveCampaignIntegration({
         userId: String(userId),
-        apiUrl: data.apiUrl,
+        apiUrl: apiUrlToUse, // Use saved API URL
         apiToken: data.apiToken,
         integrationId: integrationId || undefined, // Pass the integration ID for update
         timezone: data.timezone,
@@ -184,26 +191,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="apiUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>API URL</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://youraccount.api-us1.com" 
-                      {...field} 
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Your ActiveCampaign API URL
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* ApiUrl field is now hidden and not rendered */}
             
             <FormField
               control={form.control}
