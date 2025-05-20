@@ -163,20 +163,18 @@ export const updateActiveCampaignIntegration = async (
     const now = new Date().toISOString();
     
     try {
-      // IMPORTANT: For Airtable, we need to format the user ID as a string
-      // and NOT as an array. Airtable expects record IDs in a specific format.
-      // The integration table likely has a different field structure.
+      // Make sure the user ID is always treated as a string
+      // The userId is received as a string from the component
       const response = await airtableIntegrationApi.post('', {
         records: [
           {
             fields: {
-              // For Airtable, we provide user ID as a string without array brackets
-              // This is what's causing the error - Airtable expects a different format
-              id_users: integration.userId, // Provide as a single string value, not an array
+              // Provide user ID as a string value as expected by Airtable
+              id_users: String(integration.userId), 
               api: accountName,
               token: integration.apiToken,
               timezone: integration.timezone || 'America/New_York',
-              approver: integration.approver || 0,
+              approver: integration.approver !== undefined ? Number(integration.approver) : 0,
               DateCreated: now
             },
           },
@@ -194,13 +192,6 @@ export const updateActiveCampaignIntegration = async (
         // More detailed error for field formatting issues
         if (airtableError.response.status === 422) {
           console.error('Airtable field format error details:', airtableError.response.data?.error);
-          
-          // If we still have format issues, try a different approach - check what Airtable expects
-          if (airtableError.response.data?.error?.type === 'INVALID_VALUE_FOR_COLUMN') {
-            throw new Error(`Airtable field format error: ${airtableError.response.data?.error?.message}. 
-            Try providing the user ID in the format required by your Airtable base.`);
-          }
-          
           throw new Error(`Airtable field format error: ${airtableError.response.data?.error?.message}`);
         }
         

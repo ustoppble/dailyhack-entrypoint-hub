@@ -19,6 +19,8 @@ export {
   deleteConnectedList,
   checkExistingAutopilot
 } from './api/lists';
+// Export auth functionality
+export * from './api/auth';
 // Export autopilot functionality
 export * from './api/autopilot';
 // Export campaign goals functionality

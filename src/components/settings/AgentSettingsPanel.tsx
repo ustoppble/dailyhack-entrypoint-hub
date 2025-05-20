@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -132,15 +130,16 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
       }
       
       // If verification successful, update the integration record
-      const updateSuccess = await updateActiveCampaignIntegration({
-        userId: userId,
+      // Ensure we always pass a string for the userId
+      const success = await updateActiveCampaignIntegration({
+        userId: String(userId),
         apiUrl: data.apiUrl,
         apiToken: data.apiToken,
         timezone: data.timezone,
         approver: data.approver ? 1 : 0,
       });
       
-      if (updateSuccess) {
+      if (success) {
         toast({
           title: 'Settings Updated',
           description: 'Integration settings have been updated successfully',
