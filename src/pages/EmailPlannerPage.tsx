@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -186,7 +187,7 @@ const EmailPlannerPage = () => {
             offer_name: targetGoal.offer_name, // From the campaign goal
             emailFrequency: emailFrequency, // Based on cronId
             // Include any additional required fields
-            next_update: autopilot.next_update, 
+            // REMOVED next_update
             action: "production", // Specify this is a production request
             forceUpdate: true
           };
@@ -285,11 +286,7 @@ const EmailPlannerPage = () => {
         const activeListId = selectedList.list_id || listId;
         console.log(`Using list_id ${activeListId} for list ${selectedList.name}`);
         
-        // Calculate next update date - 7 days from now at midnight
-        const nextUpdateDate = new Date();
-        nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
-        nextUpdateDate.setHours(0, 0, 0, 0);
-        const nextUpdateString = nextUpdateDate.toISOString();
+        // REMOVED next_update calculation
         
         // Create record in Airtable autopilot table
         const cronId = values.emailFrequency === "once" ? 1 : 2;
@@ -306,14 +303,14 @@ const EmailPlannerPage = () => {
           continue;
         }
         
-        console.log("Creating autopilot record with next_update:", nextUpdateString);
+        // REMOVED next_update logging
         
         // Use the id_offer field from the campaign goal
         // Make sure it's a number as expected by the Airtable schema
         const offerId = selectedGoalData.id_offer || 0;
         console.log(`Using offer ID ${offerId} from selected campaign goal:`, selectedGoalData);
         
-        // First, create the autopilot record with next_update field and user ID
+        // First, create the autopilot record with user ID only (removed next_update)
         try {
           // Ensure we have the user ID
           if (!user.id) {
@@ -332,7 +329,7 @@ const EmailPlannerPage = () => {
                   url: agentName,
                   id_cron: cronId,
                   id_offer: offerId,
-                  next_update: nextUpdateString,
+                  // REMOVED next_update field
                   status: 1, // Set status to active (1) as a number
                   id_user: Number(user.id) // Ensure user ID is a number
                 }
