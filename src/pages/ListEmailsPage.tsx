@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -21,7 +22,8 @@ import {
   getAutopilotRecordById,
   AutopilotRecord,
   CampaignGoal,
-  fetchCampaignGoals
+  fetchCampaignGoals,
+  fetchNextUpdateByAutopilotId
 } from '@/lib/api-service';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
