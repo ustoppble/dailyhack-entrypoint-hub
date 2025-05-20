@@ -1,0 +1,357 @@
+
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchIntegrationByUserAndAgent, updateActiveCampaignIntegration, verifyActiveCampaignCredentials } from '@/lib/api-service';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft } from 'lucide-react';
+
+// Validation schema for integration settings
+const integrationSchema = z.object({
+  apiUrl: z.string().url('Must be a valid URL'), // Kept in schema but not displayed
+  apiToken: z.string().min(1, 'API Token is required'),
+  timezone: z.string().optional(),
+  approver: z.boolean().default(false),
+  remetente: z.string().optional(),
+  email: z.string().email('Must be a valid email').optional().or(z.literal('')),
+});
+
+type IntegrationFormValues = z.infer<typeof integrationSchema>;
+
+const AgentSettingsPage = () => {
+  const { agentName } = useParams<{ agentName: string }>();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [integrationId, setIntegrationId] = useState<string | null>(null);
+  const [savedApiUrl, setSavedApiUrl] = useState<string>(''); // Store API URL here but don't display input
+
+  // List of common timezones
+  const timezones = [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Sao_Paulo',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Asia/Tokyo',
+    'Asia/Shanghai',
+    'Australia/Sydney',
+    'Pacific/Auckland',
+  ];
+
+  // Initialize form with validation
+  const form = useForm<IntegrationFormValues>({
+    resolver: zodResolver(integrationSchema),
+    defaultValues: {
+      apiUrl: '', // This will be populated but not displayed
+      apiToken: '',
+      timezone: 'America/New_York',
+      approver: false,
+      remetente: '',
+      email: '',
+    }
+  });
+
+  // Load integration data when page loads
+  useEffect(() => {
+    if (user && agentName) {
+      loadIntegrationData();
+    }
+  }, [user, agentName]);
+
+  // Fetch integration data from Airtable
+  const loadIntegrationData = async () => {
+    if (!user?.id) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to access this page.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const integration = await fetchIntegrationByUserAndAgent(user.id, agentName || '');
+      
+      if (integration) {
+        console.log('Loaded integration:', integration);
+        // Store the integration ID to use for updates
+        setIntegrationId(integration.id);
+        
+        // Format the API URL for display
+        let formattedApiUrl = integration.api;
+        if (!formattedApiUrl.startsWith('http')) {
+          formattedApiUrl = `https://${formattedApiUrl}.api-us1.com`;
+        }
+        
+        // Save API URL separately but don't display it
+        setSavedApiUrl(formattedApiUrl);
+        
+        // Set form values - convert approver from number to boolean
+        form.reset({
+          apiUrl: formattedApiUrl, // Set in form but not displayed
+          apiToken: integration.token || '',
+          timezone: integration.timezone || 'America/New_York',
+          // Convert approver from number (0/1) to boolean
+          approver: integration.approver === 1,
+          remetente: integration.remetente || '',
+          email: integration.email || '',
+        });
+      } else {
+        toast({
+          title: 'Integration not found',
+          description: 'Could not find integration details for this agent',
+          variant: 'destructive',
+        });
+        navigate(`/agents/${agentName}/central`);
+      }
+    } catch (error: any) {
+      console.error('Error loading integration:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to load integration data: ${error.message}`,
+        variant: 'destructive',
+      });
+      navigate(`/agents/${agentName}/central`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle form submission to update integration
+  const onSubmit = async (data: IntegrationFormValues) => {
+    try {
+      setIsLoading(true);
+      
+      // Use the saved API URL instead of form input
+      const apiUrlToUse = savedApiUrl;
+      
+      // Verify only the API token (since URL is not editable)
+      const verificationResult = await verifyActiveCampaignCredentials(
+        apiUrlToUse,
+        data.apiToken
+      );
+      
+      if (!verificationResult.success) {
+        toast({
+          title: 'Verification Failed',
+          description: verificationResult.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // If verification successful, update the integration record
+      // Pass the integrationId to ensure we update the existing record
+      const success = await updateActiveCampaignIntegration({
+        userId: String(user?.id),
+        apiUrl: apiUrlToUse, // Use saved API URL
+        apiToken: data.apiToken,
+        integrationId: integrationId || undefined, // Pass the integration ID for update
+        timezone: data.timezone,
+        // Convert boolean to number (0/1)
+        approver: data.approver ? 1 : 0,
+        remetente: data.remetente,
+        email: data.email,
+      });
+      
+      if (success) {
+        toast({
+          title: 'Settings Updated',
+          description: 'Integration settings have been updated successfully',
+        });
+        navigate(`/agents/${agentName}/central`);
+      } else {
+        throw new Error('Failed to update integration settings');
+      }
+    } catch (error: any) {
+      console.error('Error updating integration:', error);
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update integration settings',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Link 
+            to={`/agents/${agentName}/central`} 
+            className="flex items-center text-blue-600 hover:text-blue-800"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span>Back to Agent Central</span>
+          </Link>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Agent Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* ApiUrl field is now hidden and not rendered */}
+                
+                <FormField
+                  control={form.control}
+                  name="apiToken"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API Token</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Your API token" 
+                          {...field} 
+                          type="password"
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Your ActiveCampaign API token
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="remetente"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sender Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Company or Personal Name" 
+                          {...field} 
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Name that will appear as the sender in emails
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sender Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="sender@example.com" 
+                          {...field} 
+                          type="email"
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Email address that will be used to send emails
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Timezone</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {timezones.map((timezone) => (
+                            <SelectItem key={timezone} value={timezone}>
+                              {timezone}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select your local timezone for accurate scheduling
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="approver"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto-approve emails</FormLabel>
+                        <FormDescription>
+                          When enabled, emails will be sent without requiring manual approval
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="pt-4 flex justify-end space-x-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => navigate(`/agents/${agentName}/central`)} 
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AgentSettingsPage;

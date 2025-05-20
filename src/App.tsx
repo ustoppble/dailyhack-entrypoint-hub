@@ -24,6 +24,7 @@ import NotFound from './pages/NotFound';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import OffersPage from './pages/OffersPage';
 import OfferEditPage from './pages/OfferEditPage';
+import AgentSettingsPage from './pages/AgentSettingsPage';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="agents/:agentName/email/:emailId" element={<EmailViewPage />} />
             <Route path="email/:emailId" element={<EmailViewPage />} />
             <Route path="agents/:agentName/kb" element={<KnowledgeBasePage />} />
+            <Route path="agents/:agentName/settings" element={<AgentSettingsPage />} />
             
             {/* Offers management routes */}
             <Route path="agents/:agentName/offers" element={<OffersPage />} />
