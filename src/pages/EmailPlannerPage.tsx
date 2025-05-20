@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -148,7 +149,7 @@ const EmailPlannerPage = () => {
               {
                 fields: {
                   id_autopilot: autopilotId,
-                  status: 0, // Changed from string "0" to number 0 - Status 0 = In Progress
+                  status: "0", // Status 0 = In Progress
                   id_user: userId
                 }
               }
@@ -362,14 +363,14 @@ const EmailPlannerPage = () => {
           // Get the autopilot ID from the response
           const autopilotId = autopilotResponse.data.records[0].fields.id_autopilot;
           
-          // Create task in the autopilot tasks table - with status as a number 0 instead of string "0"
+          // Create task in the autopilot tasks table - with status as a string "0" instead of number 0
           // and include the user ID
           const autopilotTaskResponse = await airtableAutopilotTasksApi.post('', {
             records: [
               {
                 fields: {
                   id_autopilot: autopilotId,
-                  status: 0, // Changed from string "0" to number 0
+                  status: "0", // Use string "0" instead of number 0
                   id_user: Number(user.id) // Ensure user ID is a number
                 }
               }
