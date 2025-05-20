@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -89,12 +88,13 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
           formattedApiUrl = `https://${formattedApiUrl}.api-us1.com`;
         }
         
-        // Set form values
+        // Set form values - convert approver from number to boolean
         form.reset({
           apiUrl: formattedApiUrl,
           apiToken: integration.token || '',
           timezone: integration.timezone || 'America/New_York',
-          approver: integration.approver === 1 ? true : false,
+          // Convert approver from number (0/1) to boolean
+          approver: integration.approver === 1,
           remetente: integration.remetente || '',
           email: integration.email || '',
         });
@@ -145,6 +145,7 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
         apiToken: data.apiToken,
         integrationId: integrationId || undefined, // Pass the integration ID for update
         timezone: data.timezone,
+        // Convert boolean to number (0/1)
         approver: data.approver ? 1 : 0,
         remetente: data.remetente,
         email: data.email,

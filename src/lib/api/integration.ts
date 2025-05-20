@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { airtableIntegrationApi } from './client';
 import { ACIntegration, VerificationResult } from './types';
@@ -163,8 +162,6 @@ export const updateActiveCampaignIntegration = async (
     const accountName = extractAccountName(integration.apiUrl);
     console.log('Extracted account name:', accountName);
     
-    const now = new Date().toISOString();
-    
     // If integrationId is provided, update the existing record
     if (integration.integrationId) {
       console.log('Updating existing record with ID:', integration.integrationId);
@@ -178,8 +175,7 @@ export const updateActiveCampaignIntegration = async (
             timezone: integration.timezone || 'America/New_York',
             approver: integration.approver !== undefined ? Number(integration.approver) : 0,
             remetente: integration.remetente || '',
-            email: integration.email || '',
-            DateUpdated: now
+            email: integration.email || ''
           }
         });
         
@@ -217,8 +213,7 @@ export const updateActiveCampaignIntegration = async (
             timezone: integration.timezone || 'America/New_York',
             approver: integration.approver !== undefined ? Number(integration.approver) : 0,
             remetente: integration.remetente || '',
-            email: integration.email || '',
-            DateUpdated: now
+            email: integration.email || ''
           }
         });
         
@@ -239,8 +234,7 @@ export const updateActiveCampaignIntegration = async (
                   timezone: integration.timezone || 'America/New_York',
                   approver: integration.approver !== undefined ? Number(integration.approver) : 0,
                   remetente: integration.remetente || '',
-                  email: integration.email || '',
-                  DateCreated: now
+                  email: integration.email || ''
                 },
               },
             ],

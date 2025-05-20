@@ -16,9 +16,9 @@ export interface ACIntegration {
   apiToken: string;
   integrationId?: string;  // Added integrationId field to track existing records
   timezone?: string;
-  approver?: number;
-  remetente?: string;  // Campo para o nome do remetente
-  email?: string;      // Campo para o email do remetente
+  approver?: number;       // 0 = disabled, 1 = enabled
+  remetente?: string;      // Campo para o nome do remetente
+  email?: string;          // Campo para o email do remetente
 }
 
 export interface VerificationResult {
