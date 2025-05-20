@@ -5,3 +5,5 @@ export const AIRTABLE_BASE_ID = 'appQ1xO0AUpotDePg';
 export const AIRTABLE_TABLE_ID = 'tblRaSVdNM7os0CHe';
 export const AIRTABLE_INTEGRATION_TABLE_ID = 'tblXTMwj5xIBxCIQG';
 export const AIRTABLE_GOALS_TABLE_ID = 'tblkoRzK5dv5KVYpo';
+export const AIRTABLE_TASKS_TABLE_ID = 'tblWeAwzXeMhK7P6z';
+export const AIRTABLE_UPDATES_TABLE_ID = 'tblfN4S5R9BNqT5Zk';

@@ -10,18 +10,39 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
+import { airtableTasksApi, airtableUpdatesApi } from '@/lib/api/client';
+
+// Define types for our new data
+interface Task {
+  id: string;
+  fields: {
+    list_id?: string | number;
+    first_email_date?: string;
+    last_email_date?: string;
+    email_count?: number;
+    name?: string;
+    description?: string;
+    status?: string;
+  };
+}
+
+interface Update {
+  id: string;
+  fields: {
+    next_update?: string;
+  };
+}
 
 const ListEmailsPage = () => {
   const navigate = useNavigate();
-  // Updated to match the route params from App.tsx
   const { agentName, listId } = useParams<{ agentName: string, listId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<EmailRecord[]>([]);
@@ -32,10 +53,56 @@ const ListEmailsPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [autopilotId, setAutopilotId] = useState<string | null>(null);
   const { user } = useAuth();
+  
+  // New state for task and update information
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [nextUpdate, setNextUpdate] = useState<string | null>(null);
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
 
   useEffect(() => {
     loadEmails();
+    loadTasks();
+    loadNextUpdate();
   }, [listId, agentName]);
+
+  const loadTasks = async () => {
+    if (!listId) return;
+    
+    setIsTasksLoading(true);
+    try {
+      // Fetch tasks related to this list
+      const response = await airtableTasksApi.get('', {
+        params: {
+          filterByFormula: `{list_id}='${listId}'`
+        }
+      });
+      
+      console.log('Tasks data:', response.data);
+      setTasks(response.data.records || []);
+    } catch (err: any) {
+      console.error('Error fetching tasks:', err);
+      setTasksError('Failed to load tasks information');
+    } finally {
+      setIsTasksLoading(false);
+    }
+  };
+
+  const loadNextUpdate = async () => {
+    try {
+      // Fetch next update information
+      const response = await airtableUpdatesApi.get('');
+      console.log('Updates data:', response.data);
+      
+      // Get the first record since we only need one next_update value
+      const updateRecord = response.data.records && response.data.records[0];
+      if (updateRecord && updateRecord.fields && updateRecord.fields.next_update) {
+        setNextUpdate(updateRecord.fields.next_update);
+      }
+    } catch (err) {
+      console.error('Error fetching next update:', err);
+    }
+  };
 
   const loadEmails = async () => {
     if (!agentName || !listId) {
@@ -101,6 +168,19 @@ const ListEmailsPage = () => {
     }
     
     return 'No date available';
+  };
+
+  // Format a date string nicely or return placeholder
+  const formatTaskDate = (dateStr?: string) => {
+    if (!dateStr) return 'Not scheduled';
+    
+    try {
+      const date = parseISO(dateStr);
+      return format(date, 'PPP');
+    } catch (e) {
+      console.error('Error parsing date:', e);
+      return 'Invalid date';
+    }
   };
 
   const getStatusBadge = (status: number | string) => {
@@ -566,7 +646,77 @@ const ListEmailsPage = () => {
             <ArrowLeft className="h-4 w-4" /> Back to Email Planner
           </Button>
         </div>
+
+        {/* Next Update Information */}
+        {nextUpdate && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-amber-600">
+                <Calendar className="h-5 w-5" />
+                <p className="font-medium">
+                  Next scheduled update: {formatTaskDate(nextUpdate)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
+        {/* Tasks Information */}
+        <Card className="mb-6">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="text-xl">Tasks for List {listId}</CardTitle>
+            <CardDescription>
+              Email creation tasks associated with this list
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isTasksLoading ? (
+              <div className="p-6 flex justify-center">
+                <LoadingState text="Loading tasks..." />
+              </div>
+            ) : tasksError ? (
+              <div className="p-6 text-center text-red-500">{tasksError}</div>
+            ) : tasks.length === 0 ? (
+              <div className="p-6 text-center text-gray-500">No tasks found for this list.</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>First Email</TableHead>
+                    <TableHead>Last Email</TableHead>
+                    <TableHead>Emails</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tasks.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell className="font-medium">{task.fields.name || 'Unnamed Task'}</TableCell>
+                      <TableCell>{task.fields.description || 'No description'}</TableCell>
+                      <TableCell>{formatTaskDate(task.fields.first_email_date)}</TableCell>
+                      <TableCell>{formatTaskDate(task.fields.last_email_date)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          <span>{task.fields.email_count || 0}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={task.fields.status === 'completed' ? 'default' : 'secondary'}>
+                          {task.fields.status || 'pending'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Emails List Card */}
         <Card className="w-full">
           <CardHeader className="bg-gray-50 border-b">
             <CardTitle className="text-xl">
