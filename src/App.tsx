@@ -8,7 +8,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 
 // Import pages
 import HomePage from './pages/HomePage';
-import IntegratePage from './pages/IntegratePage';
 import AgentsPage from './pages/AgentsPage';
 import AgentCentralPage from './pages/AgentCentralPage';
 import AgentListsPage from './pages/AgentListsPage';
@@ -33,8 +32,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<HomePage />} />
-            <Route path="integrate" element={<IntegratePage />} />
-            {/* Consolidate "agents" to use the same IntegratePage */}
+            {/* Redirect /integrate to /agents */}
+            <Route path="integrate" element={<Navigate to="/agents?mode=add" replace />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:agentName/central" element={<AgentCentralPage />} />
             <Route path="agents/:agentName/lists" element={<AgentListsPage />} />

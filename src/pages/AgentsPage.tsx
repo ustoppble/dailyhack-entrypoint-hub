@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -10,11 +10,12 @@ import IntegrationForm from '@/components/integration/IntegrationForm';
 import StatusMessage from '@/components/integration/StatusMessage';
 import { useToast } from '@/hooks/use-toast';
 import IntegrationGrid from '@/components/lists/IntegrationGrid';
-import { fetchUserIntegrations } from '@/lib/api/integration';
+import { fetchUserIntegrations } from '@/lib/api-service';
 
 const AgentsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(!!user);
   const [errorMessage, setErrorMessage] = useState('');
@@ -24,7 +25,11 @@ const AgentsPage = () => {
   const [responseDetails, setResponseDetails] = useState<{status?: number, data?: any}>();
   const [integrations, setIntegrations] = useState<{id: string, api: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNewForm, setShowNewForm] = useState(false);
+  
+  // Check if mode=add is in the URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const initialShowNewForm = queryParams.get('mode') === 'add';
+  const [showNewForm, setShowNewForm] = useState(initialShowNewForm);
 
   useEffect(() => {
     const loadIntegrations = async () => {
@@ -33,8 +38,8 @@ const AgentsPage = () => {
           setIsLoading(true);
           const userIntegrations = await fetchUserIntegrations(String(user.id));
           setIntegrations(userIntegrations);
-          // Only show the form if no integrations exist
-          setShowNewForm(userIntegrations.length === 0);
+          // Only show the form if no integrations exist or if mode=add
+          setShowNewForm(initialShowNewForm || userIntegrations.length === 0);
         } catch (error) {
           console.error('Failed to load integrations:', error);
           toast({
@@ -53,7 +58,7 @@ const AgentsPage = () => {
     if (isAuthenticated) {
       loadIntegrations();
     }
-  }, [user, isAuthenticated, toast]);
+  }, [user, isAuthenticated, toast, initialShowNewForm]);
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
