@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -25,16 +24,14 @@ import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from 
 interface Task {
   id: string;
   fields: {
-    list_id?: string | number;
-    first_email_date?: string;
-    last_email_date?: string;
-    email_count?: number;
-    name?: string;
-    description?: string;
+    id_autopilot_task?: number;
+    first_email?: string;
+    last_email?: string;
     status?: string;
     id_autopilot?: number;
+    next_update?: string;
   };
-  emailCount?: number; // New property to store the actual email count from query
+  emailCount?: number; // Property to store the actual email count from query
 }
 
 interface Update {
@@ -57,7 +54,7 @@ const ListEmailsPage = () => {
   const [autopilotId, setAutopilotId] = useState<string | null>(null);
   const { user } = useAuth();
   
-  // New state for task and update information
+  // State for task and update information
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nextUpdate, setNextUpdate] = useState<string | null>(null);
   const [isTasksLoading, setIsTasksLoading] = useState(true);
@@ -95,17 +92,24 @@ const ListEmailsPage = () => {
       // For each task, we'll get its email count by querying the emails table
       const tasksWithCounts = await Promise.all(fetchedTasks.map(async (task) => {
         // Get the id_autopilot_task value from the task
-        const taskId = task.id;
+        const taskId = task.fields.id_autopilot_task;
+        
+        if (!taskId) {
+          return {
+            ...task,
+            emailCount: 0
+          };
+        }
         
         try {
           // Query the emails table to count emails associated with this task
           const emailsResponse = await airtableTasksApi.get('', {
             params: {
-              filterByFormula: `{id_autopilot_task}='${task.fields.id_autopilot}'`
+              filterByFormula: `{id_autopilot_task}='${taskId}'`
             }
           });
           
-          console.log(`Emails for task ${task.fields.id_autopilot}:`, emailsResponse.data);
+          console.log(`Emails for task ${taskId}:`, emailsResponse.data);
           
           // Count the emails
           const emailCount = emailsResponse.data.records ? emailsResponse.data.records.length : 0;
@@ -727,8 +731,7 @@ const ListEmailsPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Task Name</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Task ID</TableHead>
                     <TableHead>First Email</TableHead>
                     <TableHead>Last Email</TableHead>
                     <TableHead>Emails</TableHead>
@@ -738,10 +741,9 @@ const ListEmailsPage = () => {
                 <TableBody>
                   {tasks.map((task) => (
                     <TableRow key={task.id}>
-                      <TableCell className="font-medium">{task.fields.name || 'Unnamed Task'}</TableCell>
-                      <TableCell>{task.fields.description || 'No description'}</TableCell>
-                      <TableCell>{formatTaskDate(task.fields.first_email_date)}</TableCell>
-                      <TableCell>{formatTaskDate(task.fields.last_email_date)}</TableCell>
+                      <TableCell className="font-medium">Task #{task.fields.id_autopilot_task || 'Unknown'}</TableCell>
+                      <TableCell>{formatTaskDate(task.fields.first_email)}</TableCell>
+                      <TableCell>{formatTaskDate(task.fields.last_email)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-blue-500" />
@@ -749,8 +751,8 @@ const ListEmailsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={task.fields.status === 'completed' ? 'default' : 'secondary'}>
-                          {task.fields.status || 'pending'}
+                        <Badge variant={task.fields.status === '1' ? 'default' : 'secondary'}>
+                          {task.fields.status === '1' ? 'Active' : 'Pending'}
                         </Badge>
                       </TableCell>
                     </TableRow>
