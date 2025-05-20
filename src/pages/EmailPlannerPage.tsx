@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,9 +15,10 @@ import {
   AutopilotRecord,
   fetchCampaignGoals,
   CampaignGoal,
-  checkExistingAutopilot
+  checkExistingAutopilot,
+  createAutopilotTask
 } from '@/lib/api-service';
-import { airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
+import { airtableUpdatesApi } from '@/lib/api/client';
 
 // Import our components
 import PageHeader from '@/components/autopilot/PageHeader';
@@ -140,37 +140,20 @@ const EmailPlannerPage = () => {
       // Loop through each autopilot for this agent
       for (const autopilot of autopilotData) {
         // Step 1: Create a new task record
-        const autopilotId = Number(autopilot.id);
+        const autopilotId = Number(autopilot.id_autopilot || autopilot.id);
         
         try {
-          // Create a new autopilot task
-          const taskResponse = await airtableAutopilotTasksApi.post('', {
-            records: [
-              {
-                fields: {
-                  id_autopilot: autopilotId,
-                  status: 0, // Status 0 = In Progress (as number, not string)
-                  id_user: userId
-                }
-              }
-            ]
-          });
+          // Create a new autopilot task using the improved function
+          // This ensures status is sent as a number 0 instead of string "0"
+          const taskResult = await createAutopilotTask(autopilotId, userId);
           
-          console.log('New task created:', taskResponse.data);
-          
-          if (!taskResponse.data.records || taskResponse.data.records.length === 0) {
+          if (!taskResult.success || !taskResult.taskId) {
             console.error('Failed to create task record');
             continue;
           }
           
           // Extract the task ID from the response
-          const taskRecord = taskResponse.data.records[0];
-          const taskId = taskRecord.fields.id_autopilot_task;
-          
-          if (!taskId) {
-            console.error('Task ID not found in response');
-            continue;
-          }
+          const taskId = taskResult.taskId;
           
           // Find the corresponding campaign goal for this autopilot
           const targetGoal = campaignGoals.find(goal => {
@@ -351,8 +334,8 @@ const EmailPlannerPage = () => {
                   id_cron: cronId,
                   id_offer: offerId,
                   next_update: nextUpdateString,
-                  status: 1, // Set status to active (1)
-                  id_user: Number(user.id) // Ensure user ID is a number and explicitly included
+                  status: 1, // Set status to active (1) as a number
+                  id_user: Number(user.id) // Ensure user ID is a number
                 }
               }
             ]
@@ -363,29 +346,23 @@ const EmailPlannerPage = () => {
           // Get the autopilot ID from the response
           const autopilotId = autopilotResponse.data.records[0].fields.id_autopilot;
           
-          // Create task in the autopilot tasks table - with status as a string "0" instead of number 0
-          // and include the user ID
-          const autopilotTaskResponse = await airtableAutopilotTasksApi.post('', {
-            records: [
-              {
-                fields: {
-                  id_autopilot: autopilotId,
-                  status: "0", // Use string "0" instead of number 0
-                  id_user: Number(user.id) // Ensure user ID is a number
-                }
-              }
-            ]
-          });
+          // Create task using our improved createAutopilotTask function that uses number for status
+          const taskResult = await createAutopilotTask(autopilotId, Number(user.id));
           
-          console.log("Autopilot task created:", autopilotTaskResponse.data);
+          if (!taskResult.success || !taskResult.taskId) {
+            console.error("Failed to create autopilot task");
+            throw new Error("Failed to create autopilot task");
+          }
+          
+          console.log("Autopilot task created:", taskResult);
           
           // Get the task ID from the response
-          const taskId = autopilotTaskResponse.data.records[0].fields.id_autopilot_task;
+          const taskId = taskResult.taskId;
           
           // Prepare data to send to webhook - one list per request
           const requestData = {
             agentName,
-            lists: [activeListId], // Use the actual list_id here
+            lists: [Number(activeListId)], // Use the actual list_id here as a number
             userId: Number(user.id), // Ensure user ID is a number
             id_autopilot: autopilotId,
             id_autopilot_task: taskId, // Include the autopilot task ID in the webhook payload

@@ -20,7 +20,7 @@ export interface AutopilotRecord {
   createdTime?: string;
   campaignGoalId?: string; // Added for compatibility with ManageAutopilotForm
   active?: boolean; // Added for compatibility with ManageAutopilotForm
-  status?: number; // Add status property
+  status?: number; // Status as a number (0, 1, 2)
   id_user?: number; // Add user ID property
   id_autopilot?: number; // Add id_autopilot property
   next_update?: string; // Add next_update property
@@ -34,7 +34,7 @@ export interface AutopilotTaskRecord {
   id: string;
   id_autopilot_task?: number;
   id_autopilot?: number;
-  status?: number; // Changed from string | number to just number
+  status?: number; // Status is now explicitly a number
   id_user?: number;
   first_email?: string;
   last_email?: string;
