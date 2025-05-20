@@ -275,11 +275,12 @@ const ListEmailsPage = () => {
       console.log(`Fetching next_update for autopilot ID: ${autopilotId}`);
       
       // Make a direct request to the updates table (tblfN4S5R9BNqT5Zk) with a filter for this autopilot ID
+      // UPDATE: Use string comparison in the filter formula by wrapping autopilotId in quotes
       const response = await axios.get(
         `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblfN4S5R9BNqT5Zk`, 
         {
           params: {
-            filterByFormula: `{id_autopilot} = ${autopilotId}`
+            filterByFormula: `{id_autopilot} = "${autopilotId}"`
           },
           headers: {
             Authorization: `Bearer ${AIRTABLE_API_KEY}`,
