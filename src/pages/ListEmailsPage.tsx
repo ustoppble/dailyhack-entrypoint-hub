@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
+import axios from 'axios';
 
 // Define types for our new data
 interface Task {
@@ -60,6 +61,7 @@ const ListEmailsPage = () => {
   const [isTasksLoading, setIsTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [isInitiatingProduction, setIsInitiatingProduction] = useState(false);
 
   useEffect(() => {
     loadEmails();
@@ -753,6 +755,81 @@ const ListEmailsPage = () => {
     return !isNaN(emailDate.getTime()) && emailDate > now;
   };
 
+  // New function to handle starting a new email production
+  const handleStartProduction = async () => {
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to start production",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!agentName || !listId || !autopilotId) {
+      toast({
+        title: "Missing Information",
+        description: "Agent name, list ID, or autopilot ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsInitiatingProduction(true);
+
+    try {
+      // Get the numeric user ID
+      const userId = Number(user.id);
+      
+      // Get the first task for this autopilot to use its ID
+      const taskData = tasks.length > 0 ? tasks[0] : null;
+      const taskId = taskData?.fields.id_autopilot_task;
+
+      if (!taskId) {
+        throw new Error("No task ID found for this autopilot");
+      }
+
+      // Webhook URL for triggering production
+      const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+      
+      // Prepare data payload
+      const requestData = {
+        agentName,
+        lists: [Number(listId)], // Use the actual list_id here as a number
+        userId: userId,
+        id_autopilot: Number(autopilotId),
+        id_autopilot_task: taskId,
+        // Include other required fields that might be needed
+        forceUpdate: true // Flag to indicate this is a manual production trigger
+      };
+      
+      console.log('Starting new email production with data:', requestData);
+      
+      // Send request to webhook
+      const response = await axios.post(webhookUrl, requestData);
+      console.log('Production webhook response:', response.data);
+      
+      toast({
+        title: "Production Started",
+        description: "New email production has been initiated",
+      });
+      
+      // Refresh data to show any changes
+      await loadEmails();
+      await loadNextUpdate();
+      
+    } catch (err: any) {
+      console.error('Error starting email production:', err);
+      toast({
+        title: "Production Error",
+        description: err.message || "Failed to start email production",
+        variant: "destructive"
+      });
+    } finally {
+      setIsInitiatingProduction(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-6xl mx-auto">
@@ -768,16 +845,26 @@ const ListEmailsPage = () => {
           </Button>
         </div>
 
-        {/* Next Update Information */}
+        {/* Next Update Information with Production Button */}
         {nextUpdate && !selectedTaskId && (
           <Card className="mb-6">
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 flex justify-between items-center">
               <div className="flex items-center gap-2 text-amber-600">
                 <Calendar className="h-5 w-5" />
                 <p className="font-medium">
                   Next scheduled update: {formatTaskDate(nextUpdate)}
                 </p>
               </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleStartProduction}
+                disabled={isInitiatingProduction || !autopilotId}
+                className="flex items-center gap-2"
+              >
+                <PlayCircle className="h-4 w-4" />
+                {isInitiatingProduction ? 'Starting...' : 'Start Production Now'}
+              </Button>
             </CardContent>
           </Card>
         )}
