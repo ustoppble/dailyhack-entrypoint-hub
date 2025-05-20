@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,11 +66,13 @@ const EmailPlannerPage = () => {
       setIsLoading(true);
       setDataReady(false);
       
+      const userId = user?.id ? Number(user.id) : undefined;
+      
       // Fetch all data before displaying anything
       const [autopilotRecords, connectedLists, goals] = await Promise.all([
-        fetchAutopilotRecords(agentName),
-        fetchConnectedLists(agentName, user?.id ? user.id.toString() : undefined), // Pass user ID when fetching lists
-        fetchCampaignGoals(agentName, user?.id ? user.id.toString() : undefined)  // Pass user ID when fetching goals
+        fetchAutopilotRecords(agentName, userId), // Pass user ID when fetching autopilot records
+        fetchConnectedLists(agentName, user?.id ? user.id.toString() : undefined),
+        fetchCampaignGoals(agentName, user?.id ? user.id.toString() : undefined)
       ]);
       
       // Enhance autopilot records with list names
@@ -197,7 +200,7 @@ const EmailPlannerPage = () => {
         const offerId = selectedGoalData.id_offer || 0;
         console.log(`Using offer ID ${offerId} from selected campaign goal:`, selectedGoalData);
         
-        // First, create the autopilot record with next_update field
+        // First, create the autopilot record with next_update field and user ID
         try {
           const autopilotResponse = await airtableUpdatesApi.post('', {
             records: [
@@ -208,7 +211,8 @@ const EmailPlannerPage = () => {
                   id_cron: cronId,
                   id_offer: offerId, // Use the numeric ID from the campaign goal
                   next_update: nextUpdateString,
-                  status: 1 // Set status to active (1)
+                  status: 1, // Set status to active (1)
+                  id_user: user.id // Add the user ID
                 }
               }
             ]
@@ -220,12 +224,14 @@ const EmailPlannerPage = () => {
           const autopilotId = autopilotResponse.data.records[0].fields.id_autopilot;
           
           // Create task in the autopilot tasks table - with status as a string "0" instead of number 0
+          // and include the user ID
           const autopilotTaskResponse = await airtableAutopilotTasksApi.post('', {
             records: [
               {
                 fields: {
                   id_autopilot: autopilotId,
-                  status: "0" // Use string "0" instead of number 0
+                  status: "0", // Use string "0" instead of number 0
+                  id_user: user.id // Add the user ID
                 }
               }
             ]

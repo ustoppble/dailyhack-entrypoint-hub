@@ -1,3 +1,4 @@
+
 import { airtableApi } from './client';
 import { AIRTABLE_BASE_ID, AIRTABLE_API_KEY } from './constants';
 
@@ -18,6 +19,7 @@ export interface AutopilotRecord {
   campaignGoalId?: string; // Added for compatibility with ManageAutopilotForm
   active?: boolean; // Added for compatibility with ManageAutopilotForm
   status?: number; // Add status property
+  id_user?: number; // Add user ID property
 }
 
 // Interface for email records
@@ -106,16 +108,20 @@ const getNumericOfferId = (recordId: string): number => {
 };
 
 // Fetch existing autopilot records for a specific agent/URL
-export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecord[]> => {
+export const fetchAutopilotRecords = async (url: string, userId?: number): Promise<AutopilotRecord[]> => {
   try {
     // Create a direct API instance for the autopilot table
     const autopilotApiUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_AUTOPILOT_TABLE_ID}`;
     
-    // Add URL filter to only get records for this agent
-    const filterFormula = encodeURIComponent(`{url} = "${url}"`);
-    const fullUrl = `${autopilotApiUrl}?filterByFormula=${filterFormula}`;
+    // Add URL filter to only get records for this agent and user
+    let filterFormula = `{url} = "${url}"`;
+    if (userId) {
+      filterFormula = `AND(${filterFormula}, {id_user} = ${userId})`;
+    }
+    const encodedFilter = encodeURIComponent(filterFormula);
+    const fullUrl = `${autopilotApiUrl}?filterByFormula=${encodedFilter}`;
     
-    console.log('Fetching autopilot records for URL:', url);
+    console.log('Fetching autopilot records for URL:', url, 'and user ID:', userId);
     
     const response = await fetch(fullUrl, {
       headers: {
@@ -141,7 +147,8 @@ export const fetchAutopilotRecords = async (url: string): Promise<AutopilotRecor
       url: record.fields.url,
       offerId: getRecordIdForOfferId(record.fields.id_offer),
       createdTime: record.createdTime,
-      status: record.fields.status || 0 // Include status from the record
+      status: record.fields.status || 0, // Include status from the record
+      id_user: record.fields.id_user // Include user ID from the record
     }));
     
     return records;
