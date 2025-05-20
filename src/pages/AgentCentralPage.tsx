@@ -30,8 +30,8 @@ const AgentCentralPage = () => {
       color: "bg-green-100 text-green-700",
     },
     {
-      title: "Campaign Goals",
-      description: "Create and manage campaign goals",
+      title: "Offers",
+      description: "Create and manage offers",
       icon: <Target className="h-6 w-6" />,
       link: `/agents/${agentName}/offers`,
       color: "bg-purple-100 text-purple-700",
