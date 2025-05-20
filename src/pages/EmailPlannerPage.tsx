@@ -14,6 +14,7 @@ import {
   fetchCampaignGoals,
   CampaignGoal
 } from '@/lib/api-service';
+import { airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
 
 // Import our components
 import PageHeader from '@/components/autopilot/PageHeader';
@@ -154,34 +155,81 @@ const EmailPlannerPage = () => {
           continue;
         }
         
-        // Prepare data to send to webhook - one list per request
-        const requestData = {
-          agentName,
-          lists: [listId], // Only send one list ID per request
-          userId: user.id, // Add user ID that is logged in
-          mainGoal: selectedGoalData.goal || '', // Use goal field instead
-          goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo
-          offer_name: selectedGoalData.offer_name || '', // Offer name
-          emailFrequency: values.emailFrequency,
-          goalLink: selectedGoalData.link || '', // Goal link
-          goalStyle: selectedGoalData.style || 'nutring', // Goal style
-        };
-        
-        // Log the webhook data being sent for debugging
-        console.log('Sending webhook data:', requestData);
-        
-        // Send the form data to the specified webhook for this list
-        const response = await axios.post(webhookUrl, requestData);
-        console.log(`Webhook response for list ${listId}:`, response.data);
+        // Calculate next update date - 7 days from now at midnight
+        const nextUpdateDate = new Date();
+        nextUpdateDate.setDate(nextUpdateDate.getDate() + 7);
+        nextUpdateDate.setHours(0, 0, 0, 0);
+        const nextUpdateString = nextUpdateDate.toISOString();
         
         // Create record in Airtable autopilot table
         const cronId = values.emailFrequency === "once" ? 1 : 2;
-        await createAutopilotRecord(
-          listId,
-          agentName, // Using agentName as the url parameter
-          cronId,
-          values.campaignGoalId // Pass the selected goal ID
-        );
+        
+        console.log("Creating autopilot record with next_update:", nextUpdateString);
+        
+        // First, create the autopilot record with next_update field
+        try {
+          const autopilotResponse = await airtableUpdatesApi.post('', {
+            records: [
+              {
+                fields: {
+                  id_list: listId,
+                  url: agentName,
+                  id_cron: cronId,
+                  id_offer: 0,
+                  next_update: nextUpdateString
+                }
+              }
+            ]
+          });
+          
+          console.log("Autopilot record created:", autopilotResponse.data);
+          
+          // Get the autopilot ID from the response
+          const autopilotId = autopilotResponse.data.records[0].fields.id_autopilot;
+          
+          // Create task in the autopilot tasks table
+          const autopilotTaskResponse = await airtableAutopilotTasksApi.post('', {
+            records: [
+              {
+                fields: {
+                  id_autopilot: autopilotId,
+                  status: 0
+                }
+              }
+            ]
+          });
+          
+          console.log("Autopilot task created:", autopilotTaskResponse.data);
+          
+          // Get the task ID from the response
+          const taskId = autopilotTaskResponse.data.records[0].fields.id_autopilot_task;
+          
+          // Prepare data to send to webhook - one list per request
+          const requestData = {
+            agentName,
+            lists: [listId], // Only send one list ID per request
+            userId: user.id, // Add user ID that is logged in
+            mainGoal: selectedGoalData.goal || '', // Use goal field instead
+            goal: selectedGoalData.goal || '', // Actual goal field from tblkoRzK5dv5KVYpo
+            offer_name: selectedGoalData.offer_name || '', // Offer name
+            emailFrequency: values.emailFrequency,
+            goalLink: selectedGoalData.link || '', // Goal link
+            goalStyle: selectedGoalData.style || 'nutring', // Goal style
+            autopilotId: autopilotId,
+            taskId: taskId // Include the new task ID
+          };
+          
+          // Log the webhook data being sent for debugging
+          console.log('Sending webhook data:', requestData);
+          
+          // Send the form data to the specified webhook for this list
+          const response = await axios.post(webhookUrl, requestData);
+          console.log(`Webhook response for list ${listId}:`, response.data);
+          
+        } catch (err) {
+          console.error("Error creating records or sending webhook:", err);
+          throw err;
+        }
       }
       
       const emailFrequencyText = values.emailFrequency === "once" ? "1 email per day (08h)" : "2 emails per day (08h and 20h)";
@@ -191,6 +239,7 @@ const EmailPlannerPage = () => {
       
       // Refresh data to show new autopilots
       await refreshData();
+      
     } catch (err: any) {
       console.error('Error activating email autopilot:', err);
       setError(err.message || "An error occurred while activating your email autopilot");
