@@ -1,144 +1,235 @@
-import { airtableApi, airtableIntegrationApi } from './client';
-import { EmailList, Integration } from './types';
 
-// Function to fetch email lists for a specific integration
-export const fetchEmailLists = async (integrationId: string): Promise<EmailList[]> => {
+import axios from 'axios';
+import { EmailList } from './types';
+import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
+
+const WEBHOOK_URL = 'https://primary-production-2e546.up.railway.app/webhook/62a0cea6-c1c6-48eb-8d76-5c55a270dbbc';
+const AIRTABLE_LISTS_TABLE_ID = 'tblhqy7BdNwj0SPHD';
+const AIRTABLE_UPDATES_TABLE_ID = 'tblfN4S5R9BNqT5Zk';
+
+/**
+ * Fetch email lists from ActiveCampaign via n8n webhook
+ */
+export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise<EmailList[]> => {
   try {
-    const response = await airtableIntegrationApi.get(`/${integrationId}`);
-    const integration: Integration = response.data.fields;
-    const apiUrl = formatApiUrl(integration.api_url);
+    console.log('Fetching ActiveCampaign lists for URL:', apiUrl);
+    console.log('Using token:', apiToken);
+    
+    // Using GET request with query parameters
+    const response = await axios.get(WEBHOOK_URL, {
+      params: {
+        api: apiUrl,
+        token: apiToken
+      },
+      timeout: 30000, // Increase timeout to 30 seconds
+    });
+    
+    console.log('n8n webhook response for lists:', response.data);
+    
+    if (response.data && response.data.output && Array.isArray(response.data.output)) {
+      return response.data.output.map((item: any) => ({
+        ...item,
+        // Map the field with the correct case to our lowercase property
+        insight: item.Insight || item.insight || ''
+      }));
+    }
+    
+    throw new Error('Invalid response format from webhook');
+  } catch (error: any) {
+    console.error('Error fetching email lists:', error);
+    
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      throw new Error(`Error fetching lists: ${error.response.status} - ${error.response.data || 'Unknown error'}`);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      throw new Error('No response received from webhook. Check your internet connection or try again later.');
+    }
+    
+    throw error;
+  }
+};
 
-    // Fetch lists from ActiveCampaign
-    const listsResponse = await airtableApi.post(
-      `${apiUrl}/api/3/lists`,
-      {},
+/**
+ * Fetch connected lists from Airtable
+ */
+export const fetchConnectedLists = async (agentName: string, userId?: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string, list_id?: string}[]> => {
+  try {
+    console.log('Fetching connected lists for agent:', agentName, 'and user:', userId);
+    
+    // Build the filter formula with user ID as a number
+    let filterByFormula = `{activehosted}='${agentName}'`;
+    
+    // Only include lists that belong to the current user if userId is provided
+    if (userId) {
+      // Convert userId to number and use numeric comparison in formula
+      const userIdNum = Number(userId);
+      filterByFormula = `AND(${filterByFormula}, {id_users}=${userIdNum})`;
+    }
+    
+    const encodedFilter = encodeURIComponent(filterByFormula);
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}?filterByFormula=${encodedFilter}`,
       {
         headers: {
-          'Api-Token': integration.api_key,
-          'Content-Type': 'application/json',
-        },
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
       }
     );
-
-    const lists = listsResponse.data.lists || [];
-    return lists.map((list: any) => ({
-      id: list.id,
-      name: list.name,
-      active_subscribers: list.active_subscribers,
-    }));
-  } catch (error) {
-    console.error('Error fetching email lists:', error);
-    throw error;
-  }
-};
-
-// Function to construct the API URL based on the account name
-export const formatApiUrl = (accountName: string): string => {
-  const trimmedAccountName = accountName.replace(/\s+/g, '').toLowerCase();
-  return `https://${trimmedAccountName}.api-us1.com`;
-};
-
-// Function to save selected lists to Airtable
-export const saveSelectedLists = async (
-  agentName: string,
-  selectedLists: { id: string; name: string }[],
-  integrationId: string,
-  userId: string
-): Promise<void> => {
-  try {
-    // Fetch the integration record to get the Airtable record ID
-    const integrationResponse = await airtableIntegrationApi.get(`/${integrationId}`);
-    const integrationRecord = integrationResponse.data;
-    const airtableRecordId = integrationRecord.id;
-
-    // Prepare updates for the integration record
-    const updates = {
-      fields: {
-        connected: true,
-        agent: agentName,
-        user_id: userId,
-        lists: selectedLists.map((list) => list.name).join(', '),
-        list_ids: selectedLists.map((list) => list.id).join(','),
-      },
-    };
-
-    // Update the integration record in Airtable
-    await airtableIntegrationApi.patch(`/${airtableRecordId}`, updates);
-
-    console.log('Selected lists saved successfully.');
-  } catch (error) {
-    console.error('Error saving selected lists:', error);
-    throw error;
-  }
-};
-
-// Function to fetch connected lists for an agent
-export const fetchConnectedLists = async (agentName: string, userId?: string): Promise<any[]> => {
-  try {
-    // Fetch integrations for the agent
-    const response = await airtableIntegrationApi.get('', {
-      params: {
-        filterByFormula: `AND(connected=TRUE(), agent="${agentName}", user_id="${userId}")`,
-      },
-    });
-
-    const integrations = response.data.records || [];
-
-    // Extract list information from the integrations
-    return integrations.map((integration) => {
-      const { lists, list_ids } = integration.fields;
-      const listNames = lists ? lists.split(',') : [];
-      const listIds = list_ids ? list_ids.split(',') : [];
-
-      // Combine list names and IDs into a single array of connected lists
-      return listNames.map((name: string, index: number) => ({
-        id: listIds[index] || '', // Use an empty string as a default ID
-        name: name.trim(),
-        airtableId: integration.id,
-        subscribers: integration.fields.subscribers,
+    
+    console.log('Connected lists response:', response.data);
+    
+    // Extract list names and ids from the response
+    if (response.data && response.data.records) {
+      return response.data.records.map((record: any) => ({
+        id: record.id, // This is the Airtable record ID
+        name: record.fields.list_name,
+        subscribers: record.fields.list_leads || "0",
+        airtableId: record.id, // Adding the Airtable record ID for deletion
+        list_id: record.fields.list_id // Include the actual list_id from ActiveCampaign
       }));
-    }).flat(); // Flatten the array of arrays into a single array
-  } catch (error) {
+    }
+    
+    return [];
+  } catch (error: any) {
     console.error('Error fetching connected lists:', error);
-    throw error;
+    // Return empty array on error, don't throw
+    return [];
   }
 };
 
-// Function to delete a connected list
-export const deleteConnectedList = async (airtableRecordId: string): Promise<void> => {
+/**
+ * Save selected lists to Airtable with all required fields
+ */
+export const saveSelectedLists = async (userId: string, selectedLists: EmailList[], agentName?: string): Promise<boolean> => {
   try {
-    // Prepare updates for the integration record
-    const updates = {
-      fields: {
-        connected: false,
-        lists: null,
-        list_ids: null,
-      },
-    };
-
-    // Update the integration record in Airtable to disconnect the list
-    await airtableIntegrationApi.patch(`/${airtableRecordId}`, updates);
-
-    console.log('Connected list deleted successfully.');
-  } catch (error) {
-    console.error('Error deleting connected list:', error);
-    throw error;
-  }
-};
-
-// Function to check if an autopilot already exists for a list
-export const checkExistingAutopilot = async (listId: number): Promise<boolean> => {
-  try {
-    const response = await airtableApi.get('', {
-      params: {
-        filterByFormula: `{list_id} = ${listId}`,
-      },
+    console.log('Saving selected lists for user:', userId, selectedLists);
+    
+    // Convert userId to a number for Airtable
+    const userIdNumber = Number(userId);
+    
+    // Validate that userIdNumber is actually a valid number
+    if (isNaN(userIdNumber)) {
+      throw new Error('Invalid user ID format. Must be convertible to a number.');
+    }
+    
+    // Log the exact value being sent to Airtable
+    console.log('Using numeric user ID for Airtable:', userIdNumber);
+    
+    // Create records for Airtable with the correct column names
+    const records = selectedLists.map(list => {
+      // Make sure all values are strings except id_users which is a number
+      const subscribersCount = list.active_subscribers ? String(list.active_subscribers).trim() : "0";
+      
+      return {
+        fields: {
+          list_name: list.name,
+          list_description: list.sender_reminder || '',
+          list_insight: list.insight || '',
+          list_leads: subscribersCount,
+          list_id: list.id || '',
+          activehosted: agentName || '',
+          // Send id_users as a number to Airtable
+          id_users: userIdNumber
+        }
+      };
     });
+    
+    console.log('Sending records to Airtable:', JSON.stringify(records));
+    
+    // Save to Airtable
+    const response = await axios.post(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}`,
+      { records },
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Airtable save response:', response.data);
+    
+    return response.data.records && response.data.records.length > 0;
+  } catch (error: any) {
+    console.error('Error saving selected lists to Airtable:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
+    throw error;
+  }
+};
 
-    const records = response.data.records || [];
-    return records.length > 0;
-  } catch (error) {
-    console.error('Error checking existing autopilot:', error);
-    return false; // Return false in case of an error
+/**
+ * Delete a connected list from Airtable
+ */
+export const deleteConnectedList = async (airtableRecordId: string): Promise<boolean> => {
+  try {
+    console.log('Deleting connected list with Airtable record ID:', airtableRecordId);
+    
+    const response = await axios.delete(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}/${airtableRecordId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Airtable delete response:', response.data);
+    
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting connected list from Airtable:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Check if an autopilot already exists for a specific list and schedule
+ * This is now updated to validate early in the form process
+ */
+export const checkExistingAutopilot = async (
+  listId: string | number,
+  cronId: number,
+  agentName: string
+): Promise<boolean> => {
+  try {
+    console.log(`Checking for existing autopilot for list ${listId} with cron ${cronId}`);
+    
+    // Convert listId to number for comparison with database values
+    const numericListId = Number(listId);
+    
+    // Build the filter formula to find matching autopilot records
+    const filterByFormula = `AND({id_list}=${numericListId}, {url}='${agentName}', {id_cron}=${cronId})`;
+    
+    const encodedFilter = encodeURIComponent(filterByFormula);
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_UPDATES_TABLE_ID}?filterByFormula=${encodedFilter}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Check existing autopilot response:', response.data);
+    
+    // If any records are found, an autopilot already exists
+    return response.data && response.data.records && response.data.records.length > 0;
+  } catch (error: any) {
+    console.error('Error checking for existing autopilot:', error);
+    // Default to false if there's an error
+    return false;
   }
 };

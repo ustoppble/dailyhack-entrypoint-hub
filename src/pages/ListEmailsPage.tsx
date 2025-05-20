@@ -76,13 +76,13 @@ const ListEmailsPage = () => {
 
   useEffect(() => {
     loadEmails();
+    loadNextUpdate();
   }, [listId, agentName]);
 
   useEffect(() => {
-    // Only load tasks and updates when autopilotId is available
+    // Only load tasks when autopilotId is available
     if (autopilotId) {
       loadTasks(autopilotId);
-      loadNextUpdate(autopilotId);
     }
   }, [autopilotId]);
 
@@ -264,51 +264,19 @@ const ListEmailsPage = () => {
     }
   };
 
-  const loadNextUpdate = async (autopilotId: string) => {
-    if (!autopilotId) {
-      console.log('Cannot load next_update: No autopilot ID available');
-      return;
-    }
-
+  const loadNextUpdate = async () => {
     try {
-      // Fetch update information specifically for this autopilot ID
-      console.log(`Fetching next_update for autopilot ID: ${autopilotId}`);
+      // Fetch next update information
+      const response = await airtableUpdatesApi.get('');
+      console.log('Updates data:', response.data);
       
-      // Make a direct request to the updates table (tblfN4S5R9BNqT5Zk) with a filter for this autopilot ID
-      // UPDATE: Use string comparison in the filter formula by wrapping autopilotId in quotes
-      const response = await axios.get(
-        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblfN4S5R9BNqT5Zk`, 
-        {
-          params: {
-            filterByFormula: `{id_autopilot} = "${autopilotId}"`
-          },
-          headers: {
-            Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      console.log('Updates data response:', response.data);
-      
-      // Check if we have records and get the first one
-      if (response.data.records && response.data.records.length > 0) {
-        const updateRecord = response.data.records[0];
-        
-        if (updateRecord.fields && updateRecord.fields.next_update) {
-          console.log('Found next_update:', updateRecord.fields.next_update);
-          setNextUpdate(updateRecord.fields.next_update);
-        } else {
-          console.log('Record found but no next_update field:', updateRecord);
-          setNextUpdate(null);
-        }
-      } else {
-        console.log('No records found with autopilot ID:', autopilotId);
-        setNextUpdate(null);
+      // Get the first record since we only need one next_update value
+      const updateRecord = response.data.records && response.data.records[0];
+      if (updateRecord && updateRecord.fields && updateRecord.fields.next_update) {
+        setNextUpdate(updateRecord.fields.next_update);
       }
     } catch (err) {
       console.error('Error fetching next update:', err);
-      setNextUpdate(null);
     }
   };
 
@@ -419,7 +387,7 @@ const ListEmailsPage = () => {
       const date = parseISO(dateStr);
       return format(date, 'PPP');
     } catch (e) {
-      console.error('Error parsing date:', e, dateStr);
+      console.error('Error parsing date:', e);
       return 'Invalid date';
     }
   };
@@ -900,7 +868,7 @@ const ListEmailsPage = () => {
       
       // Refresh data to show any changes
       await loadTasks(autopilotId);
-      await loadNextUpdate(autopilotId);
+      await loadNextUpdate();
       await loadEmails();
       
     } catch (err: any) {
@@ -1088,15 +1056,13 @@ const ListEmailsPage = () => {
           </Button>
         </div>
 
-        {/* Production Button - Updated text to show next update */}
+        {/* Production Button - Restored */}
         <Card className="mb-6">
           <CardContent className="pt-6 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-blue-500" />
               <p className="font-medium">
-                {nextUpdate 
-                  ? `New email creation sprint on ${formatTaskDate(nextUpdate)}` 
-                  : "New email creation sprint"}
+                Need more emails for this list?
               </p>
             </div>
             <Button
