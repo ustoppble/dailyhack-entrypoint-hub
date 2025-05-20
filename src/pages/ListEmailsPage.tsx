@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
@@ -28,6 +28,7 @@ const ListEmailsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [listName, setListName] = useState<string>('');
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [selectedApprovedEmails, setSelectedApprovedEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [autopilotId, setAutopilotId] = useState<string | null>(null);
   const { user } = useAuth();
@@ -135,6 +136,16 @@ const ListEmailsPage = () => {
     });
   };
 
+  const handleSelectApprovedEmail = (emailId: string) => {
+    setSelectedApprovedEmails(prev => {
+      if (prev.includes(emailId)) {
+        return prev.filter(id => id !== emailId);
+      } else {
+        return [...prev, emailId];
+      }
+    });
+  };
+
   const handleSelectAll = () => {
     if (draftEmails.length === selectedEmails.length) {
       // If all emails are selected, unselect all
@@ -142,6 +153,23 @@ const ListEmailsPage = () => {
     } else {
       // Otherwise, select all draft emails
       setSelectedEmails(draftEmails.map(email => email.id));
+    }
+  };
+
+  const handleSelectAllFutureApproved = () => {
+    const now = new Date();
+    const futureApprovedEmails = approvedEmails.filter(email => {
+      // Check if the email has a future send date
+      const emailDate = email.date_set ? new Date(email.date_set) : new Date(email.date || "");
+      return !isNaN(emailDate.getTime()) && emailDate > now;
+    });
+    
+    if (futureApprovedEmails.length === selectedApprovedEmails.length) {
+      // If all future emails are selected, unselect all
+      setSelectedApprovedEmails([]);
+    } else {
+      // Otherwise, select all future approved emails
+      setSelectedApprovedEmails(futureApprovedEmails.map(email => email.id));
     }
   };
 
@@ -257,6 +285,128 @@ const ListEmailsPage = () => {
     }
   };
 
+  const handleRevertToDraft = async () => {
+    if (selectedApprovedEmails.length === 0) {
+      toast({
+        title: "No emails selected",
+        description: "Please select at least one approved email to revert to draft.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication error",
+        description: "You must be logged in to revert emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+    let allPromises = [];
+
+    // The webhook URL for reverting to draft
+    const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/mail-draft';
+
+    // Create an array of promises for each email revert operation
+    for (const emailId of selectedApprovedEmails) {
+      try {
+        // Find the email record to include its data in the payload
+        const emailRecord = emails.find(email => email.id === emailId);
+        
+        if (!emailRecord) {
+          console.error(`Email with ID ${emailId} not found in the current list`);
+          failCount++;
+          continue;
+        }
+
+        // Check if the email send date is in the future
+        const emailDate = emailRecord.date_set ? new Date(emailRecord.date_set) : new Date(emailRecord.date || "");
+        const now = new Date();
+        
+        if (isNaN(emailDate.getTime()) || emailDate <= now) {
+          console.error(`Email with ID ${emailId} cannot be reverted because its send date is not in the future`);
+          failCount++;
+          continue;
+        }
+        
+        // Prepare the payload for the webhook
+        const payload = {
+          activehosted: agentName,
+          userId: user.id,
+          emailId: emailId,
+          id_email: emailRecord.id_email // Use the actual id_email from the email record
+        };
+
+        console.log('Sending revert to draft request to webhook:', payload);
+        
+        // Create a promise for each webhook request and add to our array
+        const requestPromise = fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).then(response => {
+          if (!response.ok) {
+            return response.json().catch(() => ({})).then(errorData => {
+              console.error('Webhook error:', errorData);
+              throw new Error(`Webhook error: ${response.status}`);
+            });
+          }
+          successCount++;
+          return response.json();
+        }).catch(error => {
+          console.error(`Error reverting email ${emailId}:`, error);
+          failCount++;
+          throw error;
+        });
+        
+        allPromises.push(requestPromise);
+      } catch (error) {
+        console.error(`Error creating request for email ${emailId}:`, error);
+        failCount++;
+      }
+    }
+
+    try {
+      // Wait for all webhook requests to complete
+      await Promise.allSettled(allPromises);
+      
+      // Show success message
+      if (successCount > 0) {
+        toast({
+          title: `${successCount} email(s) reverted to draft successfully`,
+          description: failCount > 0 ? `${failCount} email(s) failed to revert.` : "",
+          variant: successCount > 0 ? "default" : "destructive"
+        });
+        
+        // Only reload emails AFTER all webhook responses have been received
+        await loadEmails();
+      } else {
+        toast({
+          title: "Failed to revert emails",
+          description: "Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error in Promise.allSettled:", error);
+      toast({
+        title: "Error processing revert requests",
+        description: "Some emails may not have been reverted correctly.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setSelectedApprovedEmails([]);
+    }
+  };
+
   // Sort emails by date_set (newest to oldest)
   const sortedEmails = [...emails].sort((a, b) => {
     const dateA = a.date_set ? new Date(a.date_set).getTime() : 0;
@@ -275,6 +425,20 @@ const ListEmailsPage = () => {
     const status = typeof email.status === 'string' ? parseInt(email.status) : email.status;
     return status !== 1;
   });
+
+  // Filter future approved emails
+  const futureApprovedEmails = approvedEmails.filter(email => {
+    const emailDate = email.date_set ? new Date(email.date_set) : new Date(email.date || "");
+    const now = new Date();
+    return !isNaN(emailDate.getTime()) && emailDate > now;
+  });
+
+  // Check if an email can be reverted (send date is in the future)
+  const canRevertEmail = (email: EmailRecord) => {
+    const emailDate = email.date_set ? new Date(email.date_set) : new Date(email.date || "");
+    const now = new Date();
+    return !isNaN(emailDate.getTime()) && emailDate > now;
+  };
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -404,9 +568,35 @@ const ListEmailsPage = () => {
                 {/* Approved Emails Section */}
                 <div>
                   <h3 className="px-4 py-2 bg-gray-100 font-medium">Approved Emails</h3>
+                  
+                  {futureApprovedEmails.length > 0 && (
+                    <div className="p-4 border-b flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="select-all-approved" 
+                          checked={futureApprovedEmails.length > 0 && selectedApprovedEmails.length === futureApprovedEmails.length}
+                          onCheckedChange={handleSelectAllFutureApproved}
+                        />
+                        <label htmlFor="select-all-approved" className="text-sm font-medium">
+                          Select All Future Emails ({futureApprovedEmails.length})
+                        </label>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleRevertToDraft}
+                        disabled={selectedApprovedEmails.length === 0 || isProcessing}
+                        className="flex items-center gap-2 border-red-500 text-red-500 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                        Revert to Draft ({selectedApprovedEmails.length})
+                      </Button>
+                    </div>
+                  )}
+                  
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10"></TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Campaign</TableHead>
@@ -417,31 +607,42 @@ const ListEmailsPage = () => {
                     <TableBody>
                       {approvedEmails.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-4">
+                          <TableCell colSpan={6} className="text-center py-4">
                             No approved emails found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        approvedEmails.map((email) => (
-                          <TableRow key={email.id}>
-                            <TableCell className="font-medium">
-                              {formatDate(email)}
-                            </TableCell>
-                            <TableCell>{email.title}</TableCell>
-                            <TableCell>{email.campaign_name}</TableCell>
-                            <TableCell>{getStatusBadge(email.status)}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleViewEmail(email.id)}
-                                className="flex items-center gap-1"
-                              >
-                                <Search className="h-4 w-4" /> View
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        approvedEmails.map((email) => {
+                          const canRevert = canRevertEmail(email);
+                          return (
+                            <TableRow key={email.id}>
+                              <TableCell>
+                                {canRevert && (
+                                  <Checkbox 
+                                    checked={selectedApprovedEmails.includes(email.id)}
+                                    onCheckedChange={() => handleSelectApprovedEmail(email.id)}
+                                  />
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {formatDate(email)}
+                              </TableCell>
+                              <TableCell>{email.title}</TableCell>
+                              <TableCell>{email.campaign_name}</TableCell>
+                              <TableCell>{getStatusBadge(email.status)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewEmail(email.id)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Search className="h-4 w-4" /> View
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
