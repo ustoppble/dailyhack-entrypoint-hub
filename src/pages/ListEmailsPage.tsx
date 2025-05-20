@@ -18,7 +18,7 @@ import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { airtableTasksApi, airtableUpdatesApi } from '@/lib/api/client';
+import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
 
 // Define types for our new data
 interface Task {
@@ -31,6 +31,7 @@ interface Task {
     name?: string;
     description?: string;
     status?: string;
+    id_autopilot?: number;
   };
 }
 
@@ -62,26 +63,32 @@ const ListEmailsPage = () => {
 
   useEffect(() => {
     loadEmails();
-    loadTasks();
     loadNextUpdate();
   }, [listId, agentName]);
 
-  const loadTasks = async () => {
-    if (!listId) return;
+  useEffect(() => {
+    // Only load tasks when autopilotId is available
+    if (autopilotId) {
+      loadTasks(autopilotId);
+    }
+  }, [autopilotId]);
+
+  const loadTasks = async (autopilotId: string) => {
+    if (!listId || !autopilotId) return;
     
     setIsTasksLoading(true);
     try {
-      // Fetch tasks related to this list
-      const response = await airtableTasksApi.get('', {
+      // Fetch tasks related to this autopilot from the new table
+      const response = await airtableAutopilotTasksApi.get('', {
         params: {
-          filterByFormula: `{list_id}='${listId}'`
+          filterByFormula: `{id_autopilot}='${autopilotId}'`
         }
       });
       
-      console.log('Tasks data:', response.data);
+      console.log('Autopilot Tasks data:', response.data);
       setTasks(response.data.records || []);
     } catch (err: any) {
-      console.error('Error fetching tasks:', err);
+      console.error('Error fetching autopilot tasks:', err);
       setTasksError('Failed to load tasks information');
     } finally {
       setIsTasksLoading(false);
