@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -18,7 +19,15 @@ import LoadingState from '@/components/lists/LoadingState';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { airtableTasksApi, airtableUpdatesApi, airtableAutopilotTasksApi } from '@/lib/api/client';
+import { 
+  airtableTasksApi, 
+  airtableUpdatesApi, 
+  airtableAutopilotTasksApi 
+} from '@/lib/api/client';
+import { 
+  AIRTABLE_API_KEY, 
+  AIRTABLE_BASE_ID 
+} from '@/lib/api/constants';
 import axios from 'axios';
 
 // Define types for our new data
