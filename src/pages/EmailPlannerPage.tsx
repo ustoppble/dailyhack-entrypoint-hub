@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -109,6 +108,134 @@ const EmailPlannerPage = () => {
     refreshData();
   }, [agentName, user?.id]);
   
+  // Function to handle starting email production
+  const handleStartProduction = async () => {
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to start production",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!agentName || !autopilotData.length) {
+      toast({
+        title: "Missing Information",
+        description: "Agent name or autopilot data not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get the numeric user ID
+      const userId = Number(user.id);
+      
+      // Loop through each autopilot for this agent
+      for (const autopilot of autopilotData) {
+        // Step 1: Create a new task record
+        const autopilotId = Number(autopilot.id);
+        
+        try {
+          // Create a new autopilot task
+          const taskResponse = await airtableAutopilotTasksApi.post('', {
+            records: [
+              {
+                fields: {
+                  id_autopilot: autopilotId,
+                  status: "0", // Status 0 = In Progress
+                  id_user: userId
+                }
+              }
+            ]
+          });
+          
+          console.log('New task created:', taskResponse.data);
+          
+          if (!taskResponse.data.records || taskResponse.data.records.length === 0) {
+            console.error('Failed to create task record');
+            continue;
+          }
+          
+          // Extract the task ID from the response
+          const taskRecord = taskResponse.data.records[0];
+          const taskId = taskRecord.fields.id_autopilot_task;
+          
+          if (!taskId) {
+            console.error('Task ID not found in response');
+            continue;
+          }
+          
+          // Find the corresponding campaign goal for this autopilot
+          const targetGoal = campaignGoals.find(goal => {
+            // Match by id_offer if available
+            if (autopilot.offerId && goal.id_offer) {
+              return Number(autopilot.offerId) === Number(goal.id_offer);
+            }
+            return false;
+          });
+          
+          if (!targetGoal) {
+            console.error('Campaign goal not found for autopilot:', autopilotId);
+            continue;
+          }
+          
+          // Step 2: Send webhook POST request with required data
+          // Webhook URL for triggering production
+          const webhookUrl = 'https://primary-production-2e546.up.railway.app/webhook/62eb5369-3119-41d2-a923-eb2aea9bd0df';
+          
+          // Determine email frequency based on cron ID
+          const emailFrequency = autopilot.cronId === 1 ? "once" : "twice";
+          
+          // Create the payload according to the required format
+          const requestData = {
+            agentName: agentName, // From the URL parameter
+            lists: [Number(autopilot.listId)], // Convert to array of numbers
+            userId: userId, // From the user context
+            id_autopilot: autopilotId, // From the autopilot record
+            id_autopilot_task: taskId, // From the newly created task
+            goal: targetGoal.goal, // From the campaign goal
+            offer_name: targetGoal.offer_name, // From the campaign goal
+            emailFrequency: emailFrequency, // Based on cronId
+            // Include any additional required fields
+            next_update: autopilot.next_update, 
+            action: "production", // Specify this is a production request
+            forceUpdate: true
+          };
+          
+          console.log('Starting new email production with payload:', requestData);
+          
+          // Send request to webhook
+          const response = await axios.post(webhookUrl, requestData);
+          console.log('Production webhook response:', response.data);
+        } catch (err) {
+          console.error(`Error processing autopilot ${autopilot.id}:`, err);
+        }
+      }
+      
+      toast({
+        title: "Production Started",
+        description: "New email production has been initiated",
+      });
+      
+      // Refresh data to show any changes
+      await refreshData();
+      
+    } catch (err: any) {
+      console.error('Error starting email production:', err);
+      toast({
+        title: "Production Error",
+        description: err.message || "Failed to start email production",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const onSubmit = async (values: any) => {
     if (!user) {
       toast({
@@ -322,6 +449,29 @@ const EmailPlannerPage = () => {
                 agentName={agentName || ''}
                 campaignGoals={campaignGoals}
               />
+            )}
+
+            {/* Next Update Information with Production Button */}
+            {autopilotData.length > 0 && (
+              <div className="mb-6">
+                <div className="bg-white rounded-lg shadow-sm border p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <Calendar className="h-5 w-5" />
+                    <p className="font-medium">
+                      Next scheduled update: {new Date(autopilotData[0].next_update || '').toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button
+                    variant="default"
+                    onClick={handleStartProduction}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    {isSubmitting ? 'Starting...' : 'Start Production Now'}
+                  </Button>
+                </div>
+              </div>
             )}
 
             {/* Create New Autopilot Section */}
