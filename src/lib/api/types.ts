@@ -16,8 +16,6 @@ export interface ACIntegration {
   apiToken: string;
   timezone?: string;
   approver?: number;
-  senderName?: string;
-  senderEmail?: string;
 }
 
 export interface VerificationResult {
