@@ -202,17 +202,26 @@ const EmailPlannerPage = () => {
         
         // First, create the autopilot record with next_update field and user ID
         try {
+          // Ensure we have the user ID
+          if (!user.id) {
+            console.error("User ID is missing");
+            throw new Error("User ID is required to create an autopilot");
+          }
+          
+          // Log the user ID for debugging
+          console.log("Using user ID for autopilot creation:", user.id);
+          
           const autopilotResponse = await airtableUpdatesApi.post('', {
             records: [
               {
                 fields: {
-                  id_list: Number(activeListId), // Use the list_id as a number
+                  id_list: Number(activeListId),
                   url: agentName,
                   id_cron: cronId,
-                  id_offer: offerId, // Use the numeric ID from the campaign goal
+                  id_offer: offerId,
                   next_update: nextUpdateString,
                   status: 1, // Set status to active (1)
-                  id_user: user.id // Add the user ID
+                  id_user: Number(user.id) // Ensure user ID is a number and explicitly included
                 }
               }
             ]
@@ -231,7 +240,7 @@ const EmailPlannerPage = () => {
                 fields: {
                   id_autopilot: autopilotId,
                   status: "0", // Use string "0" instead of number 0
-                  id_user: user.id // Add the user ID
+                  id_user: Number(user.id) // Ensure user ID is a number
                 }
               }
             ]
@@ -246,7 +255,7 @@ const EmailPlannerPage = () => {
           const requestData = {
             agentName,
             lists: [activeListId], // Use the actual list_id here
-            userId: user.id, // Add user ID that is logged in
+            userId: Number(user.id), // Ensure user ID is a number
             id_autopilot: autopilotId,
             id_autopilot_task: taskId, // Include the autopilot task ID in the webhook payload
             mainGoal: selectedGoalData.goal || '', // Use goal field
