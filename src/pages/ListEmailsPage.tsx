@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -33,6 +34,7 @@ interface Task {
     status?: string;
     id_autopilot?: number;
   };
+  emailCount?: number; // New property to store the actual email count from query
 }
 
 interface Update {
@@ -86,7 +88,43 @@ const ListEmailsPage = () => {
       });
       
       console.log('Autopilot Tasks data:', response.data);
-      setTasks(response.data.records || []);
+      
+      // Get tasks without email counts first
+      const fetchedTasks: Task[] = response.data.records || [];
+      
+      // For each task, we'll get its email count by querying the emails table
+      const tasksWithCounts = await Promise.all(fetchedTasks.map(async (task) => {
+        // Get the id_autopilot_task value from the task
+        const taskId = task.id;
+        
+        try {
+          // Query the emails table to count emails associated with this task
+          const emailsResponse = await airtableTasksApi.get('', {
+            params: {
+              filterByFormula: `{id_autopilot_task}='${task.fields.id_autopilot}'`
+            }
+          });
+          
+          console.log(`Emails for task ${task.fields.id_autopilot}:`, emailsResponse.data);
+          
+          // Count the emails
+          const emailCount = emailsResponse.data.records ? emailsResponse.data.records.length : 0;
+          
+          // Return the task with the email count
+          return {
+            ...task,
+            emailCount
+          };
+        } catch (err) {
+          console.error(`Error fetching emails for task ${taskId}:`, err);
+          return {
+            ...task,
+            emailCount: 0
+          };
+        }
+      }));
+      
+      setTasks(tasksWithCounts);
     } catch (err: any) {
       console.error('Error fetching autopilot tasks:', err);
       setTasksError('Failed to load tasks information');
@@ -707,7 +745,7 @@ const ListEmailsPage = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-blue-500" />
-                          <span>{task.fields.email_count || 0}</span>
+                          <span>{task.emailCount || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
