@@ -152,7 +152,9 @@ export const updateActiveCampaignIntegration = async (
       apiUrl: integration.apiUrl,
       apiToken: integration.apiToken.substring(0, 5) + '***',
       timezone: integration.timezone,
-      approver: integration.approver
+      approver: integration.approver,
+      remetente: integration.remetente,
+      email: integration.email
     });
     
     // Extract account name from API URL
@@ -175,6 +177,8 @@ export const updateActiveCampaignIntegration = async (
               token: integration.apiToken,
               timezone: integration.timezone || 'America/New_York',
               approver: integration.approver !== undefined ? Number(integration.approver) : 0,
+              remetente: integration.remetente || '',
+              email: integration.email || '',
               DateCreated: now
             },
           },
@@ -242,7 +246,7 @@ export const fetchUserIntegrations = async (userId: string, includeTokens: boole
 /**
  * Fetch a specific integration by user ID and agent name
  */
-export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: string): Promise<{id: string, api: string, token: string, timezone?: string, approver?: number} | null> => {
+export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: string): Promise<{id: string, api: string, token: string, timezone?: string, approver?: number, remetente?: string, email?: string} | null> => {
   try {
     console.log(`Fetching integration for user ${userId} and agent ${agentName}`);
     
@@ -260,7 +264,9 @@ export const fetchIntegrationByUserAndAgent = async (userId: string, agentName: 
         api: record.fields.api || agentName,
         token: record.fields.token || '',
         timezone: record.fields.timezone || 'America/New_York',
-        approver: record.fields.approver !== undefined ? Number(record.fields.approver) : 0
+        approver: record.fields.approver !== undefined ? Number(record.fields.approver) : 0,
+        remetente: record.fields.remetente || '',
+        email: record.fields.email || ''
       };
     }
     

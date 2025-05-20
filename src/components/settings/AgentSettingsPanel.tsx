@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,8 @@ const integrationSchema = z.object({
   apiToken: z.string().min(1, 'API Token is required'),
   timezone: z.string().optional(),
   approver: z.boolean().default(false),
+  remetente: z.string().optional(),
+  email: z.string().email('Must be a valid email').optional(),
 });
 
 type IntegrationFormValues = z.infer<typeof integrationSchema>;
@@ -57,6 +60,8 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
       apiToken: '',
       timezone: 'America/New_York',
       approver: false,
+      remetente: '',
+      email: '',
     }
   });
 
@@ -89,6 +94,8 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
           apiToken: integration.token || '',
           timezone: integration.timezone || 'America/New_York',
           approver: integration.approver === 1 ? true : false,
+          remetente: integration.remetente || '',
+          email: integration.email || '',
         });
       } else {
         toast({
@@ -137,6 +144,8 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
         apiToken: data.apiToken,
         timezone: data.timezone,
         approver: data.approver ? 1 : 0,
+        remetente: data.remetente,
+        email: data.email,
       });
       
       if (success) {
@@ -209,6 +218,49 @@ const AgentSettingsPanel = ({ open, onClose, userId, agentName }: AgentSettingsP
                   </FormControl>
                   <FormDescription>
                     Your ActiveCampaign API token
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="remetente"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Name</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Company or Personal Name" 
+                      {...field} 
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Name that will appear as the sender in emails
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="sender@example.com" 
+                      {...field} 
+                      type="email"
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Email address that will be used to send emails
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
