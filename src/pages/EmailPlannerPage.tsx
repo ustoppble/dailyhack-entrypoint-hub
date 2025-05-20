@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,8 +65,8 @@ const EmailPlannerPage = () => {
       // Fetch all data before displaying anything
       const [autopilotRecords, connectedLists, goals] = await Promise.all([
         fetchAutopilotRecords(agentName),
-        fetchConnectedLists(agentName),
-        fetchCampaignGoals(agentName)
+        fetchConnectedLists(agentName, user?.id ? user.id.toString() : undefined), // Pass user ID when fetching lists
+        fetchCampaignGoals(agentName, user?.id ? user.id.toString() : undefined)  // Pass user ID when fetching goals
       ]);
       
       // Enhance autopilot records with list names
@@ -100,7 +99,7 @@ const EmailPlannerPage = () => {
   
   useEffect(() => {
     refreshData();
-  }, [agentName]);
+  }, [agentName, user?.id]);
   
   const onSubmit = async (values: any) => {
     if (!user) {

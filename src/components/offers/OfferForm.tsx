@@ -208,7 +208,7 @@ const OfferForm = ({
       const fields = { 
         ...data,
         activehosted: agentName,
-        // Convert user.id to a number instead of a string
+        // Always include user ID when creating/updating offers
         id_user: Number(user.id),
       };
       

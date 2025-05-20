@@ -52,14 +52,19 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
 /**
  * Fetch connected lists from Airtable
  */
-export const fetchConnectedLists = async (agentName: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string}[]> => {
+export const fetchConnectedLists = async (agentName: string, userId?: string): Promise<{id: string, name: string, subscribers: string, airtableId?: string}[]> => {
   try {
-    console.log('Fetching connected lists for agent:', agentName);
+    console.log('Fetching connected lists for agent:', agentName, 'and user:', userId);
     
-    // Query Airtable for lists with matching activehosted field
-    const filterByFormula = encodeURIComponent(`{activehosted}='${agentName}'`);
+    // Query Airtable for lists with matching activehosted field and optionally user ID
+    let filterByFormula = `{activehosted}='${agentName}'`;
+    if (userId) {
+      filterByFormula = `AND(${filterByFormula}, {id_user}=${userId})`;
+    }
+    
+    const encodedFilter = encodeURIComponent(filterByFormula);
     const response = await axios.get(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}?filterByFormula=${filterByFormula}`,
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_LISTS_TABLE_ID}?filterByFormula=${encodedFilter}`,
       {
         headers: {
           'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
@@ -108,7 +113,7 @@ export const saveSelectedLists = async (userId: string, selectedLists: EmailList
           list_leads: subscribersCount,
           list_id: list.id || '',
           activehosted: agentName || '',
-          // Removed id_users field as requested
+          id_user: userId, // Add user ID to save with the list
         }
       };
     });
