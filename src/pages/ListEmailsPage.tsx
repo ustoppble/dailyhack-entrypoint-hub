@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Search, CheckSquare, X, Trash2, Calendar, Mail, Eye, Zap } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fetchEmailsForList, EmailRecord, getAutopilotIdForList } from '@/lib/api/autopilot';
 import LoadingState from '@/components/lists/LoadingState';
@@ -810,8 +810,8 @@ const ListEmailsPage = () => {
       console.log('Production webhook response:', response.data);
       
       toast({
-        title: "Produção Iniciada",
-        description: "Nova produção de e-mails foi iniciada",
+        title: "Production Accelerated",
+        description: "Email production has been fast-tracked successfully",
       });
       
       // Refresh data to show any changes
@@ -821,8 +821,8 @@ const ListEmailsPage = () => {
     } catch (err: any) {
       console.error('Error starting email production:', err);
       toast({
-        title: "Erro na Produção",
-        description: err.message || "Falha ao iniciar a produção de e-mails",
+        title: "Production Error",
+        description: err.message || "Failed to accelerate email production",
         variant: "destructive"
       });
     } finally {
@@ -862,8 +862,8 @@ const ListEmailsPage = () => {
                 disabled={isInitiatingProduction || !autopilotId}
                 className="flex items-center gap-2"
               >
-                <PlayCircle className="h-4 w-4" />
-                {isInitiatingProduction ? 'Iniciando...' : 'Antecipar Produção'}
+                <Zap className="h-4 w-4" />
+                {isInitiatingProduction ? 'Processing...' : 'Fast-Track Production'}
               </Button>
             </CardContent>
           </Card>
