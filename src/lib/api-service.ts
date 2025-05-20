@@ -17,7 +17,8 @@ export {
   saveSelectedLists, 
   fetchConnectedLists, 
   deleteConnectedList,
-  checkExistingAutopilot
+  checkExistingAutopilot,
+  fetchNextUpdateByAutopilotId
 } from './api/lists';
 // Export auth functionality
 export * from './api/auth';

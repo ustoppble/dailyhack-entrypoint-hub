@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { EmailList } from './types';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID } from './constants';
@@ -231,5 +230,41 @@ export const checkExistingAutopilot = async (
     console.error('Error checking for existing autopilot:', error);
     // Default to false if there's an error
     return false;
+  }
+};
+
+/**
+ * Fetch next update date for a specific autopilot
+ */
+export const fetchNextUpdateByAutopilotId = async (autopilotId: string): Promise<string | null> => {
+  try {
+    console.log(`Fetching next update date for autopilot ID: ${autopilotId}`);
+    
+    // Build the filter formula to find matching autopilot record
+    const filterByFormula = `{id_autopilot}=${autopilotId}`;
+    
+    const encodedFilter = encodeURIComponent(filterByFormula);
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_UPDATES_TABLE_ID}?filterByFormula=${encodedFilter}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log(`Next update data for autopilot ${autopilotId}:`, response.data);
+    
+    // Check if we have any records and get the next_update field
+    if (response.data && response.data.records && response.data.records.length > 0) {
+      const record = response.data.records[0];
+      return record.fields.next_update || null;
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error(`Error fetching next update for autopilot ${autopilotId}:`, error);
+    return null;
   }
 };

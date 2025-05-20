@@ -76,8 +76,10 @@ const ListEmailsPage = () => {
 
   useEffect(() => {
     loadEmails();
-    loadNextUpdate();
-  }, [listId, agentName]);
+    if (autopilotId) {
+      loadNextUpdate();
+    }
+  }, [listId, agentName, autopilotId]);
 
   useEffect(() => {
     // Only load tasks when autopilotId is available
@@ -265,15 +267,13 @@ const ListEmailsPage = () => {
   };
 
   const loadNextUpdate = async () => {
+    if (!autopilotId) return;
+    
     try {
-      // Fetch next update information
-      const response = await airtableUpdatesApi.get('');
-      console.log('Updates data:', response.data);
-      
-      // Get the first record since we only need one next_update value
-      const updateRecord = response.data.records && response.data.records[0];
-      if (updateRecord && updateRecord.fields && updateRecord.fields.next_update) {
-        setNextUpdate(updateRecord.fields.next_update);
+      // Use the new function to fetch next_update filtered by autopilotId
+      const nextUpdateDate = await fetchNextUpdateByAutopilotId(autopilotId);
+      if (nextUpdateDate) {
+        setNextUpdate(nextUpdateDate);
       }
     } catch (err) {
       console.error('Error fetching next update:', err);
@@ -1056,13 +1056,15 @@ const ListEmailsPage = () => {
           </Button>
         </div>
 
-        {/* Production Button - Restored */}
+        {/* Production Card - Modified text to show next production date */}
         <Card className="mb-6">
           <CardContent className="pt-6 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-blue-500" />
               <p className="font-medium">
-                Need more emails for this list?
+                {nextUpdate 
+                  ? `Next production at ${formatTaskDate(nextUpdate)}` 
+                  : "Next production date not available"}
               </p>
             </div>
             <Button
@@ -1078,20 +1080,6 @@ const ListEmailsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Next Update Information */}
-        {nextUpdate && !selectedTaskId && (
-          <Card className="mb-6">
-            <CardContent className="pt-6 flex justify-between items-center">
-              <div className="flex items-center gap-2 text-amber-600">
-                <Calendar className="h-5 w-5" />
-                <p className="font-medium">
-                  Next scheduled update: {formatTaskDate(nextUpdate)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
         {/* Tasks Information */}
         {!selectedTaskId && (
           <Card className="mb-6">
