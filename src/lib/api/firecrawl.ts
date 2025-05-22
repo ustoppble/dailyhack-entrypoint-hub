@@ -4,16 +4,16 @@
  * Handles requests to the Firecrawl webhook
  */
 
-interface FirecrawlResponse {
-  success?: boolean;
-  title?: string;
-  goal?: string;
-  message?: string;
+// Define response interfaces for better typing
+export interface FirecrawlOutput {
+  title: string;
+  goal: string;
+}
+
+export interface FirecrawlResponse {
+  success: boolean;
+  output?: FirecrawlOutput;
   error?: string;
-  output?: {
-    title?: string;
-    goal?: string;
-  };
 }
 
 /**
@@ -21,19 +21,64 @@ interface FirecrawlResponse {
  * @param link - Website URL to analyze
  * @param style - Content style to analyze for
  * @param customPayload - Optional custom payload for testing
+ * @param useTestData - Force using test data instead of API call
  */
 export async function fetchWebsiteData(
   link: string, 
   style: string,
-  customPayload?: any // Allow custom payload for testing purposes
-): Promise<any> {
+  customPayload?: any, // Allow custom payload for testing purposes
+  useTestData: boolean = false // Flag to force test data usage
+): Promise<FirecrawlResponse> {
   try {
-    console.log('Sending request to Firecrawl with:', { style, link });
+    console.log('fetchWebsiteData called with:', { link, style, useTestData });
     
-    if (customPayload) {
-      console.log('Using custom payload for testing:', customPayload);
-      return customPayload; // Return the custom payload directly for testing
+    // If test data is requested or custom payload provided, use that instead of making API call
+    if (useTestData || customPayload) {
+      console.log('Using test data instead of live API');
+      
+      // Use provided custom payload if available
+      if (customPayload) {
+        console.log('Using custom payload:', customPayload);
+        
+        // Process the custom payload to match our expected return format
+        if (Array.isArray(customPayload) && customPayload.length > 0) {
+          const firstItem = customPayload[0];
+          
+          if (firstItem && firstItem.output && 
+              typeof firstItem.output === 'object' &&
+              firstItem.output.title && 
+              firstItem.output.goal) {
+            
+            return {
+              success: true,
+              output: {
+                title: firstItem.output.title,
+                goal: firstItem.output.goal
+              }
+            };
+          }
+        }
+        
+        // Return the payload directly if it's already in the expected format
+        if (!Array.isArray(customPayload) && 
+            customPayload.output && 
+            typeof customPayload.output === 'object') {
+          return customPayload;
+        }
+      }
+      
+      // If no custom payload or it couldn't be processed, return default test data
+      return {
+        success: true,
+        output: {
+          title: "AI de ActiveCampaign para Aumentar as suas Vendas por Email",
+          goal: "Este conteúdo tem como objetivo demonstrar como profissionais e empresas podem aumentar suas taxas de conversão por email com o uso de inteligência artificial integrada ao ActiveCampaign. A estratégia inclui conectar a ferramenta ao ActiveCampaign, disparar campanhas automatizadas via comando de voz no WhatsApp, e criar emails altamente segmentados e personalizados usando tecnologia GPT-4."
+        }
+      };
     }
+    
+    // Proceed with actual API call if test data is not requested
+    console.log('Making real API call to Firecrawl webhook');
     
     const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
       method: 'POST',
@@ -70,7 +115,7 @@ export async function fetchWebsiteData(
         
         console.log('Found valid output in array response:', firstItem.output);
         
-        // Ensure it's not a placeholder
+        // Check for placeholder values
         if (firstItem.output.title === "$json.output.title" || 
             firstItem.output.goal === "$json.output.goal") {
           console.log('Detected placeholder values in output');
