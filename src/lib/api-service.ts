@@ -27,4 +27,11 @@ export * from './api/autopilot';
 // Export campaign goals functionality
 export * from './api/goals';
 // Export firecrawl functionality
-export * from './api/firecrawl';
+export { 
+  fetchWebsiteData 
+} from './api/firecrawl';
+// Export firecrawl test utilities (for development/debugging only)
+export {
+  testFirecrawlWithSampleData,
+  testFirecrawlWithRealAPI
+} from './api/firecrawl.test';

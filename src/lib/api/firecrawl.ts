@@ -20,10 +20,20 @@ interface FirecrawlResponse {
  * Fetches data from website using Firecrawl webhook
  * @param link - Website URL to analyze
  * @param style - Content style to analyze for
+ * @param customPayload - Optional custom payload for testing
  */
-export async function fetchWebsiteData(link: string, style: string): Promise<any> {
+export async function fetchWebsiteData(
+  link: string, 
+  style: string,
+  customPayload?: any // Allow custom payload for testing purposes
+): Promise<any> {
   try {
     console.log('Sending request to Firecrawl with:', { style, link });
+    
+    if (customPayload) {
+      console.log('Using custom payload for testing:', customPayload);
+      return customPayload; // Return the custom payload directly for testing
+    }
     
     const response = await fetch('https://primary-production-2e546.up.railway.app/webhook/firecrawl', {
       method: 'POST',
@@ -50,29 +60,92 @@ export async function fetchWebsiteData(link: string, style: string): Promise<any
     if (Array.isArray(rawData) && rawData.length > 0) {
       console.log('Processing array response format');
       
-      // The data structure appears to be an array with an object that has an output property
-      if (rawData[0].output) {
-        console.log('Found output in array response:', rawData[0].output);
-        return rawData; // Return the array as is - it already has the correct structure
+      const firstItem = rawData[0];
+      
+      // Check if the first item has an output property with title and goal
+      if (firstItem && firstItem.output && 
+          typeof firstItem.output === 'object' && 
+          firstItem.output.title && 
+          firstItem.output.goal) {
+        
+        console.log('Found valid output in array response:', firstItem.output);
+        
+        // Ensure it's not a placeholder
+        if (firstItem.output.title === "$json.output.title" || 
+            firstItem.output.goal === "$json.output.goal") {
+          console.log('Detected placeholder values in output');
+          return { 
+            success: false,
+            error: "The API returned placeholder values. Please check your API configuration."
+          };
+        }
+        
+        return {
+          success: true,
+          output: {
+            title: firstItem.output.title,
+            goal: firstItem.output.goal
+          }
+        };
       }
     }
     
-    // Handle placeholder response - this indicates the API returned placeholders
-    // instead of actual content
-    if (typeof rawData === 'object' && 
-        (rawData.title === '$json.output.title' || rawData.goal === '$json.output.goal')) {
+    // Handle direct object response with output property
+    if (!Array.isArray(rawData) && rawData && typeof rawData === 'object') {
+      console.log('Processing object response format');
       
-      console.log('Detected placeholder response from API');
+      // Check for direct output property
+      if (rawData.output && typeof rawData.output === 'object') {
+        console.log('Found output in object response:', rawData.output);
+        
+        // Check for placeholders in output
+        if (rawData.output.title === "$json.output.title" || 
+            rawData.output.goal === "$json.output.goal") {
+          console.log('Detected placeholder values in output');
+          return { 
+            success: false,
+            error: "The API returned placeholder values. Please check your API configuration."
+          };
+        }
+        
+        return {
+          success: true,
+          output: {
+            title: rawData.output.title,
+            goal: rawData.output.goal
+          }
+        };
+      }
       
-      // Return an error indicating that the API returned placeholders
-      return { 
-        success: false,
-        error: "The API returned placeholder values. Please try a different URL or style."
-      };
+      // Check for direct title and goal properties
+      if (rawData.title && rawData.goal) {
+        console.log('Found direct title and goal properties:', { title: rawData.title, goal: rawData.goal });
+        
+        // Check for placeholders in direct properties
+        if (rawData.title === "$json.output.title" || rawData.goal === "$json.output.goal") {
+          console.log('Detected placeholder values in direct properties');
+          return { 
+            success: false,
+            error: "The API returned placeholder values. Please check your API configuration."
+          };
+        }
+        
+        return {
+          success: true,
+          output: {
+            title: rawData.title,
+            goal: rawData.goal
+          }
+        };
+      }
     }
     
-    // Return the original response for any other format
-    return rawData;
+    // If we reached here, the response doesn't match any expected format
+    console.error('Unexpected response format from Firecrawl API:', rawData);
+    return { 
+      success: false,
+      error: "The API returned an unexpected format. Please try a different URL or style."
+    };
     
   } catch (error) {
     console.error('Error fetching website data:', error);

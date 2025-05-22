@@ -83,45 +83,34 @@ const OfferForm = ({
     
     setIsLoading(true);
     setFirecrawlError(null); // Clear previous errors
-    
+
     try {
+      // For demonstration/testing purposes, you can use this example data
+      // Uncomment the following lines to test with the provided example data
+      /*
+      const testData = [
+        {
+          output: {
+            title: "AI de ActiveCampaign para Aumentar as suas Vendas por Email",
+            goal: "Este conteúdo tem como objetivo demonstrar como profissionais e empresas podem aumentar suas taxas de conversão por email com o uso de inteligência artificial integrada ao ActiveCampaign. A estratégia inclui conectar a ferramenta ao ActiveCampaign, disparar campanhas automatizadas via comando de voz no WhatsApp, e criar emails altamente segmentados e personalizados usando tecnologia GPT-4."
+          }
+        }
+      ];
+      const response = await fetchWebsiteData(link, style, testData);
+      */
+      
+      // Normal API call
       const response = await fetchWebsiteData(link, style);
       console.log('Firecrawl response in form:', response);
       
       // Check if there was an error in the response
-      if (response.error || response.success === false) {
+      if (!response.success) {
         throw new Error(response.error || 'Failed to fetch website data');
       }
       
-      // Handle the array response format we're getting from the webhook
-      if (Array.isArray(response)) {
-        console.log('Processing array response:', response);
-        
-        // Get the first item in the array
-        if (response.length > 0) {
-          const firstItem = response[0];
-          console.log('Examining first item in array:', firstItem);
-          
-          // Check if it has an output object
-          if (firstItem.output) {
-            console.log('Found output object:', firstItem.output);
-            
-            // Extract title and goal from the output object
-            if (firstItem.output.title) {
-              console.log('Setting offer_name from title:', firstItem.output.title);
-              form.setValue('offer_name', firstItem.output.title);
-            }
-            
-            if (firstItem.output.goal) {
-              console.log('Setting goal:', firstItem.output.goal);
-              form.setValue('goal', firstItem.output.goal);
-            }
-          }
-        }
-      } 
-      // Handle single object response with output property
-      else if (response && typeof response === 'object' && response.output) {
-        console.log('Processing object response with output property:', response);
+      // Extract data from the response
+      if (response.output) {
+        console.log('Setting form values from API response:', response.output);
         
         if (response.output.title) {
           console.log('Setting offer_name from title:', response.output.title);
@@ -132,23 +121,9 @@ const OfferForm = ({
           console.log('Setting goal:', response.output.goal);
           form.setValue('goal', response.output.goal);
         }
-      }
-      // Handle direct properties on the response object
-      else if (response && typeof response === 'object') {
-        console.log('Checking direct properties on response object');
-        
-        if (response.title) {
-          console.log('Setting offer_name from direct title:', response.title);
-          form.setValue('offer_name', response.title);
-        }
-        
-        if (response.goal) {
-          console.log('Setting goal from direct goal:', response.goal);
-          form.setValue('goal', response.goal);
-        }
       } else {
-        console.error('Unexpected response format:', response);
-        throw new Error('Invalid response format from Firecrawl API');
+        console.error('No output data found in response:', response);
+        throw new Error('No output data found in API response');
       }
       
     } catch (error) {
