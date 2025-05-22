@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -23,11 +22,10 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_GOALS_TABLE_ID } from '@/lib/api/constants';
-import { Loader2, AlertTriangle, InfoIcon } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
-import { fetchWebsiteData, testFirecrawlWithSampleData } from '@/lib/api-service';
+import { fetchWebsiteData } from '@/lib/api/firecrawl';
 
 // Define the form schema
 const offerFormSchema = z.object({
@@ -60,7 +58,6 @@ const OfferForm = ({
   const [isLoading, setIsLoading] = useState(false);
   const [urlTyping, setUrlTyping] = useState(false);
   const [firecrawlError, setFirecrawlError] = useState<string | null>(null);
-  const [useTestData, setUseTestData] = useState(true); // Default to test data for now
 
   // Configure the form
   const form = useForm<OfferFormValues>({
@@ -80,43 +77,6 @@ const OfferForm = ({
   // Use debounce to wait for typing to finish
   const debouncedLink = useDebounce(link, 1500);
 
-  // Toggle between test data and live API
-  const toggleTestMode = () => {
-    setUseTestData(prev => !prev);
-    setFirecrawlError(null); // Clear previous errors when switching modes
-    
-    // If switching to test mode and we have a link, try to fetch with test data
-    if (!useTestData && debouncedLink && z.string().url().safeParse(debouncedLink).success) {
-      fetchFirecrawlData(debouncedLink, style);
-    }
-  };
-
-  // Function to load test data directly
-  const loadTestData = async () => {
-    setIsLoading(true);
-    setFirecrawlError(null);
-    
-    try {
-      // Use the test utility directly
-      const testResult = await testFirecrawlWithSampleData();
-      console.log('Test data result:', testResult);
-      
-      if (testResult && testResult[0]?.output) {
-        const output = testResult[0].output;
-        form.setValue('offer_name', output.title || '');
-        form.setValue('goal', output.goal || '');
-        return;
-      }
-      
-      throw new Error('Test data has unexpected format');
-    } catch (error) {
-      console.error('Error loading test data:', error);
-      setFirecrawlError('Failed to load test data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Function to fetch data from the Firecrawl webhook
   const fetchFirecrawlData = async (link: string, style: string) => {
     if (!link || !z.string().url().safeParse(link).success) return;
@@ -125,14 +85,22 @@ const OfferForm = ({
     setFirecrawlError(null); // Clear previous errors
 
     try {
-      // If in test mode, use the test data
-      if (useTestData) {
-        await loadTestData();
-        return;
-      }
+      // For demonstration/testing purposes, you can use this example data
+      // Uncomment the following lines to test with the provided example data
+      /*
+      const testData = [
+        {
+          output: {
+            title: "AI de ActiveCampaign para Aumentar as suas Vendas por Email",
+            goal: "Este conteúdo tem como objetivo demonstrar como profissionais e empresas podem aumentar suas taxas de conversão por email com o uso de inteligência artificial integrada ao ActiveCampaign. A estratégia inclui conectar a ferramenta ao ActiveCampaign, disparar campanhas automatizadas via comando de voz no WhatsApp, e criar emails altamente segmentados e personalizados usando tecnologia GPT-4."
+          }
+        }
+      ];
+      const response = await fetchWebsiteData(link, style, testData);
+      */
       
-      // Normal API call with useTestData flag
-      const response = await fetchWebsiteData(link, style, null, false);
+      // Normal API call
+      const response = await fetchWebsiteData(link, style);
       console.log('Firecrawl response in form:', response);
       
       // Check if there was an error in the response
@@ -190,13 +158,6 @@ const OfferForm = ({
       setFirecrawlError(null);
     }
   }, [style]);
-
-  // Load test data on initial load
-  useEffect(() => {
-    if (useTestData && !initialData && !form.formState.isDirty) {
-      loadTestData();
-    }
-  }, []);
 
   const onSubmit = async (data: OfferFormValues) => {
     if (!user) {
@@ -280,33 +241,6 @@ const OfferForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b">
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="test-mode"
-              checked={useTestData}
-              onCheckedChange={toggleTestMode}
-            />
-            <label 
-              htmlFor="test-mode" 
-              className="text-sm font-medium cursor-pointer">
-              Use Test Data
-            </label>
-          </div>
-          
-          {useTestData && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={loadTestData}
-              disabled={isLoading}
-            >
-              Reload Test Data
-            </Button>
-          )}
-        </div>
-
         <FormField
           control={form.control}
           name="style"
@@ -352,15 +286,8 @@ const OfferForm = ({
                   placeholder="https://example.com"
                   {...field}
                   onChange={handleLinkChange}
-                  disabled={useTestData} // Disable when using test data
                 />
               </FormControl>
-              {useTestData && (
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <InfoIcon className="h-3 w-3 mr-1" />
-                  URL input is disabled in test mode
-                </div>
-              )}
               <FormMessage />
             </FormItem>
           )}
@@ -369,7 +296,7 @@ const OfferForm = ({
         {isLoading && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="ml-2">Loading {useTestData ? "test" : "website"} data...</span>
+            <span className="ml-2">Loading website data...</span>
           </div>
         )}
         
