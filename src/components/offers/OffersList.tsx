@@ -71,6 +71,13 @@ const OffersList = ({ offers, onDelete, onRefresh }: OffersListProps) => {
     }
   };
 
+  // Function to limit text to 50 words
+  const limitWords = (text: string, limit: number = 50): string => {
+    const words = text.split(' ');
+    if (words.length <= limit) return text;
+    return words.slice(0, limit).join(' ') + '...';
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4">
       {offers.map((offer) => (
@@ -110,7 +117,7 @@ const OffersList = ({ offers, onDelete, onRefresh }: OffersListProps) => {
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-medium">Offer: {offer.goal}</p>
+                  <p className="text-sm font-medium">Offer: {limitWords(offer.goal)}</p>
                 </div>
                 <Badge className={`${getStyleBadgeColor(offer.style)}`}>
                   {offer.style}
