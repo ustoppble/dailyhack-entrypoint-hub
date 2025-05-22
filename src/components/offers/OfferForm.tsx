@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -87,7 +86,12 @@ const OfferForm = ({
     
     try {
       const response = await fetchWebsiteData(link, style);
-      console.log('Raw Firecrawl response:', response);
+      console.log('Firecrawl response in form:', response);
+      
+      // Check if there was an error in the response
+      if (response.error || response.success === false) {
+        throw new Error(response.error || 'Failed to fetch website data');
+      }
       
       // Handle the array response format we're getting from the webhook
       if (Array.isArray(response)) {
@@ -115,42 +119,32 @@ const OfferForm = ({
           }
         }
       } 
-      // Handle single object response
+      // Handle single object response with output property
+      else if (response && typeof response === 'object' && response.output) {
+        console.log('Processing object response with output property:', response);
+        
+        if (response.output.title) {
+          console.log('Setting offer_name from title:', response.output.title);
+          form.setValue('offer_name', response.output.title);
+        }
+        
+        if (response.output.goal) {
+          console.log('Setting goal:', response.output.goal);
+          form.setValue('goal', response.output.goal);
+        }
+      }
+      // Handle direct properties on the response object
       else if (response && typeof response === 'object') {
-        console.log('Processing object response:', response);
+        console.log('Checking direct properties on response object');
         
-        // Check for error
-        if (response.error) {
-          throw new Error(response.error);
+        if (response.title) {
+          console.log('Setting offer_name from direct title:', response.title);
+          form.setValue('offer_name', response.title);
         }
         
-        // Check if the response has an output object
-        if (response.output) {
-          console.log('Found output in object:', response.output);
-          
-          if (response.output.title) {
-            console.log('Setting offer_name from title:', response.output.title);
-            form.setValue('offer_name', response.output.title);
-          }
-          
-          if (response.output.goal) {
-            console.log('Setting goal:', response.output.goal);
-            form.setValue('goal', response.output.goal);
-          }
-        }
-        // Direct properties on the response object
-        else {
-          console.log('Checking direct properties');
-          
-          if (response.title) {
-            console.log('Setting offer_name from direct title:', response.title);
-            form.setValue('offer_name', response.title);
-          }
-          
-          if (response.goal) {
-            console.log('Setting goal from direct goal:', response.goal);
-            form.setValue('goal', response.goal);
-          }
+        if (response.goal) {
+          console.log('Setting goal from direct goal:', response.goal);
+          form.setValue('goal', response.goal);
         }
       } else {
         console.error('Unexpected response format:', response);

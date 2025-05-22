@@ -46,29 +46,32 @@ export async function fetchWebsiteData(link: string, style: string): Promise<any
       };
     }
 
-    // Handle the array response format with actual content
-    if (Array.isArray(rawData) && rawData.length > 0 && rawData[0].output) {
-      console.log('Processing array response with output object');
-      return rawData;
+    // Handle array response format (as shown in the examples)
+    if (Array.isArray(rawData) && rawData.length > 0) {
+      console.log('Processing array response format');
+      
+      // The data structure appears to be an array with an object that has an output property
+      if (rawData[0].output) {
+        console.log('Found output in array response:', rawData[0].output);
+        return rawData; // Return the array as is - it already has the correct structure
+      }
     }
     
-    // Handle string placeholder issue by extracting real content
-    // If we get a response with $json.output.X placeholders, we'll create a proper structure
+    // Handle placeholder response - this indicates the API returned placeholders
+    // instead of actual content
     if (typeof rawData === 'object' && 
         (rawData.title === '$json.output.title' || rawData.goal === '$json.output.goal')) {
       
-      console.log('Detected placeholder response, creating proper structure');
+      console.log('Detected placeholder response from API');
       
-      // Creating a properly formatted response with real content
-      return [{
-        output: {
-          title: "Despertar Sua Lista Digital e Gerar Vendas em 24h",
-          goal: "Este conteúdo tem o objetivo de nutrir a lista de contatos dos inscritos, fornecendo informações valiosas e estratégias práticas para reativar listas de email paradas ou com carrinhos abandonados. A abordagem é suave, focada em construir relacionamento, confiança e educar o público sobre o potencial de suas listas para gerar receitas rápidas e concretas. A promessa central é que, ao aplicar o método detalhado, os usuários podem realizar sua primeira venda em 24 horas ou reativar vendas esquecidas, transformando leads dormindo em clientes ativos, por meio de uma sequência comprovada e automatizada. Os entregáveis incluem um kit completo com guia passo a passo em PDF, vídeos explicativos, templates de emails persuasivos, automação pronta para importar no ActiveCampaign, além de uma fórmula de oferta irrecusável para reativação de listas. Prova social é evidenciada por depoimentos de clientes reais e pelo histórico de sucesso da Blackbird e do especialista Laschuk, que já geraram mais de R$100 milhões em vendas via email. Gatilhos mentais utilizados incluem exclusividade, prova social, prova de resultados, facilidade de implementação, garantia de risco zero, bônus de diagnóstico de lucratividade por email e senso de urgência para aproveitar a oferta com preço especial. A oferta apresenta um investimento acessível, com garantia de satisfação de 30 dias, e incentiva a ação imediata para não perder a oportunidade de transformar listas paradas em fontes de receita rápida."
-        }
-      }];
+      // Return an error indicating that the API returned placeholders
+      return { 
+        success: false,
+        error: "The API returned placeholder values. Please try a different URL or style."
+      };
     }
     
-    // Return the original response if no transformation is needed
+    // Return the original response for any other format
     return rawData;
     
   } catch (error) {
