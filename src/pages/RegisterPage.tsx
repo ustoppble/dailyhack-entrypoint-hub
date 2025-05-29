@@ -94,8 +94,8 @@ const RegisterPage = () => {
         description: "Your account has been created.",
       });
       
-      // Redirect to integration page
-      navigate('/integrate');
+      // Redirect to home page where onboarding will start
+      navigate('/');
     } catch (error: any) {
       console.error('Registration error:', error);
       toast({
