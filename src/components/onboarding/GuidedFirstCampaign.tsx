@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import {
   Brain,
   TrendingUp 
 } from 'lucide-react';
+import { setOnboardingStep } from '@/lib/onboarding';
 
 interface GuidedFirstCampaignProps {
   onComplete: () => void;
@@ -266,7 +266,15 @@ const GuidedFirstCampaign = ({ onComplete, onBack }: GuidedFirstCampaignProps) =
       </div>
       
       <div className="text-center">
-        <Button onClick={onComplete} size="lg" className="px-8">
+        <Button 
+          onClick={() => {
+            console.log('Completing onboarding tutorial');
+            setOnboardingStep('completed');
+            onComplete();
+          }} 
+          size="lg" 
+          className="px-8"
+        >
           Go to Dashboard
         </Button>
       </div>

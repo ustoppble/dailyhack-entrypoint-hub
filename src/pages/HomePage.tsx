@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,12 +7,13 @@ import WelcomeScreen from '@/components/onboarding/WelcomeScreen';
 import SetupWizard from '@/components/onboarding/SetupWizard';
 import GuidedFirstCampaign from '@/components/onboarding/GuidedFirstCampaign';
 import { fetchUserIntegrations } from '@/lib/api/integration';
+import { getOnboardingCompleted, setOnboardingCompleted, getOnboardingStep, setOnboardingStep } from '@/lib/onboarding';
 
 type OnboardingStep = 'welcome' | 'setup' | 'campaign' | 'completed';
 
 const HomePage = () => {
   const { isAuthenticated, user } = useAuth();
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('welcome');
+  const [onboardingStep, setCurrentOnboardingStep] = useState<OnboardingStep>('welcome');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasIntegrations, setHasIntegrations] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,13 +25,32 @@ const HomePage = () => {
           const integrations = await fetchUserIntegrations(String(user.id));
           setHasIntegrations(integrations.length > 0);
           
-          // Show onboarding if no integrations exist
-          if (integrations.length === 0) {
+          // Check if onboarding was completed
+          const onboardingCompleted = getOnboardingCompleted();
+          const savedStep = getOnboardingStep();
+          
+          console.log('Onboarding state:', { onboardingCompleted, savedStep, hasIntegrations: integrations.length > 0 });
+          
+          // Show onboarding if not completed OR if no integrations exist
+          if (!onboardingCompleted || integrations.length === 0) {
             setShowOnboarding(true);
-            setOnboardingStep('welcome');
+            // Set step based on current state
+            if (integrations.length === 0) {
+              setCurrentOnboardingStep('welcome');
+              setOnboardingStep('welcome');
+            } else if (savedStep === 'campaign' || savedStep === 'setup') {
+              // User has integration but didn't complete campaign tutorial
+              setCurrentOnboardingStep('campaign');
+              setOnboardingStep('campaign');
+            } else {
+              setCurrentOnboardingStep(savedStep as OnboardingStep);
+            }
+          } else {
+            setShowOnboarding(false);
           }
         } catch (error) {
           console.error('Error checking user setup:', error);
+          // If we can't check, show onboarding to be safe
           setShowOnboarding(true);
         }
       }
@@ -42,9 +61,17 @@ const HomePage = () => {
   }, [isAuthenticated, user]);
 
   const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
+    console.log('Onboarding completed');
+    setOnboardingCompleted(true);
     setOnboardingStep('completed');
+    setShowOnboarding(false);
     setHasIntegrations(true);
+  };
+
+  const handleStepChange = (step: OnboardingStep) => {
+    console.log('Onboarding step changed to:', step);
+    setCurrentOnboardingStep(step);
+    setOnboardingStep(step);
   };
 
   if (isLoading) {
@@ -55,28 +82,28 @@ const HomePage = () => {
     );
   }
 
-  // Show onboarding flow for authenticated users without setup
+  // Show onboarding flow for authenticated users who haven't completed it
   if (isAuthenticated && showOnboarding) {
     switch (onboardingStep) {
       case 'welcome':
         return (
           <WelcomeScreen 
             userName={user?.name}
-            onGetStarted={() => setOnboardingStep('setup')}
+            onGetStarted={() => handleStepChange('setup')}
           />
         );
       case 'setup':
         return (
           <SetupWizard 
-            onComplete={() => setOnboardingStep('campaign')}
-            onBack={() => setOnboardingStep('welcome')}
+            onComplete={() => handleStepChange('campaign')}
+            onBack={() => handleStepChange('welcome')}
           />
         );
       case 'campaign':
         return (
           <GuidedFirstCampaign 
             onComplete={handleOnboardingComplete}
-            onBack={() => setOnboardingStep('setup')}
+            onBack={() => handleStepChange('setup')}
           />
         );
       default:

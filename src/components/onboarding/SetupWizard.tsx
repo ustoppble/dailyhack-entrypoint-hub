@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, ArrowRight, ExternalLink, AlertTriangle } from 'lucide-react';
 import IntegrationForm from '@/components/integration/IntegrationForm';
 import StatusMessage from '@/components/integration/StatusMessage';
+import { setOnboardingStep } from '@/lib/onboarding';
 
 interface SetupWizardProps {
   onComplete: () => void;
@@ -44,6 +44,8 @@ const SetupWizard = ({ onComplete, onBack }: SetupWizardProps) => {
     setResponseDetails(undefined);
     setSuccessMessage(message);
     setIsConnected(true);
+    // Save progress and move to step 2
+    setOnboardingStep('setup');
     setTimeout(() => setCurrentStep(2), 1500);
   };
 
@@ -112,13 +114,13 @@ const SetupWizard = ({ onComplete, onBack }: SetupWizardProps) => {
         <CheckCircle className="w-8 h-8 text-blue-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Complete!</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Integration Complete!</h2>
         <p className="text-gray-600 mb-6">
-          You're ready to start creating AI-powered email campaigns. Let's create your first campaign together!
+          Perfect! Your ActiveCampaign is connected. Now let's create your first AI-powered email campaign to show you how our methodology works.
         </p>
       </div>
       <Button onClick={onComplete} size="lg" className="px-8">
-        Start Creating Campaigns
+        Learn the DailyHack Methodology
       </Button>
     </div>
   );
