@@ -25,6 +25,25 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
     
     console.log('n8n webhook response for lists:', response.data);
     
+    // Handle the new response format where data is an array of objects with "output" property
+    if (response.data && Array.isArray(response.data)) {
+      // Extract the output objects from each array item
+      const extractedLists = response.data.map((item: any) => {
+        if (item && item.output) {
+          return {
+            ...item.output,
+            // Map the field with the correct case to our lowercase property
+            insight: item.output.Insight || item.output.insight || ''
+          };
+        }
+        return item; // Fallback for items without output wrapper
+      }).filter(Boolean); // Remove any null/undefined items
+      
+      console.log('Extracted lists:', extractedLists);
+      return extractedLists;
+    }
+    
+    // Fallback: handle the old format where response.data.output is an array
     if (response.data && response.data.output && Array.isArray(response.data.output)) {
       return response.data.output.map((item: any) => ({
         ...item,
@@ -33,7 +52,8 @@ export const fetchEmailLists = async (apiUrl: string, apiToken: string): Promise
       }));
     }
     
-    throw new Error('Invalid response format from webhook');
+    console.error('Unexpected response format:', response.data);
+    throw new Error('Invalid response format from webhook - expected array of lists');
   } catch (error: any) {
     console.error('Error fetching email lists:', error);
     
