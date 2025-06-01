@@ -24,12 +24,19 @@ import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import OffersPage from './pages/OffersPage';
 import OfferEditPage from './pages/OfferEditPage';
 import AgentSettingsPage from './pages/AgentSettingsPage';
+import DemoLandingPage from './pages/DemoLandingPage';
+import DemoAnalysisPage from './pages/DemoAnalysisPage';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          {/* Demo routes - public, outside of main layout */}
+          <Route path="/demo" element={<DemoLandingPage />} />
+          <Route path="/demo/analysis" element={<DemoAnalysisPage />} />
+          
+          {/* Main app routes with layout */}
           <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<HomePage />} />
             <Route path="agents" element={<AgentsPage />} />
