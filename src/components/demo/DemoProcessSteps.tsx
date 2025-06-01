@@ -6,19 +6,22 @@ import { Link, Zap, RotateCcw } from 'lucide-react';
 const DemoProcessSteps = () => {
   const steps = [
     {
+      number: '1',
       icon: Link,
-      title: '1. Cole seu melhor vídeo/post agora',
-      description: 'YouTube, Instagram, LinkedIn ou qualquer conteúdo que já funcionou para você'
+      title: 'Cole seu conteúdo',
+      description: 'Cole seu melhor vídeo/post agora'
     },
     {
+      number: '2',
       icon: Zap,
-      title: '2. IA gera email profissional + dispara automático',
-      description: 'Sistema analisa seu conteúdo e cria emails persuasivos que convertem'
+      title: 'IA gera email',
+      description: 'IA gera email profissional + dispara automático'
     },
     {
+      number: '3',
       icon: RotateCcw,
-      title: '3. Sistema cria emails novos toda semana',
-      description: 'Autopilot funciona 24/7, criando novos emails baseados no seu estilo'
+      title: 'Autopilot ativo',
+      description: 'Sistema cria emails novos toda semana'
     }
   ];
 
@@ -34,8 +37,12 @@ const DemoProcessSteps = () => {
           return (
             <Card key={index} className="text-center p-6 hover:shadow-lg transition-shadow duration-200">
               <CardContent className="pt-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <IconComponent className="h-8 w-8 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white text-xl font-bold">{step.number}</span>
+                </div>
+                
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <IconComponent className="h-8 w-8 text-gray-600" />
                 </div>
                 
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
