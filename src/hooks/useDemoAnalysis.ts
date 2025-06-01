@@ -38,15 +38,46 @@ export const useDemoAnalysis = () => {
     
     setIsAnalyzing(true);
     
-    // Store URL temporarily
-    localStorage.setItem('demo_url', url);
-    localStorage.setItem('demo_timestamp', Date.now().toString());
-    
-    // Simulate analysis
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      navigate('/demo/analysis');
-    }, 2000);
+    try {
+      // Send POST to webhook
+      console.log('Sending URL to webhook:', url);
+      
+      const response = await fetch('https://primary-production-2e546.up.railway.app/webhook-test/75beebe5-d7a5-4fb1-af0b-03cfb015040d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: url,
+          timestamp: new Date().toISOString(),
+          source: 'demo'
+        })
+      });
+
+      console.log('Webhook response status:', response.status);
+      
+      // Store URL temporarily
+      localStorage.setItem('demo_url', url);
+      localStorage.setItem('demo_timestamp', Date.now().toString());
+      
+      // Navigate to analysis page after webhook call
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        navigate('/demo/analysis');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error sending to webhook:', error);
+      
+      // Even if webhook fails, continue with the demo flow
+      localStorage.setItem('demo_url', url);
+      localStorage.setItem('demo_timestamp', Date.now().toString());
+      
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        navigate('/demo/analysis');
+      }, 2000);
+    }
   };
 
   return {
